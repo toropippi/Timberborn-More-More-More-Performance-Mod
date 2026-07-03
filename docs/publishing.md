@@ -72,7 +72,7 @@ mod.io) and the Steam Workshop folder.
 > **More More More Performance! (T3MP)**
 >
 > A **real, algorithmic speedup** of Timberborn's CPU-bound simulation — **not** a
-> speed multiplier, **not** a benchmark tool. It rebuilds the heaviest hot paths
+> speed multiplier. It rebuilds the heaviest hot paths
 > so high game speed and large late-game colonies actually keep up, computing the
 > **same** result faster. On a large late-game test colony the always-on
 > optimizations run the sim about **1.5x** the unmodded rate at the same game
@@ -81,7 +81,7 @@ mod.io) and the Steam Workshop folder.
 >
 > It does **not** change game speed — keep using the base game's speed buttons or
 > any speed mod you like; this makes those actually deliver instead of
-> stuttering. Behavior-identical to vanilla: **no farmer bugs, no save risk.**
+> stuttering. Behavior-identical to vanilla.
 >
 > **Two features**
 > - **Always-on optimizations** — turn on automatically a few seconds after a

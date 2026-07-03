@@ -1,13 +1,13 @@
 # More More More Performance! (T3MP)
 
 A Timberborn performance mod — a **real, algorithmic speedup** of the CPU-bound
-simulation, **not** a speed multiplier and **not** a benchmark tool. It applies
+simulation, **not** a speed multiplier. It applies
 **behavior-exact** optimizations to the heaviest hot paths (they change how fast
 the game computes, never what it computes), so high game speed and large
 late-game colonies actually keep up. It does not change game speed itself — pair
 it with any speed mod; Shift+P toggles an extra render blackout + animation
 thinning. Unattended runs produce the exact same colony you would get at normal
-speed — no farmer bugs, no save risk.
+speed.
 
 Mod Id / internal codename: `T3MP` (finalized — unchanged across releases).
 
