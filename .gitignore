@@ -1,0 +1,11 @@
+# Build output
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Local benchmark / dev artifacts (not part of the mod)
+testlogs/
+backups/
+*.log

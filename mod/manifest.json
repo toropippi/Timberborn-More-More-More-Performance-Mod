@@ -1,0 +1,15 @@
+{
+  "Name": "More More More Performance! (T3MP)",
+  "Version": "1.0.0",
+  "Id": "T3MP",
+  "MinimumGameVersion": "1.1.0.2",
+  "Description": "Make Timberborn's simulation actually run FASTER at high game speed - a real, algorithmic way to optimize the CPU-bound sim, NOT a speed multiplier and NOT a benchmark tool. More More More Performance! (T3MP) rebuilds the heaviest hot paths (tick dispatch, hauling, pathfinding / travel-time estimates, need decisions, water) so large late-game colonies and fast-forward keep up. Measured per full in-game day on a large colony: about 1.5x the unmodded tick rate, always on; about 1.75x with the optional Shift+P render-skip turbo. Because it makes every simulation tick cheaper for the CPU, a heavy colony that was CPU-bound also gets more fps headroom. It does NOT change game speed - keep using the base game's speed controls or any speed mod; this makes those actually deliver instead of stuttering. Behavior-identical to vanilla: pathfinding, reservations, inventories and water are never skipped or approximated, so you get the exact same colony - no farmer bugs, no save risk. Optimizations turn on automatically a few seconds after a save loads, and a live tick-rate meter is shown bottom-right. Actively maintained for the current game version. [JP] シミュ自体を速くする本物の最適化mod。速度の倍率を変えるのではなく、CPUがボトルネックになっている計算を軽くして、高速再生や大規模コロニーが本当に速く（faster）回るようにします。重いコロニーではCPU負荷が下がるぶんfpsの余裕も生まれます。挙動はバニラと完全一致（経路・予約・在庫・水を一切省略・近似しない）ので結果は同じ＝農夫バグやセーブ破損の心配なし。常時約1.5倍、Shift+Pのターボで約1.75倍。keywords: performance, speed, faster, optimize, optimization, lag, fps, late game, large colony, tick rate.",
+  "RequiredMods": [
+    {
+      "Id": "Harmony",
+      "MinimumVersion": "2.4.1"
+    }
+  ],
+  "OptionalMods": [
+  ]
+}
