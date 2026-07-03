@@ -1,0 +1,272 @@
+namespace T3MP;
+
+internal static class BenchmarkSettings
+{
+    // Automated benchmark runs pass '-benchAutoUltra' on the Timberborn command
+    // line. Only then does the mod auto-apply Optimized ultra speed with render
+    // blackout after load. Normal play keeps manual 1/2/3/4 speed key behavior.
+    public static readonly bool BenchAutoUltraRequested =
+        HasCommandLineFlag("-benchAutoUltra");
+
+    private static bool HasCommandLineFlag(string flag)
+    {
+        var arguments = System.Environment.GetCommandLineArgs();
+        for (var i = 0; i < arguments.Length; i++)
+        {
+            if (string.Equals(arguments[i], flag, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Master switch: installs the optimization patches and the runtime
+    // controller. Keep true for the mod to do anything.
+    public static readonly bool EnableBenchmark = true;
+    public static readonly bool EnableBenchmarkController = true;
+    // Development-only A/B measurement: Vanilla<->Optimized cycling, frame
+    // sampling, and SimProgress/aggregate log output. Off in the distributed
+    // build so the mod runs purely in Optimized mode with no log spam.
+    public static readonly bool EnableBenchmarkMeasurement = false;
+    // Temporary measurement helper: run the save in VANILLA (optimizations off)
+    // at ultra speed so it can be compared against Optimized at the same speed.
+    // Keep false in the shipped build.
+    public static readonly bool MeasureVanillaBaseline = false;
+    // Temporary A/B helper: run at ultra speed while the controller cycles
+    // Vanilla<->Optimized, so both are measured at the same 50x in one run.
+    // Keep false in the shipped build.
+    public static readonly bool MeasureAbAtUltra = false;
+    // Temporary helper: optimizations ON but render blackout OFF (visible
+    // 1/2/3 mode) at ultra speed, i.e. this mod loaded while a DIFFERENT mod
+    // drives 50x. Keep false in the shipped build.
+    public static readonly bool MeasureOptimizedVisibleAtUltra = false;
+    public static readonly bool EnableBenchmarkDetailedMetrics = false;
+    public static readonly bool EnableDetailedBenchmarkTiming = false;
+    public static readonly bool EnableRuntimeProbes = true;
+    public static readonly bool EnableNavigationProfiler = false;
+    public static readonly bool EnableFastYielderFinder = true;
+    public static readonly bool EnableFastYielderNoCapacityPrecheck = false;
+    public static readonly bool EnableFarmYielderSegmentTree = true;
+    public static readonly bool EnableFarmHouseBehaviorDirectOptimizer = true;
+    public static readonly bool EnablePlantingSpotFinderOptimizer = true;
+    public static readonly bool EnableLumberjackYielderOptimizer = true;
+    public static readonly bool EnableLumberjackNoCapacityFastEmpty = true;
+    public static readonly bool EnableLumberjackScanStats = false;
+    public static readonly bool EnableGatherWorkplaceOptimizer = true;
+    public static readonly bool EnableFarmEventDrivenUpdates = true;
+    public static readonly bool EnableFarmSafetyRefreshAudit = false;
+    public static readonly bool EnableWalkerDistanceCache = false;
+    public static readonly bool EnableWalkerMoverDelegateCacheOptimizer = true;
+    public static readonly bool EnablePathFollowerNoAnimationFastMove = true;
+    public static readonly bool EnablePathFollowerFastMoveStopAnimation = true;
+    public static readonly bool EnablePathFollowerProfiler = false;
+    public static readonly bool EnableAnimatedPathFollowerHorizontalOptimizer = false;
+    public static readonly bool EnableCarryAmountCalculatorOptimizer = true;
+    public static readonly bool EnableGoodCarrierLiftingCapacityFrameCache = false;
+    public static readonly bool EnablePickBestTravelCache = false;
+    public static readonly bool EnableGlobalNeedTravelCache = true;
+    public static readonly bool EnableGlobalNeedTravelShadowCache = true;
+    public static readonly bool EnableGlobalNeedTravelShadowCacheLocking = false;
+    public static readonly bool EnableGlobalNeedTravelShadowCacheRefreshOnHit = false;
+    public static readonly bool EnableNeedTravelCacheMetrics = false;
+    public static readonly bool EnableNeedBehaviorDecisionMetrics = false;
+    public static readonly bool EnableBeaverDecisionFrequencySampler = false;
+    public static readonly bool EnableHotOptimizerMetrics = false;
+    public static readonly bool EnableNeedManagerDirectCriticalState = false;
+    public static readonly bool EnableNeedManagerFastTick = false;
+    public static readonly bool EnableHaulCandidateOrderCache = false;
+    public static readonly bool EnableHaulNoActionFrameCache = true;
+    public static readonly bool EnableHaulNoActionOrderedCache = true;
+    public static readonly bool EnableWorkplaceNoActionFrameCache = false;
+    public static readonly bool EnableWorkplaceNoActionFrameCacheTiming = false;
+    public static readonly bool EnableInventoryStockDistanceCache = true;
+    public static readonly bool EnableInventoryNeedGoodOptimizer = true;
+    public static readonly bool EnableInventoryCapacityDistanceCache = false;
+    public static readonly bool EnableInventoryCapacityVectorProfiler = false;
+    public static readonly bool EnableWorkerRootMetricsBypass = true;
+    public static readonly bool EnableWorkerWorkingSpeedNoRepeatSet = true;
+    public static readonly bool EnableFillInputWorkplaceOptimizer = false;
+    public static readonly bool EnableWaitInsideIdlyOptimizer = false;
+    public static readonly bool EnableBehaviorManagerProcessOptimizer = false;
+    public static readonly bool EnableExecutorTickProfiler = false;
+    public static readonly bool EnableNeedActionPositionSampling = false;
+    public static readonly bool EnableNeedActionFlowFieldProbe = false;
+    public static readonly bool EnableDistrictNeedBehaviorDirectOptimizer = true;
+    public static readonly bool EnableDistrictNeedAppraisalCache = true;
+    // Permanently disabled after the guard fired on real data even with the
+    // speed-normalized distance cache: game blueprints define navmesh edges
+    // with arbitrary spec costs including 0.25 (tubes) and 0.0 (entrance
+    // links), some spanning horizontal tiles, so NO positive geometric factor
+    // is a sound lower bound. With the distance cache in place, per-candidate
+    // evaluation is a sub-microsecond lookup anyway, so pruning's remaining
+    // value does not justify the risk. Keep the code + guard for reference.
+    public static readonly bool EnableDistrictNeedBoundPruning = false;
+    // Replaces the hours-based shadow cache for Walker.CalculateTravelTimeInHours:
+    // cache PATH DISTANCES (speed-independent, navmesh-version-invalidated) and
+    // convert to hours per query with the walker's own current base speed.
+    // More vanilla-faithful than sharing hours across differently-fast walkers.
+    public static readonly bool EnableTravelDistanceCache = true;
+    public const int TravelDistanceCacheMaxEntries = 262144;
+    // Invalidate the global need-travel shadow cache whenever the regular
+    // navmesh actually changes (batched, at most once per tick) instead of
+    // relying on the frame TTL. Makes the cache exact and lets entries live
+    // for GlobalNeedTravelShadowCacheEventModeTtlFrames.
+    public static readonly bool EnableNavMeshEventTravelCacheInvalidation = true;
+    public const int GlobalNeedTravelShadowCacheEventModeTtlFrames = 18000;
+    public static readonly bool EnableDistrictNeedDirectDetailedStats = false;
+    public static readonly bool EnableEmptyInventoriesFastPath = true;
+    // Sound lower bound on nav path distance. Default edges cost the plain
+    // horizontal euclidean length (NavMeshEdge.CreateDefault), but zipline
+    // cable edges cost CableUnitCost=0.4 per 3D length unit (game 1.1.0.2
+    // spec), so any path costs at least 0.4 * horizontal euclidean minus
+    // start/end node snap slack. The runtime guard in
+    // DistrictNeedBehaviorDirectOptimizer disables pruning permanently if a
+    // measured duration ever undercuts this bound.
+    public const float NavDistanceLowerBoundFactor = 0.4f;
+    // Raw distance units removed from the euclidean estimate BEFORE the
+    // minimum edge-cost factor is applied. Covers node snap error (~1.4
+    // horizontal units) plus distance-cache key quantization aliasing (~1.4
+    // units per endpoint at quantize step 1.0): 1.4 + 2 * 1.4 = 4.2, rounded up.
+    public const float NavDistanceLowerBoundSlack = 4.5f;
+    public const float BoundPruningGuardEpsilonHours = 0.001f;
+    public static readonly bool EnableDistrictResourceCounterThrottle = true;
+    public static readonly bool EnableWaterObjectServiceThrottle = false;
+    public static readonly bool EnableWaterObjectServiceFastSkip = true;
+    public static readonly bool EnableThreadSafeWaterMapTickThrottle = false;
+    public static readonly bool EnableThreadSafeWaterFlowDirectionThrottle = false;
+    public static readonly bool EnableRangedEffectSubjectThrottle = false;
+    public static readonly bool EnableContaminationApplierThrottle = false;
+    public static readonly bool EnableNoActionCooldown = false;
+    public static readonly bool EnableMechanicalGraphLoadBatching = true;
+    public static readonly bool EnableTickDispatchOptimizer = true;
+    public static readonly bool EnableMainLoopProfiler = false;
+    public static readonly bool EnableMainLoopTypeProfiler = false;
+    public static readonly bool EnableMainLoopUpdateTypeProfiler = false;
+    public static readonly bool EnableUnityMarkerProfiler = false;
+    public static readonly bool EnableAnimatorRegistryThrottle = true;
+    public static readonly bool EnableAnimatorRegistryDetailProfiler = false;
+    public static readonly bool EnableMechanicalAnimationBatchProbe = false;
+    public static readonly bool EnableMechanicalDirectRotationOptimizer = true;
+    public static readonly bool EnableMechanicalDirectRotationSampleCache = true;
+    public static readonly bool EnableMechanicalDirectCommonFrameSampling = false;
+    public static readonly bool EnableNodeTransformDirectOptimizer = false;
+    public static readonly bool EnableDefaultRotationOnlyDirectOptimizer = true;
+    public static readonly bool EnableDefaultMechanicalAnimatorThrottle = false;
+    public static readonly bool EnableDefaultMechanicalAnimatorDetailProfiler = false;
+    public static readonly bool EnableDefaultMechanicalAnimatorRegistryReplacement = false;
+    public static readonly bool EnableDefaultMechanicalAnimatorUpdatePatch = false;
+    public static readonly bool EnableMovementAnimatorThrottle = true;
+    public static readonly bool EnableStatusIconPositionerThrottle = false;
+    public static readonly bool EnableSoundListenerStaticCameraOptimizer = false;
+    // Keep false: TubeVisitorUpdater drives stateful tube enter/exit each frame
+    // and is cheap; never throttle it. (The tube lingering-light bug was
+    // actually caused by CharacterModel.LateUpdate suppression freezing the
+    // model position TubeVisitor reads - see BenchmarkProbe - not by this.)
+    public static readonly bool EnableTubeVisitorUpdaterThrottle = false;
+    public static readonly bool EnableStatusAggregatorThrottle = false;
+    public static readonly bool EnableTickVisualSingletonThrottle = true;
+    public static readonly bool EnableUnattendedVisualSuppression = true;
+    public static readonly bool EnableStutterDetailProfiler = false;
+    public static readonly bool EnableRangedEffectSubjectProfiler = false;
+    public static readonly bool EnableLoadComponentProfiler = false;
+    public static readonly bool EnableLoadSingletonProfiler = false;
+    public static readonly bool EnableLoadStateListenerProfiler = false;
+    public static readonly bool EnableLoadEventProfiler = false;
+    public static readonly bool EnableRuntimeOverlay = false;
+    public static readonly bool EnableHitchLogging = false;
+    public static readonly bool EnableOptimizedRenderBlackout = true;
+    // During render blackout, lift the blackout for exactly one frame every
+    // RenderPeekIntervalFullTicks full ticks so the screen shows a fresh
+    // snapshot of the colony. All suppression paths key off
+    // RenderBlackoutActive, so the peek frame runs the normal visual updates.
+    public static readonly bool EnableBlackoutRenderPeek = true;
+    public const int RenderPeekIntervalFullTicks = 100;
+    // On-screen live tick-rate meter (bottom-right) while the mod is active.
+    // Doubles as a liveness indicator during the Shift+P blackout: the number
+    // keeps updating while the simulation runs.
+    public static readonly bool EnableSpeedupOverlay = true;
+    // Experimental: render the meter through the game's UI Toolkit layer
+    // (game font) instead of IMGUI. Off by default because it attaches to a
+    // discovered UIDocument that may not be the on-screen HUD; the IMGUI meter
+    // is the reliable default.
+    public static readonly bool EnableSpeedupOverlayGameUi = false;
+    // Shift+P toggles the render blackout + animation thinning. Disable to
+    // unbind it. The mod does not change game speed; speed is left to the base
+    // game (and composes with any speed mod).
+    public static readonly bool EnableRenderBlackoutToggleKey = true;
+    // Timberborn's fixed simulation tick advances this many in-game seconds at
+    // 1x speed (Configurations/TickTime.blueprint: TickIntervalInSeconds), so
+    // realtime multiplier = simulation ticks per real second * this value.
+    public const float GameTickIntervalSeconds = 0.6f;
+    public static readonly bool EnablePathFollowerNreGuard = true;
+    public static readonly bool EnableSpeedManagerProbe = true;
+    public static readonly bool EnableSpeedManagerLogging = false;
+    public static readonly bool EnableTimeSpeedButtonGroupAutoResume = false;
+    public static readonly bool EnableTimeSpeedButtonGroupProbe = false;
+    public static readonly bool EnableOptimizedFrameRateUncap = true;
+    public static readonly bool EnableOptimizedUltraSpeed = true;
+    public static readonly bool EnableAutoForceOptimizedAfterLoad = true;
+    public static readonly bool EnableStartupGcBeforeAutoResume = true;
+    public static readonly bool ForceOptimizedByDefault = false;
+    public static readonly bool EnableAutoResumeGameSpeed = false;
+    public const int WalkerDistanceCacheTtlFrames = 120;
+    public const int GlobalNeedTravelShadowCacheTtlFrames = 600;
+    public const int GlobalNeedTravelShadowCachePruneIntervalFrames = 120;
+    public const int NoActionCooldownFrames = 60;
+    public const int FastYielderDistanceCacheMaxEntries = 1024;
+    public const int FastYielderDistanceCacheMaxAgeFrames = 600;
+    public const int InventoryStockDistanceCacheTtlFrames = 1800;
+    public const int InventoryCapacityDistanceCacheTtlFrames = 1800;
+    public const int FarmEventDrivenSafetyRefreshFrames = 600;
+    public const int DistrictResourceCounterThrottleTicks = 2;
+    public const int WaterObjectServiceThrottleTicks = 2;
+    public const int ThreadSafeWaterMapTickThrottleTicks = 2;
+    public const int ThreadSafeWaterFlowDirectionIntervalTicks = 10;
+    public const int RangedEffectSubjectThrottleTicks = 2;
+    public const int ContaminationApplierThrottleTicks = 2;
+    public const int PlantingSpotFinderCacheTtlFrames = 600;
+    public const int NeedActionFlowFieldProbeSampleRate = 32;
+    public const int NeedActionFlowFieldProbeMaxSamplesPerAggregate = 1024;
+    public const int MainLoopProfilerTopEntries = 12;
+    public const int ExecutorTickProfilerTopEntries = 12;
+    public const int AnimatorRegistryThrottleFrames = 2;
+    public const int AnimatorRegistryDetailSampleFrames = 120;
+    public const int AnimatorRegistryDetailTopEntries = 12;
+    public const int MechanicalAnimationBatchProbeSampleFrames = 300;
+    public const int MechanicalAnimationBatchProbeTopEntries = 10;
+    public const int MechanicalDirectVisibilityRefreshFrames = 30;
+    public const int DefaultMechanicalAnimatorThrottleFrames = 3;
+    public const int MovementAnimatorThrottleFrames = 2;
+    public const int StatusIconPositionerThrottleFrames = 2;
+    public const int SoundListenerStaticCameraIntervalFrames = 4;
+    public const int TubeVisitorUpdaterThrottleFrames = 2;
+    public const int StatusAggregatorThrottleFrames = 2;
+    public const int WaterRendererThrottleTicks = 2;
+    public const int ModularShaftAnimatorThrottleTicks = 2;
+    public const int LoadProfilerTopEntries = 20;
+    public const float HitchLogThresholdSeconds = 0.25f;
+    public const float LoadSlowCallThresholdMilliseconds = 250f;
+    public const float MainLoopSlowStageThresholdMilliseconds = 250f;
+    public const float MainLoopSlowTypeThresholdMilliseconds = 250f;
+    public const float RuntimeHotspotSlowThresholdMilliseconds = 10f;
+    public const float RangedEffectSlowThresholdMilliseconds = 10f;
+    public const float StatusAggregatorSlowThresholdMilliseconds = 10f;
+    public const float UnreachableHomeSlowThresholdMilliseconds = 10f;
+    public const float NavMeshNotifySlowThresholdMilliseconds = 10f;
+    public const float RuntimeOverlayWindowSeconds = 3f;
+    public const float AutoResumeGameAfterSeconds = 3f;
+    public const float AutoResumeGameIntervalSeconds = 2f;
+    // Disabled by default. Fastest-speed benchmarks must use TimeSpeedButtonGroup
+    // and confirm SpeedManager currentSpeed=7 in logs.
+    public const float AutoResumeTargetSpeed = 7f;
+    public const float OptimizedUltraSpeed = 50f;
+    public const float AutoForceOptimizedAfterLoadSeconds = 5f;
+    public const float WalkerDistanceCacheQuantizeStep = 1f;
+    public const float PickBestTravelCacheQuantizeStep = 1f;
+    public static readonly string OptimizedImplementationName = "release-v1";
+    public const float ModeSegmentSeconds = 2f;
+    public const float AggregateSeconds = 20f;
+    public const int WarmupFramesAfterSwitch = 5;
+}

@@ -1,0 +1,33 @@
+<Project>
+  <!--
+    Locates your Timberborn install so the project can reference the game's
+    managed assemblies without hard-coded per-machine paths.
+
+    Resolution order:
+      1. -p:TimberbornInstall=... passed to dotnet/msbuild
+      2. TIMBERBORN_DIR environment variable
+      3. Common Steam library locations (auto-detected below)
+
+    "Timberborn install" = the folder that CONTAINS Timberborn_Data
+    (e.g. ...\steamapps\common\Timberborn). If auto-detection fails, set the
+    TIMBERBORN_DIR environment variable to that folder and rebuild.
+  -->
+  <PropertyGroup>
+    <TimberbornInstall Condition="'$(TimberbornInstall)' == ''">$(TIMBERBORN_DIR)</TimberbornInstall>
+
+    <TimberbornInstall Condition="'$(TimberbornInstall)' == '' And Exists('C:\Program Files (x86)\Steam\steamapps\common\Timberborn\Timberborn_Data\Managed')">C:\Program Files (x86)\Steam\steamapps\common\Timberborn</TimberbornInstall>
+    <TimberbornInstall Condition="'$(TimberbornInstall)' == '' And Exists('C:\Program Files\Steam\steamapps\common\Timberborn\Timberborn_Data\Managed')">C:\Program Files\Steam\steamapps\common\Timberborn</TimberbornInstall>
+    <TimberbornInstall Condition="'$(TimberbornInstall)' == '' And Exists('D:\SteamLibrary\steamapps\common\Timberborn\Timberborn_Data\Managed')">D:\SteamLibrary\steamapps\common\Timberborn</TimberbornInstall>
+    <TimberbornInstall Condition="'$(TimberbornInstall)' == '' And Exists('E:\SteamLibrary\steamapps\common\Timberborn\Timberborn_Data\Managed')">E:\SteamLibrary\steamapps\common\Timberborn</TimberbornInstall>
+
+    <!-- On non-Windows (e.g. Proton), a common layout: -->
+    <TimberbornInstall Condition="'$(TimberbornInstall)' == '' And Exists('$(HOME)/.steam/steam/steamapps/common/Timberborn/Timberborn_Data/Managed')">$(HOME)/.steam/steam/steamapps/common/Timberborn</TimberbornInstall>
+
+    <TimberbornManagedDir>$(TimberbornInstall)\Timberborn_Data\Managed</TimberbornManagedDir>
+  </PropertyGroup>
+
+  <Target Name="_CheckTimberbornInstall" BeforeTargets="ResolveAssemblyReferences"
+          Condition="!Exists('$(TimberbornManagedDir)')">
+    <Error Text="Timberborn install not found. Set the TIMBERBORN_DIR environment variable (or pass -p:TimberbornInstall=&quot;...&quot;) to the folder that contains Timberborn_Data. Tried: '$(TimberbornManagedDir)'." />
+  </Target>
+</Project>
