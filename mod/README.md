@@ -1,17 +1,15 @@
 # More More More Performance! (T3MP)
 
-**A real, algorithmic speedup for Timberborn — not a speed multiplier, not a
-benchmark tool.** It rebuilds the simulation's heaviest CPU hot paths so large
-late-game colonies and fast-forward actually keep up, while producing the
-**exact same colony** as vanilla.
+**A real, algorithmic speedup for Timberborn — not a speed multiplier.** It
+rebuilds the simulation's heaviest CPU hot paths so large late-game colonies and
+fast-forward actually keep up, while producing the **exact same colony** as
+vanilla.
 
 - **~1.5x** faster simulation, always on (measured per full in-game day on a
   large colony, so day/night load is averaged out).
 - **~1.75x** with the optional Shift+P render-skip turbo.
 - **Behavior-identical to vanilla** — pathfinding, reservations, inventories and
-  water are never skipped or approximated. Same result, every time: **no farmer
-  bugs, no save risk.**
-- **Actively maintained** for the current game version.
+  water are never skipped or approximated. Same result, every time.
 
 ## What it is (and isn't)
 
@@ -21,8 +19,8 @@ attacks the other side: it makes each simulation tick **cheaper to compute**, so
 raising the speed (with the base game controls or any speed mod) actually
 delivers instead of grinding to a halt. Pair it with your favorite speed mod.
 
-It is **not** a benchmark/diagnostic tool and it does **not** change any game
-behavior — it just does the same math with far less overhead.
+It does **not** change any game behavior — it just does the same math with far
+less overhead.
 
 ## Two features
 
@@ -38,10 +36,12 @@ behavior — it just does the same math with far less overhead.
    change the tick rate, it just darkens the screen. Press Shift+P again to turn
    rendering back on.
 
-A live simulation tick-rate meter (e.g. `SIM 28.30 ticks/s`) is shown
-bottom-right whenever the mod is active. It keeps updating during a Shift+P
-blackout, so you can confirm the simulation is still running while the screen is
-dark.
+A live speed meter is shown bottom-right whenever the mod is active:
+`rSPD/iSPD` — the real vs. ideal speed multiple (real = what you are actually
+getting, ideal = what the game is trying to run after its population throttle) —
+and `UPS` (simulation updates/ticks per second). It keeps updating during a
+Shift+P blackout, so you can confirm the simulation is still running while the
+screen is dark.
 
 ## Install
 
@@ -53,15 +53,14 @@ dark.
 ## 日本語
 
 **シミュレーション自体を速くする、本物の最適化 mod です（速度倍率を変えるもの
-でも、計測ツールでもありません）。** Timberborn の重い CPU 処理を作り替えて、
+ではありません）。** Timberborn の重い CPU 処理を作り替えて、
 大規模な終盤コロニーや高速再生が**本当に速く回る**ようにします。結果はバニラと
 **完全に同じ**です。
 
 - **常時約 1.5 倍**（大規模コロニーで、ゲーム内 1 日単位で計測。昼夜の負荷差を平均化）
 - **Shift+P のターボで約 1.75 倍**
 - **挙動はバニラと完全一致** — 経路・予約・在庫・水を一切省略・近似しません。
-  だから結果は毎回同じ＝**農夫バグやセーブ破損の心配なし**
-- **現行バージョンをメンテ中**
+  だから結果は毎回同じ
 
 他の速度 mod は「倍率」を上げますが、上げるほどカクつきます（シミュが CPU 律速
 のため）。この mod は逆側、**1 tick あたりの計算を軽くする**ので、（本体の速度
@@ -74,6 +73,8 @@ dark.
   計算律速まで押し上げているときだけ tick が上がり（+10〜18%）、通常速度では
   tick は変わりません。もう一度 Shift+P で描画に戻ります。
 
-右下に tick レート計（例 `SIM 28.30 ticks/s`）を表示。暗転中も更新され続けます。
+右下に速度メーターを表示：`rSPD/iSPD`（実際／理想の倍速。実際＝出ている倍速、
+理想＝人口スロットル補正後にゲームが出そうとしている倍速）と `UPS`（1秒あたりの
+tick 数）。暗転中も更新され続けます。
 
 **導入**：1) **Harmony**（必須）を入れる → 2) ゲーム内 Mod Manager で有効化して再起動。

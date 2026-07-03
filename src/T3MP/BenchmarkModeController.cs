@@ -56,6 +56,10 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     private bool _blackoutWasActive;
     private bool _autoForceOptimizedApplied;
     private float _gameSceneEnteredRealtime = -1f;
+    // True only while the actual game scene (buildIndex 2) is active. The
+    // controller is DontDestroyOnLoad, so without this the speed meter would keep
+    // drawing on the main menu / loading screens after leaving a game.
+    private bool _inGameScene;
 
     public static void Install()
     {
@@ -139,6 +143,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     private void Update()
     {
         var now = Time.realtimeSinceStartup;
+        _inGameScene = SceneManager.GetActiveScene().buildIndex == 2;
         var elapsedSinceLastUpdate = now - _lastUpdateRealtime;
         var managedMemory = GC.GetTotalMemory(false);
         var gc0 = GC.CollectionCount(0);
@@ -482,6 +487,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     private void UpdateSpeedupOverlayUi()
     {
         var show = BenchmarkSettings.EnableSpeedupOverlay &&
+            _inGameScene &&
             _currentMode == BenchmarkMode.Optimized &&
             _speedupInitialized;
         if (!show)
@@ -529,6 +535,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     {
         // IMGUI fallback, used only if the UI Toolkit overlay is unavailable.
         if (!BenchmarkSettings.EnableSpeedupOverlay ||
+            !_inGameScene ||
             _currentMode != BenchmarkMode.Optimized ||
             !_speedupInitialized ||
             _speedupUsingGameUi)
