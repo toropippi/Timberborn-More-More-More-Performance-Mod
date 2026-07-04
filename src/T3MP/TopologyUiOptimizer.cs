@@ -158,6 +158,52 @@ internal static class TopologyUiOptimizer
         CurrentlyHighlighted.Clear();
     }
 
+    // --- 1b. Mechanical highlight refresh coalescing ----------------------
+    // While dragging a gear preview along a network, the preview alternates
+    // between connected and disconnected, so even the diff refresh repaints
+    // the whole network on every flip (~25-30ms on 1643 nodes, up to ~14x/s
+    // measured in manual play). Coalesce dirty refreshes to one per interval;
+    // the deferred dirty is never lost, so the final state is always painted.
+
+    private static FieldInfo? _highlightDirtyField;
+    private static float _nextAllowedHighlightRefreshRealtime;
+    private static bool _highlightDeferredDirty;
+
+    public static void BeforeHighlightLateUpdate(object service)
+    {
+        _highlightDirtyField ??= service.GetType().GetField("_dirty", BindingFlags.Instance | BindingFlags.NonPublic);
+        if (_highlightDirtyField is null)
+        {
+            return;
+        }
+
+        _highlightDeferredDirty = false;
+        if (!(bool)_highlightDirtyField.GetValue(service))
+        {
+            return;
+        }
+
+        var now = Time.realtimeSinceStartup;
+        if (now < _nextAllowedHighlightRefreshRealtime)
+        {
+            _highlightDirtyField.SetValue(service, false);
+            _highlightDeferredDirty = true;
+        }
+        else
+        {
+            _nextAllowedHighlightRefreshRealtime = now + BenchmarkSettings.TopoHighlightMinRefreshIntervalSeconds;
+        }
+    }
+
+    public static void AfterHighlightLateUpdate(object service)
+    {
+        if (_highlightDirtyField is not null && _highlightDeferredDirty)
+        {
+            _highlightDeferredDirty = false;
+            _highlightDirtyField.SetValue(service, true);
+        }
+    }
+
     // --- 2. Path overlay rebuild throttle --------------------------------
 
     private sealed class DrawerThrottleState
@@ -249,7 +295,16 @@ internal static class TopologyUiOptimizer
             }
         }
 
-        if (unchanged && now - state.LastFullRunRealtime < BenchmarkSettings.TopoPreviewRefreshIntervalSeconds)
+        var sinceFullRun = now - state.LastFullRunRealtime;
+        if (unchanged && sinceFullRun < BenchmarkSettings.TopoPreviewRefreshIntervalSeconds)
+        {
+            return false;
+        }
+
+        // Changed placements (dragging): cap the full-run rate too. Do NOT
+        // update LastPlacements here, so the pending change keeps requesting
+        // a run until the interval opens up.
+        if (!unchanged && sinceFullRun < BenchmarkSettings.TopoPreviewDragMinIntervalSeconds)
         {
             return false;
         }

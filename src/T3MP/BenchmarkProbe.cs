@@ -2324,7 +2324,19 @@ internal static class BenchmarkProbe
             ("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer", "LateUpdate"),
             ("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer", "UpdateAllNodes"),
             ("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer", "UpdateDrawers"),
-            ("Timberborn.BlockObjectTools.PreviewPlacer", "ShowPreviews")
+            ("Timberborn.BlockObjectTools.PreviewPlacer", "ShowPreviews"),
+            // Attribution for the RoadFlowFieldGenerator.FillFlowField storms:
+            // which caller actually triggers the full-district refills.
+            ("Timberborn.Navigation.PathfindingService", "FindInstantRoadPath"),
+            ("Timberborn.Navigation.PathfindingService", "FindRoadPathCached"),
+            ("Timberborn.Navigation.PathfindingService", "TryFillRoadFlowField"),
+            ("Timberborn.Navigation.RoadNavigationRangeService", "GetNodesInRange"),
+            ("Timberborn.Navigation.RoadNavigationRangeService", "GetPreviewNodesInRange"),
+            // Attribution INSIDE a full ShowPreviews run (up to 19ms in
+            // manual play): navmesh recalcs, validation, model updates.
+            ("Timberborn.BlockSystemNavigation.BlockObjectNavMesh", "RecalculateNavMeshObject"),
+            ("Timberborn.BlockSystem.BlockObjectValidationService", "AreValid"),
+            ("Timberborn.BlockObjectModelSystem.BlockObjectModelController", "UpdateModel")
         };
 
         var patched = 0;
@@ -2427,6 +2439,24 @@ internal static class BenchmarkProbe
             }
         }
 
+        if (BenchmarkSettings.EnableMechanicalHighlightDiff)
+        {
+            var serviceType = FindType("Timberborn.MechanicalSystemHighlighting.MechanicalGraphHighlightService");
+            var lateUpdateMethod = serviceType?.GetMethod("LateUpdateSingleton", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            var prefix = typeof(BenchmarkProbe).GetMethod(nameof(CoalesceHighlightLateUpdateCall), BindingFlags.Static | BindingFlags.NonPublic);
+            var postfix = typeof(BenchmarkProbe).GetMethod(nameof(CoalesceHighlightLateUpdateReturn), BindingFlags.Static | BindingFlags.NonPublic);
+            if (lateUpdateMethod is null || prefix is null || postfix is null)
+            {
+                Debug.LogWarning("[T3MP] Mechanical highlight coalescing targets were not found.");
+            }
+            else if (TryPatch(harmony, patchMethod, lateUpdateMethod,
+                Activator.CreateInstance(harmonyMethodType, prefix),
+                Activator.CreateInstance(harmonyMethodType, postfix)))
+            {
+                patched++;
+            }
+        }
+
         if (BenchmarkSettings.EnablePathOverlayRebuildThrottle)
         {
             var drawerType = FindType("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer");
@@ -2476,6 +2506,16 @@ internal static class BenchmarkProbe
     private static void RecordUnhighlightAllSecondary()
     {
         TopologyUiOptimizer.OnUnhighlightAllSecondary();
+    }
+
+    private static void CoalesceHighlightLateUpdateCall(object __instance)
+    {
+        TopologyUiOptimizer.BeforeHighlightLateUpdate(__instance);
+    }
+
+    private static void CoalesceHighlightLateUpdateReturn(object __instance)
+    {
+        TopologyUiOptimizer.AfterHighlightLateUpdate(__instance);
     }
 
     private static void ThrottleDrawerLateUpdateCall(object __instance)
