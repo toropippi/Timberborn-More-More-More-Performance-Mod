@@ -141,6 +141,9 @@ internal static class BenchmarkProbe
             var patchedMenuBlackoutCancelMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableOptimizedRenderBlackout && BenchmarkSettings.EnableRenderBlackoutToggleKey
                 ? PatchOptionsMenuBlackoutCancel(harmony, harmonyMethodType, patchMethod)
                 : 0;
+            var patchedTopologyUiProbeMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiProbe(harmony, harmonyMethodType, patchMethod) : 0;
+            var patchedTopologyUiScenarioMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiScenario(harmony, harmonyMethodType, patchMethod) : 0;
+            var patchedTopologyUiOptimizerMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiOptimizers(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedEmptyInventoriesFastPathMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchEmptyInventoriesFastPath(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedNavMeshInvalidationMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchNavMeshUpdateInvalidation(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTickMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTickBuckets(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
@@ -166,7 +169,7 @@ internal static class BenchmarkProbe
             var patchedSoundListenerMethods = PatchSoundListenerStaticCameraOptimizer(harmony, harmonyMethodType, patchMethod);
             var patchedPathFollowerGuardMethods = PatchMovementNreGuard(harmony, harmonyType, harmonyMethodType, patchMethod);
 
-            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerNoAnimation={patchedPathFollowerNoAnimationMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, WaterObjectServiceFastSkip={patchedWaterObjectServiceFastSkipMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorThrottle={patchedAnimatorThrottleMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, PathFollowerGuard={patchedPathFollowerGuardMethods}, MenuBlackoutCancel={patchedMenuBlackoutCancelMethods}");
+            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerNoAnimation={patchedPathFollowerNoAnimationMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, WaterObjectServiceFastSkip={patchedWaterObjectServiceFastSkipMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorThrottle={patchedAnimatorThrottleMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, PathFollowerGuard={patchedPathFollowerGuardMethods}, MenuBlackoutCancel={patchedMenuBlackoutCancelMethods}, TopoUiProbe={patchedTopologyUiProbeMethods}, TopoUiScenario={patchedTopologyUiScenarioMethods}, TopoUiOptimizer={patchedTopologyUiOptimizerMethods}");
         }
         catch (Exception exception)
         {
@@ -2289,6 +2292,237 @@ internal static class BenchmarkProbe
         return TryPatch(harmonyInstance, patchMethod, targetMethod, Activator.CreateInstance(harmonyMethodType, prefix), null) ? 1 : 0;
     }
 
+    // Stopwatch probes around the topology-UI hot paths identified in the
+    // gear/path placement-lag investigation (see TopologyUiProbe).
+    private static int PatchTopologyUiProbe(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        if (!BenchmarkSettings.EnableTopologyUiProbe)
+        {
+            return 0;
+        }
+
+        var prefix = typeof(BenchmarkProbe).GetMethod(nameof(RecordTopologyUiCall), BindingFlags.Static | BindingFlags.NonPublic);
+        var postfix = typeof(BenchmarkProbe).GetMethod(nameof(RecordTopologyUiReturn), BindingFlags.Static | BindingFlags.NonPublic);
+        if (prefix is null || postfix is null)
+        {
+            Debug.LogWarning("[T3MP] Topology UI probe patch methods were not found.");
+            return 0;
+        }
+
+        var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, prefix);
+        var postfixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, postfix);
+        var sites = new (string TypeName, string MethodName)[]
+        {
+            ("Timberborn.Navigation.DistrictMap", "RecalculateRoadFlowFields"),
+            ("Timberborn.Navigation.DistrictMap", "AssignDistrictToRoadMap"),
+            ("Timberborn.Navigation.DistrictRoadFlowFieldGenerator", "FillFlowFieldUpToDistance"),
+            ("Timberborn.Navigation.RoadSpillFlowFieldGenerator", "FillFlowFieldUpToDistance"),
+            ("Timberborn.Navigation.RoadFlowFieldGenerator", "FillFlowField"),
+            ("Timberborn.Navigation.NavMeshUpdater", "ApplyPreviewChanges"),
+            ("Timberborn.MechanicalSystemHighlighting.MechanicalGraphIterator", "Iterate"),
+            ("Timberborn.MechanicalSystemHighlighting.MechanicalGraphHighlightService", "RefreshHighlight"),
+            ("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer", "LateUpdate"),
+            ("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer", "UpdateAllNodes"),
+            ("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer", "UpdateDrawers"),
+            ("Timberborn.BlockObjectTools.PreviewPlacer", "ShowPreviews")
+        };
+
+        var patched = 0;
+        foreach (var (typeName, methodName) in sites)
+        {
+            var targetType = FindType(typeName);
+            if (targetType is null)
+            {
+                Debug.LogWarning($"[T3MP] Topology UI probe target type was not found: {typeName}");
+                continue;
+            }
+
+            var found = false;
+            foreach (var method in targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+                         .Where(method => method.Name == methodName && !method.IsAbstract && !method.ContainsGenericParameters))
+            {
+                found = true;
+                if (TryPatch(harmony, patchMethod, method, prefixHarmonyMethod, postfixHarmonyMethod))
+                {
+                    patched++;
+                }
+            }
+
+            if (!found)
+            {
+                Debug.LogWarning($"[T3MP] Topology UI probe target method was not found: {typeName}.{methodName}");
+            }
+        }
+
+        return patched;
+    }
+
+    // Singleton/instance capture + driver installation for the automated
+    // '-benchTopoUi' selection scenario (see TopologyUiScenario).
+    private static int PatchTopologyUiScenario(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        if (!BenchmarkSettings.BenchTopoUiRequested)
+        {
+            return 0;
+        }
+
+        var patched = 0;
+        patched += PatchScenarioCapture(harmony, harmonyMethodType, patchMethod,
+            "Timberborn.SelectionSystem.EntitySelectionService", "Load", nameof(RecordEntitySelectionServiceForScenario));
+        patched += PatchScenarioCapture(harmony, harmonyMethodType, patchMethod,
+            "Timberborn.MechanicalSystem.MechanicalGraphRegistry", "Load", nameof(RecordMechanicalGraphRegistryForScenario));
+        patched += PatchScenarioCapture(harmony, harmonyMethodType, patchMethod,
+            "Timberborn.BuildingsNavigation.PathRangeDrawer", "Awake", nameof(RecordPathRangeDrawerForScenario));
+
+        if (patched > 0)
+        {
+            TopologyUiScenario.Install();
+        }
+
+        return patched;
+    }
+
+    private static int PatchScenarioCapture(
+        object harmony,
+        Type harmonyMethodType,
+        MethodInfo patchMethod,
+        string typeName,
+        string methodName,
+        string postfixName)
+    {
+        var targetType = FindType(typeName);
+        var targetMethod = targetType?.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+            .FirstOrDefault(method => method.Name == methodName && method.GetParameters().Length == 0);
+        var postfix = typeof(BenchmarkProbe).GetMethod(postfixName, BindingFlags.Static | BindingFlags.NonPublic);
+        if (targetMethod is null || postfix is null)
+        {
+            Debug.LogWarning($"[T3MP] Topology UI scenario capture target was not found: {typeName}.{methodName}");
+            return 0;
+        }
+
+        return TryPatch(harmony, patchMethod, targetMethod, null, Activator.CreateInstance(harmonyMethodType, postfix)) ? 1 : 0;
+    }
+
+    // UI-only topology optimizations (see TopologyUiOptimizer).
+    private static int PatchTopologyUiOptimizers(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        var patched = 0;
+
+        if (BenchmarkSettings.EnableMechanicalHighlightDiff)
+        {
+            var serviceType = FindType("Timberborn.MechanicalSystemHighlighting.MechanicalGraphHighlightService");
+            var refreshMethod = serviceType?.GetMethod("RefreshHighlight", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            var refreshPrefix = typeof(BenchmarkProbe).GetMethod(nameof(SkipVanillaRefreshHighlight), BindingFlags.Static | BindingFlags.NonPublic);
+            var highlighterType = FindType("Timberborn.SelectionSystem.Highlighter");
+            var unhighlightAllMethod = highlighterType?.GetMethod("UnhighlightAllSecondary", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+            var unhighlightAllPostfix = typeof(BenchmarkProbe).GetMethod(nameof(RecordUnhighlightAllSecondary), BindingFlags.Static | BindingFlags.NonPublic);
+            if (refreshMethod is null || refreshPrefix is null || unhighlightAllMethod is null || unhighlightAllPostfix is null)
+            {
+                Debug.LogWarning("[T3MP] Mechanical highlight diff targets were not found.");
+            }
+            else if (TryPatch(harmony, patchMethod, unhighlightAllMethod, null, Activator.CreateInstance(harmonyMethodType, unhighlightAllPostfix)) &&
+                TryPatch(harmony, patchMethod, refreshMethod, Activator.CreateInstance(harmonyMethodType, refreshPrefix), null))
+            {
+                patched += 2;
+            }
+        }
+
+        if (BenchmarkSettings.EnablePathOverlayRebuildThrottle)
+        {
+            var drawerType = FindType("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer");
+            var lateUpdateMethod = drawerType?.GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            var prefix = typeof(BenchmarkProbe).GetMethod(nameof(ThrottleDrawerLateUpdateCall), BindingFlags.Static | BindingFlags.NonPublic);
+            var postfix = typeof(BenchmarkProbe).GetMethod(nameof(ThrottleDrawerLateUpdateReturn), BindingFlags.Static | BindingFlags.NonPublic);
+            if (lateUpdateMethod is null || prefix is null || postfix is null)
+            {
+                Debug.LogWarning("[T3MP] Path overlay throttle targets were not found.");
+            }
+            else if (TryPatch(harmony, patchMethod, lateUpdateMethod,
+                Activator.CreateInstance(harmonyMethodType, prefix),
+                Activator.CreateInstance(harmonyMethodType, postfix)))
+            {
+                patched++;
+            }
+        }
+
+        if (BenchmarkSettings.EnablePreviewPlacerSkip)
+        {
+            var placerType = FindType("Timberborn.BlockObjectTools.PreviewPlacer");
+            var showMethod = placerType?.GetMethod("ShowPreviews", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+            var showPrefix = typeof(BenchmarkProbe).GetMethod(nameof(SkipUnchangedShowPreviews), BindingFlags.Static | BindingFlags.NonPublic);
+            var invalidatePostfix = typeof(BenchmarkProbe).GetMethod(nameof(InvalidatePreviewPlacerCache), BindingFlags.Static | BindingFlags.NonPublic);
+            var hideMethod = placerType?.GetMethod("HideAllPreviews", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+            var buildableMethod = placerType?.GetMethod("GetBuildableCoordinates", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+            if (showMethod is null || showPrefix is null || invalidatePostfix is null || hideMethod is null || buildableMethod is null)
+            {
+                Debug.LogWarning("[T3MP] Preview placer skip targets were not found.");
+            }
+            else if (TryPatch(harmony, patchMethod, hideMethod, null, Activator.CreateInstance(harmonyMethodType, invalidatePostfix)) &&
+                TryPatch(harmony, patchMethod, buildableMethod, null, Activator.CreateInstance(harmonyMethodType, invalidatePostfix)) &&
+                TryPatch(harmony, patchMethod, showMethod, Activator.CreateInstance(harmonyMethodType, showPrefix), null))
+            {
+                patched += 3;
+            }
+        }
+
+        return patched;
+    }
+
+    private static bool SkipVanillaRefreshHighlight(object __instance)
+    {
+        return TopologyUiOptimizer.RefreshHighlightDiff(__instance);
+    }
+
+    private static void RecordUnhighlightAllSecondary()
+    {
+        TopologyUiOptimizer.OnUnhighlightAllSecondary();
+    }
+
+    private static void ThrottleDrawerLateUpdateCall(object __instance)
+    {
+        TopologyUiOptimizer.BeforeDrawerLateUpdate(__instance);
+    }
+
+    private static void ThrottleDrawerLateUpdateReturn(object __instance)
+    {
+        TopologyUiOptimizer.AfterDrawerLateUpdate(__instance);
+    }
+
+    private static bool SkipUnchangedShowPreviews(object __instance, IEnumerable<Timberborn.Coordinates.Placement> placements)
+    {
+        return TopologyUiOptimizer.ShouldRunShowPreviews(__instance, placements);
+    }
+
+    private static void InvalidatePreviewPlacerCache(object __instance)
+    {
+        TopologyUiOptimizer.OnHideAllPreviews(__instance);
+    }
+
+    private static void RecordTopologyUiCall(object __instance, MethodBase __originalMethod, out TopologyUiProbe.State __state)
+    {
+        TopologyUiProbe.Begin(__instance, __originalMethod, out __state);
+    }
+
+    private static void RecordTopologyUiReturn(TopologyUiProbe.State __state)
+    {
+        TopologyUiProbe.End(in __state);
+    }
+
+    private static void RecordEntitySelectionServiceForScenario(object __instance)
+    {
+        TopologyUiScenario.RecordEntitySelectionService(__instance);
+    }
+
+    private static void RecordMechanicalGraphRegistryForScenario(object __instance)
+    {
+        TopologyUiScenario.RecordMechanicalGraphRegistry(__instance);
+    }
+
+    private static void RecordPathRangeDrawerForScenario(object __instance)
+    {
+        TopologyUiScenario.RecordPathRangeDrawerOwner(__instance);
+    }
+
     private static void CancelRenderBlackoutOnOptionsMenu()
     {
         BenchmarkModeController.CancelRenderBlackoutForMenu();
@@ -4192,6 +4426,7 @@ internal static class BenchmarkProbe
     {
         SpeedManagerProbe.Record(__instance);
         AutoRuntimeControl.TryResumeGameSpeed(__instance);
+        TopologyUiScenario.RecordSpeedManager(__instance);
     }
 
     private static void RecordTimeSpeedButtonGroup(object __instance)

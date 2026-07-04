@@ -8,6 +8,13 @@ internal static class BenchmarkSettings
     public static readonly bool BenchAutoUltraRequested =
         HasCommandLineFlag("-benchAutoUltra");
 
+    // Automated topology-UI investigation runs pass '-benchTopoUi'. The mod
+    // then installs the selection scenario driver (TopologyUiScenario):
+    // forced speed x50, rendered (no blackout), alternating gear-network /
+    // path-network selections picked deterministically from the save.
+    public static readonly bool BenchTopoUiRequested =
+        HasCommandLineFlag("-benchTopoUi");
+
     private static bool HasCommandLineFlag(string flag)
     {
         var arguments = System.Environment.GetCommandLineArgs();
@@ -141,6 +148,39 @@ internal static class BenchmarkSettings
     public static readonly bool EnableNoActionCooldown = false;
     public static readonly bool EnableMechanicalGraphLoadBatching = true;
     public static readonly bool EnableTickDispatchOptimizer = true;
+
+    // Measurement-only stopwatch probes around the road/mechanical topology
+    // UI hot paths (district flow-field recomputes, road overlay rebuild,
+    // mechanical network DFS + rehighlight, preview placer). One of the
+    // patched methods (DistrictMap.RecalculateRoadFlowFields) is also on the
+    // sim pathfinding hot path, so SET FALSE FOR SHIPPED BUILDS and never
+    // compare absolute ticks/s from probe-enabled runs.
+    public static readonly bool EnableTopologyUiProbe = true;
+    public const float TopoUiReportWindowSeconds = 5f;
+    // UI-only fixes for the topology hot paths (see TopologyUiOptimizer):
+    // diff-based mechanical network highlight instead of unhighlight-all +
+    // re-highlight-all on every refresh (46ms -> DFS-only on a 1643-node
+    // network); rate-limited district path overlay rebuilds (33ms per rebuild,
+    // vanilla re-fires it on ANY instant-navmesh change while selected);
+    // preview placer skip when the placement list did not change since the
+    // last recent full pass (vanilla re-adds previews to the preview navmesh
+    // EVERY frame while a tool is held, even with the cursor still).
+    // Placement validation itself is untouched - only visuals refresh less.
+    public static readonly bool EnableMechanicalHighlightDiff = true;
+    public static readonly bool EnablePathOverlayRebuildThrottle = true;
+    public static readonly bool EnablePreviewPlacerSkip = true;
+    public const float TopoPathOverlayMinRebuildIntervalSeconds = 0.35f;
+    public const float TopoPreviewRefreshIntervalSeconds = 0.25f;
+    // Scenario pacing (see TopologyUiScenario). Settle covers post-load
+    // stabilization before the first selection; hold keeps each selection
+    // active long enough to catch event-driven re-highlights at speed.
+    public const float TopoUiScenarioSettleSeconds = 20f;
+    public const float TopoUiScenarioHoldSeconds = 5f;
+    public const float TopoUiScenarioIdleSeconds = 2f;
+    public const int TopoUiScenarioCycles = 5;
+    // x50: with the population throttle removed this is comfortably past the
+    // CPU ceiling on the test save (user rule: x7 is NOT CPU-bound, x50 is).
+    public const float TopoUiTargetSpeed = 50f;
 
     // Deliberately behavior-CHANGING (user decision 2026-07-04: ships ON):
     // remove the vanilla population speed throttle (GameSpeedThrottler scales
