@@ -1,45 +1,44 @@
 # Promotion drafts — Reddit / X
 
-Rules these drafts follow: player language only (speed buttons, not internal
-multipliers), measured numbers only (~1.5x always-on, x3.4-vs-x7 throttle,
-~2.4x Shift+P), the throttle removal is disclosed as the one deliberate
-behavior change. Replace `[STEAM_URL]` / `[MODIO_URL]` after publishing.
+Rules these drafts follow: **the hook is the speedup — this mod is an
+optimization mod first**; the throttle removal is a supporting feature, never
+the headline. Player language only (speed buttons, not internal multipliers),
+measured numbers only (~1.5x always-on, x3.4-vs-x7 throttle, ~2.4x Shift+P).
+Replace `[STEAM_URL]` / `[MODIO_URL]` after publishing.
 
 ## Reddit — r/Timberborn
 
-**Attach:** `assets/graph_throttle_bars.png` + `assets/graph_measured.png`
+**Attach:** `assets/graph_measured.png` + `assets/graph_throttle_bars.png`
 (graphs carry the post; the thumbnail is store-only).
 
 **Title:**
 
-> PSA: at 200+ beavers the max speed button secretly runs at less than half
-> speed. I made a free mod that fixes that — and speeds up the sim ~1.5x on top
+> I rebuilt Timberborn's simulation hot paths: a free performance mod that
+> runs the sim ~1.5x faster always-on, up to ~2.4x with turbo (measured)
 
 **Body:**
 
-> While profiling Timberborn for a performance mod I found something the game
-> never tells you: a hidden speed throttle tied to population. As your colony
-> grows from 30 to 200 beavers, every speed above x1 is quietly scaled down.
-> At 200+ beavers the fastest speed button delivers **x3.4 instead of x7**
-> (measured in-game, and confirmed in the game's code). That's why big
-> colonies "feel sluggish" even when your PC is fine.
+> Big colonies get slow because the simulation is CPU-bound on one thread. I
+> profiled the actual hot paths (per-entity tick dispatch, need/behavior
+> selection, travel-distance estimation) and rebuilt them to compute the
+> **same result faster** — this is a real algorithmic speedup, not a speed
+> multiplier. The result: **More More More Performance! (T3MP)**.
 >
-> So I made **More More More Performance! (T3MP)**. What it does:
->
-> 1. **Always-on optimizations** — the simulation itself runs up to **~1.5x
->    faster** the moment your save loads. Measured per full in-game day on a
->    large late-game colony, same colony and same days as the vanilla run.
-> 2. **Removes the hidden population throttle** — the speed you press is the
->    speed you get. This is the mod's one deliberate behavior change, and
->    honestly the change you feel the most.
-> 3. **Optional Shift+P turbo** — for leaving a heavy colony fast-forwarding
+> 1. **Always-on optimizations** — the simulation runs up to **~1.5x faster**
+>    the moment your save loads. Measured per full in-game day on a large
+>    late-game colony, same colony and same days as the vanilla run.
+> 2. **Optional Shift+P turbo** — for leaving a heavy colony fast-forwarding
 >    unattended: skips rendering/animation work, up to **~2.4x vanilla**
 >    measured. Press Shift+P again to go back to normal.
+> 3. **Bonus:** while profiling I found vanilla quietly throttles your speed
+>    buttons as population grows (at 200+ beavers the fastest button delivers
+>    x3.4 instead of x7 — measured). The mod removes that hidden throttle, so
+>    the speed you press is the speed you get. This is the mod's one
+>    deliberate behavior change.
 >
-> Everything except the throttle removal is a pure optimization: the sim
-> computes the **same** results as vanilla (verified by running the same
-> colony with and without the mod). Works fine together with speed mods.
-> Requires the Harmony mod. Tested on game 1.1.0.2.
+> Everything else is a pure optimization: the sim computes the **same**
+> results as vanilla (verified by running the same colony with and without
+> the mod). Works fine together with speed mods. Requires the Harmony mod.
 >
 > Steam Workshop: [STEAM_URL]
 > mod.io: [MODIO_URL]
@@ -49,19 +48,19 @@ behavior change. Replace `[STEAM_URL]` / `[MODIO_URL]` after publishing.
 
 ## X (Twitter) — Japanese
 
-**Attach:** `assets/thumbnail_v5.png` or `assets/graph_throttle_bars.png`
+**Attach:** `assets/thumbnail_v5.png` or `assets/graph_measured.png`
 
-> 【Timberborn】人口が増えると速度ボタンがこっそり減速してるの、知ってました？
-> 200匹コロニーだと最速ボタンはx7のはずが実際はx3.4しか出ません（実測）。
-> これを撤廃し、さらにシミュ自体を最大2.4倍まで高速化する無料MODを公開しました。
+> 【Timberborn】大コロニーで重くなるシミュレーション本体を高速化する無料MODを
+> 公開しました。導入するだけで常時約1.5倍、ターボ(Shift+P)で最大2.4倍（実測）。
+> おまけに、人口が増えると速度ボタンがこっそり減速される隠し仕様も撤廃します。
 > Steam / mod.io で「More More More Performance!」で検索
 > [STEAM_URL]
 
 ## X (Twitter) — English
 
-> Timberborn quietly slows your speed buttons as your colony grows — at 200+
-> beavers the max button delivers x3.4, not x7 (measured). My free mod removes
-> that hidden throttle and makes the sim itself up to 2.4x faster.
+> I made a free Timberborn performance mod: the simulation itself runs ~1.5x
+> faster always-on, up to 2.4x with turbo (measured on a large late-game
+> colony). It also removes the hidden speed-button throttle at high population.
 > "More More More Performance!" on Steam Workshop & mod.io
 > [STEAM_URL]
 

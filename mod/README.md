@@ -1,18 +1,20 @@
 # More More More Performance! (T3MP)
 
-**A real, algorithmic speedup for Timberborn — not a speed multiplier.** It
-rebuilds the simulation's heaviest CPU hot paths so large late-game colonies and
-fast-forward actually keep up, while producing the **exact same colony** as
-vanilla.
+**A performance mod: it makes the game itself run faster — not a speed
+multiplier.** It makes the simulation's heaviest CPU work much cheaper, so large
+late-game colonies and fast-forward actually keep up, while producing the
+**exact same colony** as vanilla.
 
-- **The hidden population speed throttle is removed** — on a big colony,
-  vanilla turns your x3 into ~x1.8 and x7 into ~x3.4 without telling you; with
-  this mod the speed you press is the speed you get. In practice this is the
-  change you feel the most.
-- **~1.5x** faster simulation, always on (measured per full in-game day on a
-  large colony, so day/night load is averaged out).
-- **Up to ~2.4x** with the optional Shift+P animation-skip turbo (the exact
-  factor depends on your CPU).
+- **~1.5x faster simulation, always on** — install it, load your save, done
+  (measured per full in-game day on a large colony, so day/night load is
+  averaged out).
+- **Up to ~2.4x with the Shift+P turbo** — skips animations while you
+  fast-forward; press Shift+P again to go back (the exact factor depends on
+  your CPU).
+- **Hidden speed-button slowdown removed** — as your colony grows, vanilla
+  quietly weakens the speed buttons: on a big colony the fastest button runs at
+  **less than half** of its real speed. With this mod the speed you press is
+  the speed you get.
 - **Behavior-identical to vanilla** — pathfinding, reservations, inventories and
   water are never skipped or approximated. Same result, every time.
 
@@ -31,12 +33,12 @@ less overhead.
 
 1. **Always-on optimizations** — enabled automatically as soon as a save
    loads. Nothing to configure.
-2. **Population speed throttle removed** — vanilla quietly shrinks any speed
-   above x1 as the colony grows: `effective = 1 + (pressed − 1) × scale`, with
-   the scale falling from 1.0 at ≤30 beavers to 0.4 at ≥200. So on a big
-   colony x3 really runs x1.8, x7 runs x3.4, x50 runs x20.6. With this mod
-   the speed you press is the speed you get. (This is the mod's one deliberate
-   behavior change; a flag in the source disables it.)
+2. **Hidden speed-button slowdown removed** — vanilla quietly weakens every
+   speed above x1 as the colony grows; the bigger the colony, the less your
+   speed buttons actually deliver (less than half on a 200+ beaver colony).
+   With this mod the speed you press is the speed you get. (This is the mod's
+   one deliberate behavior change; a flag in the source disables it. The exact
+   vanilla formula is documented in the GitHub repo.)
 3. **Turbo rendering (Shift+P)** — for leaving a heavy colony fast-forwarding
    unattended. Toggles a render blackout + animation thinning: the screen goes
    dark (one frame is drawn every 100 ticks so you can watch progress) and the
@@ -72,16 +74,17 @@ correctness is unaffected either way.
 
 ## 日本語
 
-**シミュレーション自体を速くする、本物の最適化 mod です（速度倍率を変えるもの
-ではありません）。** Timberborn の重い CPU 処理を作り替えて、
-大規模な終盤コロニーや高速再生が**本当に速く回る**ようにします。結果はバニラと
-**完全に同じ**です。
+**高速化 MOD です。ゲームの計算を軽くして、ゲームそのものを速くします（速度
+倍率を変える MOD ではありません）。** 大規模な終盤コロニーや高速再生が本当に
+速く回るようになり、結果はバニラと**完全に同じ**です。
 
-- **隠れ人口速度制限を撤廃** — バニラは大コロニーで x3 を実質 x1.8、x7 を x3.4 に
-  勝手に縮めます（無告知）。本 mod では押した速度がそのまま出ます。
-  **体感ではこれが一番効きます**
-- **常時約 1.5 倍**（大規模コロニーで、ゲーム内 1 日単位で計測。昼夜の負荷差を平均化）
-- **Shift+P のアニメーション skip で最大約 2.4 倍**（CPU に依存）
+- **常時、シミュレーションが約 1.5 倍**：導入してセーブを読み込むだけ
+  （大規模コロニーで、ゲーム内 1 日単位で計測。昼夜の負荷差を平均化）
+- **Shift+P のターボで最大約 2.4 倍**：アニメーションを省略して早送り。
+  もう一度押すと元に戻ります（CPU に依存）
+- **速度ボタンの隠し減速を撤廃**：バニラは人口が増えると速度ボタンの効きを
+  こっそり弱めます。大きなコロニーでは、最速ボタンを押しても**本来の半分以下**
+  しか出ません。本 MOD では押した速度がそのまま出ます
 - **挙動はバニラと完全一致** — 経路・予約・在庫・水を一切省略・近似しません。
   だから結果は毎回同じ
 
@@ -91,10 +94,10 @@ correctness is unaffected either way.
 速度 mod と併用できます。
 
 - **常時最適化**：セーブ読み込みと同時に自動で有効。設定不要。
-- **人口速度制限の撤廃**：バニラは「1倍を超えた分」をコロニー人口で縮小します
-  （実効 = 1 + (押した速度 − 1) × 係数、係数は30人以下で1.0→200人以上で0.4）。
-  つまり大コロニーでは x3→実質x1.8、x7→x3.4、x50→x20.6。本modでは押した速度が
-  そのまま通ります。（これが本mod唯一の意図的な挙動変更です。ソースのフラグで無効化可能）
+- **速度ボタンの隠し減速の撤廃**：バニラは人口が増えるほど、1倍を超える速度の
+  効きをこっそり弱めます（200匹以上のコロニーでは最速ボタンでも本来の半分以下）。
+  本modでは押した速度がそのまま通ります。（これが本mod唯一の意図的な挙動変更です。
+  ソースのフラグで無効化可能。バニラの正確な式は GitHub リポジトリに記載）
 - **ターボ描画（Shift+P）**：重いコロニーを放置で早送りするとき用。画面を暗転
   ＋アニメ間引きして、描画に使っていた時間をシミュに回します（超高速時に
   バニラ比最大約2.4倍を計測）。通常速度では tick は変わりません。
