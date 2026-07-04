@@ -171,6 +171,16 @@ internal static class BenchmarkSettings
     public static readonly bool EnablePreviewPlacerSkip = true;
     public const float TopoPathOverlayMinRebuildIntervalSeconds = 0.35f;
     public const float TopoPreviewRefreshIntervalSeconds = 0.25f;
+    // Coalesce mechanical highlight refreshes: dragging a gear preview flips
+    // the network between connected/disconnected, repainting ~all nodes per
+    // flip even with the diff. One refresh per interval bounds that cost;
+    // deferred dirt is re-armed so the final state always gets painted.
+    public const float TopoHighlightMinRefreshIntervalSeconds = 0.25f;
+    // While dragging (placements changing every tile), still cap full
+    // ShowPreviews runs: the ghost trails the cursor by at most this long.
+    // Clicking always validates fresh placements, so nothing can be
+    // mis-placed - only the ghost visuals update at this rate.
+    public const float TopoPreviewDragMinIntervalSeconds = 0.1f;
     // Scenario pacing (see TopologyUiScenario). Settle covers post-load
     // stabilization before the first selection; hold keeps each selection
     // active long enough to catch event-driven re-highlights at speed.
