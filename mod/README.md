@@ -14,9 +14,8 @@ late-game colonies and fast-forward actually keep up, while producing the
 - **Hidden speed-button slowdown removed** — as your colony grows, vanilla
   quietly weakens the speed buttons: on a big colony the fastest button runs at
   **less than half** of its real speed. With this mod the speed you press is
-  the speed you get: even a big colony feels as **smooth and fast as your
-  first days on a fresh map** again. Consider it a small act of rebellion
-  against a hidden mechanic that quietly made the game feel worse.
+  the speed you get: even on a medium or large colony, **the speed feel of
+  your first days on a fresh map comes right back**.
 - **Behavior-identical to vanilla** — pathfinding, reservations, inventories and
   water are never skipped or approximated. Same result, every time.
 
@@ -106,8 +105,7 @@ correctness is unaffected either way.
 - **速度ボタンの隠し減速を撤廃**：バニラは人口が増えると速度ボタンの効きを
   こっそり弱めます。大きなコロニーでは、最速ボタンを押しても**本来の半分以下**
   しか出ません。本 MOD では押した速度がそのまま出て、中規模・大規模コロニー
-  でも**始めたばかりの頃のあのヌルヌルした速度感**が戻ってきます。プレイ体験を
-  こっそり悪化させていた隠し仕様への、ささやかな反抗です
+  でも**ゲームを始めたばかりの頃の速度感がそのまま戻ってきます**
 - **挙動はバニラと完全一致** — 経路・予約・在庫・水を一切省略・近似しません。
   だから結果は毎回同じ
 
