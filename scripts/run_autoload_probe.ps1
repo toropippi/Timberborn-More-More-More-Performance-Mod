@@ -13,6 +13,7 @@ param(
     [switch] $AutoConfirmMods,
     [switch] $SkipModManager,
     [switch] $BenchAutoUltra,
+    [switch] $BenchTopoUi,
     [switch] $AutoResumeAfterLoad,
     [switch] $SkipAutoResumeAfterLoad,
     [switch] $ForceOptimizedAfterLoad,
@@ -207,6 +208,12 @@ $arguments = if ($UseSteamLaunchOptions) {
         # '-benchAutoUltra' and auto-applies ultra speed + render blackout after
         # load. Normal play uses the manual speed keys instead.
         $argList += '-benchAutoUltra'
+    }
+    if ($BenchTopoUi) {
+        # Opt-in for the topology-UI investigation harness. The mod reads
+        # '-benchTopoUi' and runs the automated gear/path selection scenario
+        # at forced speed x50, rendered (see TopologyUiScenario).
+        $argList += '-benchTopoUi'
     }
     $argList -join ' '
 }
