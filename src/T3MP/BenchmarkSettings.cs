@@ -1,4 +1,4 @@
-namespace T3MP;
+﻿namespace T3MP;
 
 internal static class BenchmarkSettings
 {
@@ -141,6 +141,42 @@ internal static class BenchmarkSettings
     public static readonly bool EnableNoActionCooldown = false;
     public static readonly bool EnableMechanicalGraphLoadBatching = true;
     public static readonly bool EnableTickDispatchOptimizer = true;
+
+    // Deliberately behavior-CHANGING (user decision 2026-07-04: ships ON):
+    // remove the vanilla population speed throttle (GameSpeedThrottler scales
+    // requested speed down to 40% between 30 and 200 beavers). Forces the
+    // scale to 1 so the requested speed applies raw - pressing x3 gives x3 on
+    // any colony size. Only changes the achievable speed cap, never the
+    // per-tick simulation. Disclosed in the store description / README.
+    public static readonly bool EnableGameSpeedThrottlerRemoval = true;
+
+    // Skip applying Timbermesh animation POSES for animators whose renderers
+    // are not visible to any camera (Renderer.isVisible includes shadow
+    // rendering, so this is visually lossless). Animation time and
+    // PlayingFinished keep advancing normally; a dirty flag re-applies the
+    // pose when the renderer becomes visible again.
+    public static readonly bool EnableInvisibleAnimatorPoseSkip = true;
+
+    // Replace the reflective closure EventBus.RegisterMethod builds per
+    // [OnEvent] handler (method.Invoke + new object[1] on EVERY delivery)
+    // with a compiled delegate. Same handlers, same order, same exceptions;
+    // large win on entity spawns and save-load (EntityInitializedEvent is
+    // ~26k posts x ~680 handlers).
+    public static readonly bool EnableEventBusFastDelegates = true;
+
+    // Mirror GameObject.activeInHierarchy into a dense bitmask via an
+    // ActiveInHierarchySentinel MonoBehaviour on each tickable entity (Unity's
+    // synchronous OnEnable/OnDisable callbacks keep the bit exact at visit
+    // time). Replaces ~18M native activeInHierarchy calls per 20s in the flat
+    // sweep; measured ~+8% ticks at the compute ceiling.
+    public static readonly bool EnableActiveInHierarchyMirror = true;
+
+    // Flat-array bucket dispatch (v2 of the tick dispatch optimizer): per bucket,
+    // all tickable components are cached in one flat array swept front-to-back,
+    // with enabled state mirrored in a bitmask updated from
+    // EnableComponent/DisableComponent hooks. Falls back to the per-entity
+    // cached path when false (kept for A/B ablation).
+    public static readonly bool EnableFlatTickDispatch = true;
     public static readonly bool EnableMainLoopProfiler = false;
     public static readonly bool EnableMainLoopTypeProfiler = false;
     public static readonly bool EnableMainLoopUpdateTypeProfiler = false;
@@ -261,8 +297,29 @@ internal static class BenchmarkSettings
     // Disabled by default. Fastest-speed benchmarks must use TimeSpeedButtonGroup
     // and confirm SpeedManager currentSpeed=7 in logs.
     public const float AutoResumeTargetSpeed = 7f;
-    public const float OptimizedUltraSpeed = 50f;
-    public const float AutoForceOptimizedAfterLoadSeconds = 5f;
+    // Smooth frame pacing v1: cap the game time the sim ticker consumes per
+    // rendered frame in visible high-speed play (measured fps 0.8 -> ~8).
+    // DEFAULT OFF: v1 breaks the frame-time == sim-time invariant, so
+    // per-frame systems (MovementAnimator) receive more game time than the
+    // sim advanced and character models can run ahead of their path and
+    // visibly "walk in place" (user-reported at x99; the sim state itself
+    // stays correct - verified with a stuck-walker probe). A v2 should govern
+    // Time.timeScale itself down to the achievable speed instead, which keeps
+    // every clock consistent by construction.
+    public static readonly bool EnableSmoothFramePacing = false;
+    public const float SmoothFramePacingMinTimeScale = 5f;
+    public const float SmoothFramePacingMaxDeltaTime = 0.05f;
+    // While smooth frame pacing is active, sample Timbermesh animations only
+    // every Nth rendered frame (1 = vanilla full rate). Movement stays
+    // per-frame smooth; only the skeletal pose rate drops.
+    public const int SmoothPacingAnimationFrameStride = 2;
+    // Benchmark-only (-benchAutoUltra) requested speed. NOTE: the vanilla
+    // GameSpeedThrottler rescales by population (~660 beavers on n10c =>
+    // factor 0.4): requested 50 => effective 20.6 => ideal 34.33 ticks/s,
+    // which the optimized build now REACHES (speed-limited, not CPU-limited).
+    // 99 gives effective 40.2 => ideal 67 ticks/s so benchmarks stay CPU-bound.
+    public const float OptimizedUltraSpeed = 99f;
+    public const float AutoForceOptimizedAfterLoadSeconds = 0f;
     public const float WalkerDistanceCacheQuantizeStep = 1f;
     public const float PickBestTravelCacheQuantizeStep = 1f;
     public static readonly string OptimizedImplementationName = "release-v1";

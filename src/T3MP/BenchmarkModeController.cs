@@ -61,6 +61,35 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     // drawing on the main menu / loading screens after leaving a game.
     private bool _inGameScene;
 
+    // Vanilla ships Time.maximumDeltaTime = 0.6 s: one rendered frame may
+    // swallow up to 0.6 real-seconds x timeScale of simulation, so at high
+    // effective speed the frame rate collapses to ~1 fps while the sim
+    // monopolizes the main thread. Smooth frame pacing caps the game time the
+    // SIM TICKER consumes per rendered frame while the game runs fast in
+    // VISIBLE mode (a Harmony prefix clamps Ticker.Update's deltaTime — the
+    // same drop-the-surplus semantics as the vanilla maximumDeltaTime clamp,
+    // which cannot itself be lowered because Unity refuses values below
+    // fixedDeltaTime). Tick logic is untouched; the achieved speed remains
+    // honestly visible on the rSPD meter. Normal play (x1-3) never reaches
+    // the threshold and is unaffected.
+    private static bool _smoothFramePacingActive;
+
+    public static bool SmoothFramePacingActive => _smoothFramePacingActive;
+
+    private void ApplySmoothFramePacing()
+    {
+        var shouldApply = BenchmarkSettings.EnableSmoothFramePacing &&
+            _inGameScene &&
+            _currentMode == BenchmarkMode.Optimized &&
+            !RenderBlackoutActive &&
+            Time.timeScale >= BenchmarkSettings.SmoothFramePacingMinTimeScale;
+        if (shouldApply != _smoothFramePacingActive)
+        {
+            _smoothFramePacingActive = shouldApply;
+            Debug.Log($"[T3MP] Smooth frame pacing {(shouldApply ? "ON" : "OFF")}: capSeconds={BenchmarkSettings.SmoothFramePacingMaxDeltaTime:F3} timeScale={Time.timeScale:F1}");
+        }
+    }
+
     public static void Install()
     {
         if (_instance is not null)
@@ -144,6 +173,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     {
         var now = Time.realtimeSinceStartup;
         _inGameScene = SceneManager.GetActiveScene().buildIndex == 2;
+        ApplySmoothFramePacing();
         var elapsedSinceLastUpdate = now - _lastUpdateRealtime;
         var managedMemory = GC.GetTotalMemory(false);
         var gc0 = GC.CollectionCount(0);

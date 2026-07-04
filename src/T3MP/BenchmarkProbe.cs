@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -123,6 +123,21 @@ internal static class BenchmarkProbe
             var patchedRangedEffectSubjectThrottleMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchRangedEffectSubjectThrottle(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedContaminationApplierThrottleMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchContaminationApplierThrottle(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedTickDispatchMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTickDispatchOptimizer(harmony, harmonyMethodType, patchMethod) : 0;
+            var patchedFlatDispatchHookMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableTickDispatchOptimizer && BenchmarkSettings.EnableFlatTickDispatch
+                ? PatchFlatTickDispatchHooks(harmony, harmonyMethodType, patchMethod)
+                : 0;
+            var patchedSmoothPacingMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableSmoothFramePacing
+                ? PatchSmoothFramePacing(harmony, harmonyMethodType, patchMethod)
+                : 0;
+            var patchedEventBusFastDelegateMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableEventBusFastDelegates
+                ? PatchEventBusFastDelegates(harmony, harmonyMethodType, patchMethod)
+                : 0;
+            var patchedThrottlerRemovalMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableGameSpeedThrottlerRemoval
+                ? PatchGameSpeedThrottlerRemoval(harmony, harmonyMethodType, patchMethod)
+                : 0;
+            var patchedInvisiblePoseSkipMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableInvisibleAnimatorPoseSkip
+                ? PatchInvisibleAnimatorPoseSkip(harmony, harmonyMethodType, patchMethod)
+                : 0;
             var patchedEmptyInventoriesFastPathMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchEmptyInventoriesFastPath(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedNavMeshInvalidationMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchNavMeshUpdateInvalidation(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTickMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTickBuckets(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
@@ -2077,6 +2092,212 @@ internal static class BenchmarkProbe
         return !TickDispatchOptimizer.TryTickBucket(__instance);
     }
 
+    // ------------------------------------------------------------------
+    // Flat tick dispatch hooks: keep the per-bucket flat component snapshot
+    // (TickDispatchOptimizer) exact. EnableComponent/DisableComponent are the
+    // only writers of BaseComponent.Enabled, so mirroring transitions into the
+    // snapshot bitmask makes the sweep read the same value vanilla would read
+    // at visit time. Bucket Add/Remove invalidates the affected snapshot.
+    // ------------------------------------------------------------------
+    private static int PatchFlatTickDispatchHooks(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        var patched = 0;
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
+        var enableTarget = typeof(Timberborn.BaseComponentSystem.BaseComponent).GetMethod("EnableComponent", flags);
+        var disableTarget = typeof(Timberborn.BaseComponentSystem.BaseComponent).GetMethod("DisableComponent", flags);
+        var enablePrefix = typeof(BenchmarkProbe).GetMethod(nameof(OnBaseComponentEnabledPrefix), BindingFlags.Static | BindingFlags.NonPublic);
+        var disablePrefix = typeof(BenchmarkProbe).GetMethod(nameof(OnBaseComponentDisabledPrefix), BindingFlags.Static | BindingFlags.NonPublic);
+        if (enableTarget is not null && enablePrefix is not null)
+        {
+            patched += TryPatch(harmonyInstance, patchMethod, enableTarget, Activator.CreateInstance(harmonyMethodType, enablePrefix), null) ? 1 : 0;
+        }
+
+        if (disableTarget is not null && disablePrefix is not null)
+        {
+            patched += TryPatch(harmonyInstance, patchMethod, disableTarget, Activator.CreateInstance(harmonyMethodType, disablePrefix), null) ? 1 : 0;
+        }
+
+        var bucketType = FindType("Timberborn.TickSystem.TickableEntityBucket") ??
+            TryLoadAssemblyAndFindType("Timberborn.TickSystem", "Timberborn.TickSystem.TickableEntityBucket");
+        if (bucketType is not null)
+        {
+            var addTarget = bucketType.GetMethod("Add", flags);
+            var removeTarget = bucketType.GetMethod("Remove", flags);
+            var addPrefix = typeof(BenchmarkProbe).GetMethod(nameof(OnTickableBucketAddPrefix), BindingFlags.Static | BindingFlags.NonPublic);
+            var removePrefix = typeof(BenchmarkProbe).GetMethod(nameof(OnTickableBucketRemovePrefix), BindingFlags.Static | BindingFlags.NonPublic);
+            if (addTarget is not null && addPrefix is not null)
+            {
+                patched += TryPatch(harmonyInstance, patchMethod, addTarget, Activator.CreateInstance(harmonyMethodType, addPrefix), null) ? 1 : 0;
+            }
+
+            if (removeTarget is not null && removePrefix is not null)
+            {
+                patched += TryPatch(harmonyInstance, patchMethod, removeTarget, Activator.CreateInstance(harmonyMethodType, removePrefix), null) ? 1 : 0;
+            }
+        }
+
+        // The flat dispatch path is only exact when ALL four hooks are live.
+        TickDispatchOptimizer.FlatHooksInstalled = patched == 4;
+        if (!TickDispatchOptimizer.FlatHooksInstalled)
+        {
+            Debug.LogWarning($"[T3MP] Flat tick dispatch hooks incomplete ({patched}/4); falling back to per-entity dispatch.");
+        }
+
+        return patched;
+    }
+
+    private static void OnBaseComponentEnabledPrefix(Timberborn.BaseComponentSystem.BaseComponent __instance)
+    {
+        if (!__instance.Enabled && __instance is Timberborn.TickSystem.TickableComponent tickable)
+        {
+            TickDispatchOptimizer.NotifyComponentEnabledChanged(tickable, true);
+        }
+    }
+
+    private static void OnBaseComponentDisabledPrefix(Timberborn.BaseComponentSystem.BaseComponent __instance)
+    {
+        if (__instance.Enabled && __instance is Timberborn.TickSystem.TickableComponent tickable)
+        {
+            TickDispatchOptimizer.NotifyComponentEnabledChanged(tickable, false);
+        }
+    }
+
+    private static void OnTickableBucketAddPrefix(object __instance, Timberborn.TickSystem.TickableEntity tickableEntity)
+    {
+        // Attach the activeInHierarchy sentinel HERE: during save-load this
+        // spreads the ~26k AddComponent calls over the loading phase (a
+        // lazily-attached burst in the first sweep froze the game ~10 s),
+        // and afterwards it is one call per born/built entity.
+        TickDispatchOptimizer.AttachSentinelForEntity(tickableEntity);
+        TickDispatchOptimizer.NotifyBucketMembershipChanged(__instance, true);
+    }
+
+    private static void OnTickableBucketRemovePrefix(object __instance)
+    {
+        TickDispatchOptimizer.NotifyBucketMembershipChanged(__instance, false);
+    }
+
+    // ------------------------------------------------------------------
+    // Smooth frame pacing: caps the game time the sim ticker consumes per
+    // rendered frame in visible high-speed play (see BenchmarkModeController
+    // for the rationale). Same drop-the-surplus semantics as the vanilla
+    // maximumDeltaTime clamp, scoped to the ticker only.
+    // ------------------------------------------------------------------
+    private static int PatchSmoothFramePacing(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        var targetMethod = typeof(Timberborn.TickSystem.Ticker).GetMethod("Update", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+        var prefix = typeof(BenchmarkProbe).GetMethod(nameof(ClampTickerDeltaForSmoothPacing), BindingFlags.Static | BindingFlags.NonPublic);
+        if (targetMethod is null || prefix is null)
+        {
+            Debug.LogWarning("[T3MP] Smooth frame pacing target was not found.");
+            return 0;
+        }
+
+        return TryPatch(harmonyInstance, patchMethod, targetMethod, Activator.CreateInstance(harmonyMethodType, prefix), null) ? 1 : 0;
+    }
+
+    private static void ClampTickerDeltaForSmoothPacing(ref float deltaTimeInSeconds)
+    {
+        if (!BenchmarkModeController.SmoothFramePacingActive)
+        {
+            return;
+        }
+
+        var cap = BenchmarkSettings.SmoothFramePacingMaxDeltaTime * Time.timeScale;
+        if (deltaTimeInSeconds > cap)
+        {
+            deltaTimeInSeconds = cap;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // EventBus fast delegates: replace the reflective per-delivery closure
+    // built by EventBus.RegisterMethod with a compiled delegate (see
+    // EventBusFastDelegates for exactness notes).
+    // ------------------------------------------------------------------
+    private static int PatchEventBusFastDelegates(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        var eventBusType = FindType("Timberborn.SingletonSystem.EventBus");
+        var targetMethod = eventBusType?.GetMethod("RegisterMethod", BindingFlags.Instance | BindingFlags.NonPublic);
+        var prefix = typeof(BenchmarkProbe).GetMethod(nameof(MaybeRegisterEventBusMethodFast), BindingFlags.Static | BindingFlags.NonPublic);
+        if (targetMethod is null || prefix is null)
+        {
+            Debug.LogWarning("[T3MP] EventBus fast delegate target was not found.");
+            return 0;
+        }
+
+        return TryPatch(harmonyInstance, patchMethod, targetMethod, Activator.CreateInstance(harmonyMethodType, prefix), null) ? 1 : 0;
+    }
+
+    private static bool MaybeRegisterEventBusMethodFast(object __instance, object subscriber, MethodInfo method)
+    {
+        return EventBusFastDelegates.TryRegisterMethod(__instance, subscriber, method);
+    }
+
+    // ------------------------------------------------------------------
+    // Optional population-speed-throttle removal: vanilla GameSpeedThrottler
+    // scales the requested game speed down to 40% as the population grows
+    // (30 -> 200 beavers). With the flag on, the scale is forced to 1 so the
+    // requested speed applies raw. Deliberately behavior-CHANGING (it alters
+    // the achievable speed cap, never the per-tick simulation), so it ships
+    // OFF by default.
+    // ------------------------------------------------------------------
+    private static int PatchGameSpeedThrottlerRemoval(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        var speedManagerType = FindType("Timberborn.TimeSystem.SpeedManager");
+        var targetMethod = speedManagerType?
+            .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+            .FirstOrDefault(method => method.Name == "ChangeSpeedScale" && method.GetParameters().Length == 1);
+        var prefix = typeof(BenchmarkProbe).GetMethod(nameof(ForceUnthrottledSpeedScale), BindingFlags.Static | BindingFlags.NonPublic);
+        if (targetMethod is null || prefix is null)
+        {
+            Debug.LogWarning("[T3MP] Speed throttler removal target was not found.");
+            return 0;
+        }
+
+        return TryPatch(harmonyInstance, patchMethod, targetMethod, Activator.CreateInstance(harmonyMethodType, prefix), null) ? 1 : 0;
+    }
+
+    private static void ForceUnthrottledSpeedScale(ref float speedScale)
+    {
+        speedScale = 1f;
+    }
+
+    // ------------------------------------------------------------------
+    // Invisible-animator pose skip (see InvisibleAnimatorPoseSkip).
+    // ------------------------------------------------------------------
+    private static int PatchInvisibleAnimatorPoseSkip(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        var animatorType = FindType("Timberborn.TimbermeshAnimations.TimbermeshAnimator");
+        var poseMethod = animatorType?.GetMethod("UpdateAnimationUpdaters", BindingFlags.Instance | BindingFlags.NonPublic);
+        var updateMethod = animatorType?.GetMethod("UpdateAnimation", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+        var posePrefix = typeof(BenchmarkProbe).GetMethod(nameof(MaybeApplyAnimatorPose), BindingFlags.Static | BindingFlags.NonPublic);
+        var updatePrefix = typeof(BenchmarkProbe).GetMethod(nameof(RepairFinishedAnimatorPose), BindingFlags.Static | BindingFlags.NonPublic);
+        var playingFinishedProperty = animatorType?.GetProperty("PlayingFinished", BindingFlags.Instance | BindingFlags.Public);
+        if (poseMethod is null || updateMethod is null || posePrefix is null || updatePrefix is null || playingFinishedProperty is null)
+        {
+            Debug.LogWarning("[T3MP] Invisible-animator pose skip targets were not found.");
+            return 0;
+        }
+
+        InvisibleAnimatorPoseSkip.Initialize(poseMethod, playingFinishedProperty);
+        var patched = 0;
+        patched += TryPatch(harmonyInstance, patchMethod, poseMethod, Activator.CreateInstance(harmonyMethodType, posePrefix), null) ? 1 : 0;
+        patched += TryPatch(harmonyInstance, patchMethod, updateMethod, Activator.CreateInstance(harmonyMethodType, updatePrefix), null) ? 1 : 0;
+        return patched;
+    }
+
+    private static bool MaybeApplyAnimatorPose(object __instance)
+    {
+        return InvisibleAnimatorPoseSkip.ShouldApplyPose((Component)__instance);
+    }
+
+    private static void RepairFinishedAnimatorPose(object __instance)
+    {
+        InvisibleAnimatorPoseSkip.RepairFinishedPose((Component)__instance);
+    }
+
     private static int PatchWaterObjectServiceFastSkip(object harmony, Type harmonyType, Type harmonyMethodType, MethodInfo patchMethod)
     {
         if (!BenchmarkSettings.EnableWaterObjectServiceFastSkip)
@@ -2655,6 +2876,20 @@ internal static class BenchmarkProbe
         if (mode == BenchmarkMode.Optimized &&
             !BenchmarkModeController.RenderBlackoutActive)
         {
+            // Visible high-speed play (smooth frame pacing active): sample the
+            // Timbermesh animations only every Nth rendered frame. Movement
+            // stays per-frame smooth (MovementAnimator moves transforms); only
+            // the skeletal pose updates at a lower rate, which is imperceptible
+            // at the speeds where pacing engages. Normal speeds never reach
+            // here with pacing active, so regular play keeps full-rate
+            // animation.
+            if (BenchmarkModeController.SmoothFramePacingActive &&
+                BenchmarkSettings.SmoothPacingAnimationFrameStride > 1 &&
+                Time.frameCount % BenchmarkSettings.SmoothPacingAnimationFrameStride != 0)
+            {
+                return false;
+            }
+
             if (BenchmarkSettings.EnableDetailedBenchmarkTiming)
             {
                 AnimatorRegistryProfiler.Begin(__instance, mode, true, out __state);
@@ -3435,7 +3670,6 @@ internal static class BenchmarkProbe
         int liftingCapacity,
         IEnumerable<Yielder> yielders,
         ref YielderSearchResult __result,
-        object[] __args,
         out TimedCallState __state)
     {
         _yielderFinderDepth++;
@@ -3450,7 +3684,7 @@ internal static class BenchmarkProbe
                 true,
                 mode,
                 Stopwatch.GetTimestamp(),
-                TryGetCount(__args.Length > 3 ? __args[3] : null));
+                TryGetCount(yielders));
         }
 
         if (__originalMethod.Name == "FindLivingYielderWithoutAccessible"
@@ -3605,7 +3839,10 @@ internal static class BenchmarkProbe
         __state = new TimedCallState(true, mode, Stopwatch.GetTimestamp(), 0);
     }
 
-    private static void RecordInRangeReturn(TimedCallState __state, object[] __args, bool __result)
+    // No object[] __args here: Harmony materializes it (allocation + boxing)
+    // on EVERY call even though it was only read in dev detailed-timing mode.
+    // The candidate count is reported as 0 in that dev-only log instead.
+    private static void RecordInRangeReturn(TimedCallState __state, bool __result)
     {
         if (!__state.Active)
         {
@@ -3615,7 +3852,7 @@ internal static class BenchmarkProbe
         BenchmarkMetrics.RecordInRangeYieldersCall(
             __state.Mode,
             Stopwatch.GetTimestamp() - __state.StartTimestamp,
-            TryGetCount(__args.Length > 0 ? __args[0] : null),
+            0,
             __result);
     }
 
@@ -3754,9 +3991,15 @@ internal static class BenchmarkProbe
         return !AnimatedPathFollowerHorizontalOptimizer.TryPlaceBetweenCorners(__instance, previousCorner, nextCorner, timeInSeconds);
     }
 
+    // NOTE: parameters are bound by NAME to the vanilla
+    // ActionDurationCalculator.TravelTimeBetween(Vector3 actionPosition,
+    // Vector3 position). Do NOT use object[] __args here: Harmony would
+    // allocate an object[] and box both Vector3 on every call (~110 B), which
+    // measured ~38 MB per 20 s of pure GC garbage on a large colony.
     private static bool RecordNeedBehaviorTravelEstimateCall(
         object __instance,
-        object[] __args,
+        Vector3 actionPosition,
+        Vector3 position,
         ref float __result,
         out NeedBehaviorTravelOptimizer.TravelCallState __state)
     {
@@ -3765,21 +4008,13 @@ internal static class BenchmarkProbe
             NeedBehaviorDecisionSampler.RecordTravelEstimateCall();
         }
 
-        if (__args.Length < 2 ||
-            __args[0] is not Vector3 start ||
-            __args[1] is not Vector3 destination)
-        {
-            __state = default;
-            return true;
-        }
-
-        if (NeedBehaviorTravelOptimizer.TryHandleTravelTimeDistanceBased(__instance, start, destination, ref __result))
+        if (NeedBehaviorTravelOptimizer.TryHandleTravelTimeDistanceBased(__instance, actionPosition, position, ref __result))
         {
             __state = default;
             return false;
         }
 
-        return NeedBehaviorTravelOptimizer.TryHandleTravelTime(start, destination, ref __result, out __state);
+        return NeedBehaviorTravelOptimizer.TryHandleTravelTime(actionPosition, position, ref __result, out __state);
     }
 
     private static void RecordNeedBehaviorTravelEstimateReturn(NeedBehaviorTravelOptimizer.TravelCallState __state, float __result)
@@ -3810,9 +4045,17 @@ internal static class BenchmarkProbe
         }
     }
 
+    // NOTE: parameters are bound by NAME to the vanilla
+    // DistrictNeedBehaviorService.PickBestAction(NeedManager needManager,
+    // Vector3 essentialActionPosition, float hoursLeftForNonEssentialActions,
+    // NeedFilter needFilter). Do NOT use object[] __args (allocates + boxes
+    // per call, see RecordNeedBehaviorTravelEstimateCall).
     private static bool RecordNeedBehaviorPickBestCall(
         object __instance,
-        object[] __args,
+        Timberborn.NeedSystem.NeedManager needManager,
+        Vector3 essentialActionPosition,
+        float hoursLeftForNonEssentialActions,
+        NeedFilter needFilter,
         ref AppraisedAction? __result,
         out NeedBehaviorDecisionSampler.PickBestCallState __state)
     {
@@ -3826,7 +4069,13 @@ internal static class BenchmarkProbe
         }
 
         NeedBehaviorTravelOptimizer.BeginPickBest();
-        return DistrictNeedBehaviorDirectOptimizer.TryPickBest(__instance, __args, ref __result);
+        return DistrictNeedBehaviorDirectOptimizer.TryPickBest(
+            __instance,
+            needManager,
+            essentialActionPosition,
+            hoursLeftForNonEssentialActions,
+            needFilter,
+            ref __result);
     }
 
     private static void RecordNeedBehaviorPickBestReturn(NeedBehaviorDecisionSampler.PickBestCallState __state, object? __result)
@@ -4217,6 +4466,7 @@ internal static class BenchmarkProbe
     {
         ExecutorTickProfiler.End(__state, __result);
     }
+
 
     private static bool MaybeRunDistrictResourceCounterTick(object __instance)
     {
