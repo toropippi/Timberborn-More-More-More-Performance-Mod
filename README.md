@@ -27,6 +27,24 @@ depends on the save, the current colony load, and CPU. (An earlier heavier state
 measured ~2x when vanilla bottomed near 14 ticks/s; that is a peak, not the
 steady-state average.)
 
+**v1.1** adds a flat tick-dispatch rewrite, an activeInHierarchy mirror, and a
+Harmony-boxing fix that roughly halves the GC garbage rate (fewer multi-second
+GC freezes). Re-measured per full in-game day on matched game days (n10c,
+effective x40.2, warmup day excluded):
+
+| condition | ticks/s | vs unmodded | notes |
+| --- | --- | --- | --- |
+| unmodded (vanilla) | 19.58 | 1.00x | |
+| v1.1 always-on (rendered) | 29.69 | **1.52x** | measured with experimental frame pacing on; ~33.5 in 20 s windows without it |
+| v1.1 + Shift+P blackout | 47.18 | **2.41x** | "up to"; depends on CPU and the population speed cap |
+
+(An experimental smooth-frame-pacing mode — ~8 fps rendered high-speed play
+instead of ~1 fps — exists behind `EnableSmoothFramePacing` but ships **off**:
+its v1 lets character models visually run ahead of the simulation at very high
+speed. See `docs/optimization-history.md`.) The full change-by-change record
+with per-item measurements and leave-one-out instructions is in
+[`docs/optimization-history.md`](docs/optimization-history.md).
+
 ## Install
 
 1. Install the **Harmony** mod (required).
@@ -36,7 +54,7 @@ steady-state average.)
 
 ## Controls
 
-- Optimizations turn on automatically a few seconds after a save loads — no
+- Optimizations turn on automatically as soon as a save loads — no
   action needed. The mod does not change game speed; use the game's speed
   controls or any speed mod.
 - **Shift+P**: toggle turbo rendering — a render blackout + animation thinning

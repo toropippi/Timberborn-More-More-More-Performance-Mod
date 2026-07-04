@@ -58,7 +58,13 @@ internal static class DistrictNeedBehaviorDirectOptimizer
     private static long _results;
     private static long _nullResults;
 
-    public static bool TryPickBest(object instance, object[] args, ref AppraisedAction? result)
+    public static bool TryPickBest(
+        object instance,
+        NeedManager needManager,
+        Vector3 essentialActionPosition,
+        float hoursLeftForNonEssentialActions,
+        NeedFilter needFilter,
+        ref AppraisedAction? result)
     {
         if (!BenchmarkSettings.EnableDistrictNeedBehaviorDirectOptimizer ||
             BenchmarkModeController.CurrentMode != BenchmarkMode.Optimized)
@@ -70,18 +76,6 @@ internal static class DistrictNeedBehaviorDirectOptimizer
         if (recordMetrics)
         {
             Interlocked.Increment(ref _calls);
-        }
-        if (args.Length != 4 ||
-            args[0] is not NeedManager needManager ||
-            args[1] is not Vector3 essentialActionPosition ||
-            args[2] is not float hoursLeftForNonEssentialActions ||
-            args[3] is not NeedFilter needFilter)
-        {
-            if (recordMetrics)
-            {
-                Interlocked.Increment(ref _fallbacks);
-            }
-            return true;
         }
 
         if (!TryInitializeReflection(instance.GetType()))

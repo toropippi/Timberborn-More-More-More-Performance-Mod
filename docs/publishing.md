@@ -76,22 +76,27 @@ mod.io) and the Steam Workshop folder.
 > so high game speed and large late-game colonies actually keep up, computing the
 > **same** result faster. On a large late-game test colony the always-on
 > optimizations run the sim about **1.5x** the unmodded rate at the same game
-> speed (measured per full in-game day so day/night load is averaged); with the
-> optional Shift+P turbo it reaches about **1.75x**.
+> speed (measured per full in-game day so day/night load is averaged); with
+> the optional Shift+P turbo it reaches up to about **2.4x** (CPU and
+> population-speed-cap dependent).
 >
-> It does **not** change game speed — keep using the base game's speed buttons or
-> any speed mod you like; this makes those actually deliver instead of
-> stuttering. Behavior-identical to vanilla.
+> **The biggest felt change:** it removes the game's hidden population speed
+> throttle — vanilla quietly shrinks any speed above x1 as your colony grows
+> (on a 200+ colony, x3 really runs x1.8 and x7 runs x3.4, and the game never
+> tells you). With this mod the speed you press is the speed you get. Beyond
+> that it does **not** change game speed — keep using the base game's speed
+> buttons or any speed mod you like; this makes those actually deliver instead
+> of stuttering. All simulation behavior is identical to vanilla.
 >
 > **Two features**
-> - **Always-on optimizations** — turn on automatically a few seconds after a
->   save loads. Nothing to configure.
+> - **Always-on optimizations** — turn on automatically as soon as a save
+>   loads. Nothing to configure.
 > - **Shift+P — turbo rendering (for unattended fast-forward)** — toggles a
 >   render blackout + animation thinning. This only raises the tick rate when
 >   the simulation is already the bottleneck — i.e. when you push the game well
 >   past its normal top speed with a speed mod and the base is big enough that
 >   ticks can't keep up. In that case it reclaims per-frame render time for the
->   sim (measured **+10–18%** at very high speeds on a large base). At the base
+>   sim (measured up to **~2.4x vanilla** at very high speeds on a large base). At the base
 >   game's normal speeds it does **not** change the tick rate (the sim isn't
 >   waiting on rendering), it just darkens the screen — so use it for leaving a
 >   heavy colony fast-forwarding unattended, not for everyday play. The screen
