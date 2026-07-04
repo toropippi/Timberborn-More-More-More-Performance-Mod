@@ -138,6 +138,9 @@ internal static class BenchmarkProbe
             var patchedInvisiblePoseSkipMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableInvisibleAnimatorPoseSkip
                 ? PatchInvisibleAnimatorPoseSkip(harmony, harmonyMethodType, patchMethod)
                 : 0;
+            var patchedMenuBlackoutCancelMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableOptimizedRenderBlackout && BenchmarkSettings.EnableRenderBlackoutToggleKey
+                ? PatchOptionsMenuBlackoutCancel(harmony, harmonyMethodType, patchMethod)
+                : 0;
             var patchedEmptyInventoriesFastPathMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchEmptyInventoriesFastPath(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedNavMeshInvalidationMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchNavMeshUpdateInvalidation(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTickMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTickBuckets(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
@@ -163,7 +166,7 @@ internal static class BenchmarkProbe
             var patchedSoundListenerMethods = PatchSoundListenerStaticCameraOptimizer(harmony, harmonyMethodType, patchMethod);
             var patchedPathFollowerGuardMethods = PatchMovementNreGuard(harmony, harmonyType, harmonyMethodType, patchMethod);
 
-            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerNoAnimation={patchedPathFollowerNoAnimationMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, WaterObjectServiceFastSkip={patchedWaterObjectServiceFastSkipMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorThrottle={patchedAnimatorThrottleMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, PathFollowerGuard={patchedPathFollowerGuardMethods}");
+            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerNoAnimation={patchedPathFollowerNoAnimationMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, WaterObjectServiceFastSkip={patchedWaterObjectServiceFastSkipMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorThrottle={patchedAnimatorThrottleMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, PathFollowerGuard={patchedPathFollowerGuardMethods}, MenuBlackoutCancel={patchedMenuBlackoutCancelMethods}");
         }
         catch (Exception exception)
         {
@@ -2236,12 +2239,12 @@ internal static class BenchmarkProbe
     }
 
     // ------------------------------------------------------------------
-    // Optional population-speed-throttle removal: vanilla GameSpeedThrottler
-    // scales the requested game speed down to 40% as the population grows
-    // (30 -> 200 beavers). With the flag on, the scale is forced to 1 so the
-    // requested speed applies raw. Deliberately behavior-CHANGING (it alters
-    // the achievable speed cap, never the per-tick simulation), so it ships
-    // OFF by default.
+    // Population-speed-throttle removal: vanilla GameSpeedThrottler scales
+    // the requested game speed down (scale 1.0 at <=30 beavers -> 0.4 at
+    // >=200). With the flag on, the scale is forced to 1 so the requested
+    // speed applies raw. Deliberately behavior-CHANGING (it alters the
+    // achievable speed cap, never the per-tick simulation); ships ON by
+    // default and is disclosed in the store description.
     // ------------------------------------------------------------------
     private static int PatchGameSpeedThrottlerRemoval(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
     {
@@ -2262,6 +2265,33 @@ internal static class BenchmarkProbe
     private static void ForceUnthrottledSpeedScale(ref float speedScale)
     {
         speedScale = 1f;
+    }
+
+    // ------------------------------------------------------------------
+    // Shift+P turbo cancellation on the in-game options menu (Esc). The
+    // turbo request lives on a DontDestroyOnLoad controller, so it would
+    // otherwise survive "exit to main menu" and stay active in the next
+    // save that gets loaded. The Esc menu is the only route back to the
+    // main menu, so cancelling on menu open closes that leak (and doubles
+    // as an intuitive "menu = turbo off" behavior).
+    // ------------------------------------------------------------------
+    private static int PatchOptionsMenuBlackoutCancel(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        var optionsBoxType = FindType("Timberborn.OptionsGame.GameOptionsBox");
+        var targetMethod = optionsBoxType?.GetMethod("Show", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+        var prefix = typeof(BenchmarkProbe).GetMethod(nameof(CancelRenderBlackoutOnOptionsMenu), BindingFlags.Static | BindingFlags.NonPublic);
+        if (targetMethod is null || prefix is null)
+        {
+            Debug.LogWarning("[T3MP] Options menu blackout-cancel target was not found.");
+            return 0;
+        }
+
+        return TryPatch(harmonyInstance, patchMethod, targetMethod, Activator.CreateInstance(harmonyMethodType, prefix), null) ? 1 : 0;
+    }
+
+    private static void CancelRenderBlackoutOnOptionsMenu()
+    {
+        BenchmarkModeController.CancelRenderBlackoutForMenu();
     }
 
     // ------------------------------------------------------------------

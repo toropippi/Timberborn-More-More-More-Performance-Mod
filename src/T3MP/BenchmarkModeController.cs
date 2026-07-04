@@ -138,6 +138,29 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Cancels the Shift+P turbo when the in-game options menu (Esc) opens.
+    /// The turbo request is static state on a DontDestroyOnLoad controller, so
+    /// without this it survives "exit to main menu" and follows the player
+    /// into the next save. The Esc menu is the only gate to the main menu, so
+    /// cancelling here guarantees a save never starts blacked out.
+    /// </summary>
+    public static void CancelRenderBlackoutForMenu()
+    {
+        if (!_renderBlackoutRequested)
+        {
+            return;
+        }
+
+        _renderBlackoutRequested = false;
+        if (_instance is not null)
+        {
+            _instance.ApplyFrameRatePolicy();
+        }
+
+        Debug.Log("[T3MP] Turbo rendering (blackout + animation thinning) OFF (options menu opened).");
+    }
+
     private void Awake()
     {
         _currentMode = BenchmarkSettings.ForceOptimizedByDefault ? BenchmarkMode.Optimized : BenchmarkMode.Vanilla;
