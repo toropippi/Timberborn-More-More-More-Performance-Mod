@@ -4467,6 +4467,7 @@ internal static class BenchmarkProbe
         SpeedManagerProbe.Record(__instance);
         AutoRuntimeControl.TryResumeGameSpeed(__instance);
         TopologyUiScenario.RecordSpeedManager(__instance);
+        SmoothTimeScaleGovernor.RecordSpeedManager(__instance);
     }
 
     private static void RecordTimeSpeedButtonGroup(object __instance)

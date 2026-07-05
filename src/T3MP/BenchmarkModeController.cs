@@ -37,6 +37,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     private float _aggregateStartRealtime;
     private float _lastUpdateRealtime;
     private float _lastBlackoutKeyRealtime = -10f;
+    private float _lastSmoothModeKeyRealtime = -10f;
     private long _lastManagedMemory;
     private int _lastGc0;
     private int _lastGc1;
@@ -189,7 +190,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
             CultureInfo.InvariantCulture,
             "[T3MP] Controller installed. build={0}",
             BenchmarkSettings.OptimizedImplementationName));
-        Debug.Log("[T3MP] Optimizations auto-enable after load. Shift+P toggles render blackout + animation thinning. Game speed is left to the base game.");
+        Debug.Log("[T3MP] Optimizations auto-enable after load. Shift+P toggles render blackout + animation thinning. Shift+O toggles smooth mode (fps-priority). Game speed is otherwise left to the base game.");
     }
 
     private void Update()
@@ -234,6 +235,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
 
         HandleHotkeys(now);
         TryAutoForceOptimizedAfterLoad(now);
+        SmoothTimeScaleGovernor.Tick(_inGameScene, RenderBlackoutActive);
         UpdateRenderPeek();
         UpdateSpeedupMeter(now);
         UpdateSpeedupOverlayUi();
@@ -288,8 +290,8 @@ internal sealed class BenchmarkModeController : MonoBehaviour
 
     private void HandleHotkeys(float now)
     {
-        // Shift+P toggles the render blackout + animation thinning. This is the
-        // mod's only hotkey; game speed is left entirely to the base game.
+        // Shift+P toggles the render blackout + animation thinning.
+        // Shift+O toggles the smooth mode (fps-priority timeScale governor).
         var keyboard = Keyboard.current;
         if (BenchmarkSettings.EnableRenderBlackoutToggleKey &&
             keyboard is not null &&
@@ -304,6 +306,18 @@ internal sealed class BenchmarkModeController : MonoBehaviour
                 CultureInfo.InvariantCulture,
                 "[T3MP] Turbo rendering (blackout + animation thinning) {0}.",
                 _renderBlackoutRequested ? "ON" : "OFF"));
+        }
+
+        if (BenchmarkSettings.EnableSmoothTimeScaleGovernor &&
+            keyboard is not null &&
+            now - _lastSmoothModeKeyRealtime >= 0.5f &&
+            keyboard.oKey.wasPressedThisFrame &&
+            (keyboard.leftShiftKey.isPressed || keyboard.rightShiftKey.isPressed) &&
+            !keyboard.leftCtrlKey.isPressed &&
+            !keyboard.rightCtrlKey.isPressed)
+        {
+            _lastSmoothModeKeyRealtime = now;
+            SmoothTimeScaleGovernor.Toggle();
         }
     }
 
