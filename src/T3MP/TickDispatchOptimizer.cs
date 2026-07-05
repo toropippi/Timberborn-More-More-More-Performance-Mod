@@ -664,7 +664,17 @@ internal static class TickDispatchOptimizer
                             if ((enabledBits[k >> 6] & (1UL << (k & 63))) != 0UL)
                             {
                                 componentTicks++;
-                                components[k].Tick();
+                                if (TickHotspotProbe.Enabled)
+                                {
+                                    var probeStart = Stopwatch.GetTimestamp();
+                                    components[k].Tick();
+                                    TickHotspotProbe.Record(
+                                        components[k], Stopwatch.GetTimestamp() - probeStart);
+                                }
+                                else
+                                {
+                                    components[k].Tick();
+                                }
                             }
                         }
                     }
@@ -768,6 +778,11 @@ internal static class TickDispatchOptimizer
         if (fastBuckets % 60000 == 5000)
         {
             Debug.Log($"[T3MP] TickDispatch summary: {GetSummary()}");
+        }
+
+        if (TickHotspotProbe.Enabled)
+        {
+            TickHotspotProbe.MaybeReport();
         }
 
         return true;
