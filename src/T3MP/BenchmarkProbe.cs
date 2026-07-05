@@ -2336,7 +2336,10 @@ internal static class BenchmarkProbe
             // manual play): navmesh recalcs, validation, model updates.
             ("Timberborn.BlockSystemNavigation.BlockObjectNavMesh", "RecalculateNavMeshObject"),
             ("Timberborn.BlockSystem.BlockObjectValidationService", "AreValid"),
-            ("Timberborn.BlockObjectModelSystem.BlockObjectModelController", "UpdateModel")
+            ("Timberborn.BlockObjectModelSystem.BlockObjectModelController", "UpdateModel"),
+            // Overlay rebuild cost split: mesh construction vs the per-tile
+            // connection-key loop (UpdateDrawers total minus Build).
+            ("Timberborn.BuildingsNavigation.PathMeshDrawer", "Build")
         };
 
         var patched = 0;
@@ -2366,7 +2369,23 @@ internal static class BenchmarkProbe
             }
         }
 
+        // Sampled WHO-calls-it attribution for the UpdateModel churn.
+        var modelControllerType = FindType("Timberborn.BlockObjectModelSystem.BlockObjectModelController");
+        var updateModelMethod = modelControllerType?.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+            .FirstOrDefault(method => method.Name == "UpdateModel");
+        var samplerPrefix = typeof(BenchmarkProbe).GetMethod(nameof(RecordModelUpdateSource), BindingFlags.Static | BindingFlags.NonPublic);
+        if (updateModelMethod is not null && samplerPrefix is not null &&
+            TryPatch(harmony, patchMethod, updateModelMethod, Activator.CreateInstance(harmonyMethodType, samplerPrefix), null))
+        {
+            patched++;
+        }
+
         return patched;
+    }
+
+    private static void RecordModelUpdateSource(object __instance)
+    {
+        TopologyUiProbe.SampleModelUpdateSource(__instance);
     }
 
     // Singleton/instance capture + driver installation for the automated
@@ -2475,6 +2494,37 @@ internal static class BenchmarkProbe
             }
         }
 
+        if (BenchmarkSettings.EnablePathOverlayInvalidationFilter)
+        {
+            var invalidatorType = FindType("Timberborn.BuildingsNavigation.PathNavRangeDrawerInvalidator");
+            var targetMethod = invalidatorType?.GetMethod("OnInstantNavMeshUpdated", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            var prefix = typeof(BenchmarkProbe).GetMethod(nameof(FilterOverlayInvalidationCall), BindingFlags.Static | BindingFlags.NonPublic);
+            if (targetMethod is null || prefix is null)
+            {
+                Debug.LogWarning("[T3MP] Overlay invalidation filter targets were not found.");
+            }
+            else if (TryPatch(harmony, patchMethod, targetMethod, Activator.CreateInstance(harmonyMethodType, prefix), null))
+            {
+                patched++;
+            }
+        }
+
+        if (BenchmarkSettings.EnableModelUpdateBatching)
+        {
+            var controllerType = FindType("Timberborn.BlockObjectModelSystem.BlockObjectModelController");
+            var updateModelMethod = controllerType?.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+                .FirstOrDefault(method => method.Name == "UpdateModel");
+            var prefix = typeof(BenchmarkProbe).GetMethod(nameof(DeferModelUpdateCall), BindingFlags.Static | BindingFlags.NonPublic);
+            if (updateModelMethod is null || prefix is null)
+            {
+                Debug.LogWarning("[T3MP] Model update batching targets were not found.");
+            }
+            else if (TryPatch(harmony, patchMethod, updateModelMethod, Activator.CreateInstance(harmonyMethodType, prefix), null))
+            {
+                patched++;
+            }
+        }
+
         if (BenchmarkSettings.EnablePreviewPlacerSkip)
         {
             var placerType = FindType("Timberborn.BlockObjectTools.PreviewPlacer");
@@ -2526,6 +2576,16 @@ internal static class BenchmarkProbe
     private static void ThrottleDrawerLateUpdateReturn(object __instance)
     {
         TopologyUiOptimizer.AfterDrawerLateUpdate(__instance);
+    }
+
+    private static bool DeferModelUpdateCall(object __instance)
+    {
+        return TopologyUiOptimizer.DeferModelUpdate(__instance);
+    }
+
+    private static bool FilterOverlayInvalidationCall(object __instance, Timberborn.Navigation.NavMeshUpdate navMeshUpdate)
+    {
+        return TopologyUiOptimizer.FilterOverlayInvalidation(__instance, navMeshUpdate);
     }
 
     private static bool SkipUnchangedShowPreviews(object __instance, IEnumerable<Timberborn.Coordinates.Placement> placements)

@@ -66,6 +66,10 @@
       <HintPath>$(TimberbornManagedDir)\Timberborn.BuildingsNavigation.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.BlockObjectModelSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.BlockObjectModelSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.BlockSystem">
       <HintPath>$(TimberbornManagedDir)\Timberborn.BlockSystem.dll</HintPath>
       <Private>false</Private>

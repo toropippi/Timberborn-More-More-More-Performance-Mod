@@ -368,6 +368,163 @@ internal static class TopologyUiOptimizer
         }
     }
 
+    // --- 2b. Path overlay invalidation filter -----------------------------
+    // Vanilla PathNavRangeDrawerInvalidator marks EVERY drawer dirty on ANY
+    // instant-navmesh change anywhere on the map. Filter: only mark a drawer
+    // whose drawn road area contains (or neighbors, incl. above/below - the
+    // connection keys look one step out) a changed coordinate. Falls back to
+    // vanilla marking on huge updates or missing reflection members.
+
+    private static FieldInfo? _invalidatorDrawersField;
+    private static FieldInfo? _drawerRoadNodesField;
+    private static MethodInfo? _drawerMarkDirtyMethod;
+    private static int _invalidationFilterErrorLogs;
+
+    private static readonly Vector3Int[] NeighborOffsets =
+    {
+        new Vector3Int(0, 0, 0),
+        new Vector3Int(1, 0, 0),
+        new Vector3Int(-1, 0, 0),
+        new Vector3Int(0, 1, 0),
+        new Vector3Int(0, -1, 0),
+        new Vector3Int(0, 0, 1),
+        new Vector3Int(0, 0, -1)
+    };
+
+    // Returns true when the original (mark everything) must still run.
+    public static bool FilterOverlayInvalidation(object invalidator, Timberborn.Navigation.NavMeshUpdate navMeshUpdate)
+    {
+        try
+        {
+            var changedCoordinates = navMeshUpdate.TerrainCoordinates;
+            if (changedCoordinates.Count == 0 || changedCoordinates.Count > 256)
+            {
+                // No coordinate info (be safe) or a mass update (filtering
+                // would cost more than it saves): vanilla behavior.
+                return true;
+            }
+
+            _invalidatorDrawersField ??= invalidator.GetType().GetField("_districtPathNavRangeDrawers", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (_invalidatorDrawersField?.GetValue(invalidator) is not System.Collections.IEnumerable drawers)
+            {
+                return true;
+            }
+
+            foreach (var drawer in drawers)
+            {
+                _drawerRoadNodesField ??= drawer.GetType().GetField("_roadNodes", BindingFlags.Instance | BindingFlags.NonPublic);
+                _drawerMarkDirtyMethod ??= drawer.GetType().GetMethod("MarkDirty", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                if (_drawerRoadNodesField is null || _drawerMarkDirtyMethod is null)
+                {
+                    return true;
+                }
+
+                var roadNodes = _drawerRoadNodesField.GetValue(drawer) as HashSet<Timberborn.Navigation.WeightedCoordinates>;
+                if (roadNodes is null || roadNodes.Count == 0)
+                {
+                    // Nothing drawn yet: marking is free and always safe.
+                    _drawerMarkDirtyMethod.Invoke(drawer, null);
+                    continue;
+                }
+
+                var affected = false;
+                for (var i = 0; i < changedCoordinates.Count && !affected; i++)
+                {
+                    var coordinate = changedCoordinates[i];
+                    foreach (var offset in NeighborOffsets)
+                    {
+                        if (roadNodes.Contains(new Timberborn.Navigation.WeightedCoordinates(coordinate + offset, 0f)))
+                        {
+                            affected = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (affected)
+                {
+                    _drawerMarkDirtyMethod.Invoke(drawer, null);
+                }
+            }
+
+            return false;
+        }
+        catch (Exception exception)
+        {
+            if (_invalidationFilterErrorLogs++ < 3)
+            {
+                Debug.LogWarning($"[T3MP] Overlay invalidation filter failed, falling back to vanilla: {exception.GetType().Name}: {exception.Message}");
+            }
+
+            return true;
+        }
+    }
+
+    // --- 2c. Frame-batched block object model updates ----------------------
+    // BuildingModelUpdater re-runs BlockObjectModelController.UpdateModel for
+    // every block object on every changed navmesh coordinate (and below), so
+    // one water/navmesh tick can trigger 100k+ calls, with multi-tile objects
+    // updated once PER TILE (measured bursts: 276k calls / 366ms per 5s).
+    // Defer all UpdateModel calls into a per-frame set and flush each unique
+    // controller ONCE at frame end. Rendering only ever sees the end-of-frame
+    // state, so this is visually identical - just without the duplicate work.
+
+    private static readonly HashSet<Timberborn.BlockObjectModelSystem.BlockObjectModelController> DeferredModelUpdates =
+        new HashSet<Timberborn.BlockObjectModelSystem.BlockObjectModelController>();
+    private static bool _flushingModelUpdates;
+
+    // Prefix on BlockObjectModelController.UpdateModel. Returns true (run
+    // vanilla) during the flush; otherwise defers.
+    public static bool DeferModelUpdate(object controller)
+    {
+        if (_flushingModelUpdates)
+        {
+            return true;
+        }
+
+        if (controller is Timberborn.BlockObjectModelSystem.BlockObjectModelController typedController)
+        {
+            DeferredModelUpdates.Add(typedController);
+            return false;
+        }
+
+        return true;
+    }
+
+    // Called from the mod controller's LateUpdate (after sim and game logic,
+    // before rendering).
+    public static void FlushDeferredModelUpdates()
+    {
+        if (DeferredModelUpdates.Count == 0)
+        {
+            return;
+        }
+
+        _flushingModelUpdates = true;
+        try
+        {
+            foreach (var controller in DeferredModelUpdates)
+            {
+                try
+                {
+                    if (controller && controller.GameObject)
+                    {
+                        controller.UpdateModel();
+                    }
+                }
+                catch (Exception)
+                {
+                    // A single destroyed/broken entity must not stop the flush.
+                }
+            }
+        }
+        finally
+        {
+            _flushingModelUpdates = false;
+            DeferredModelUpdates.Clear();
+        }
+    }
+
     // --- 3. Preview placer same-placement skip ---------------------------
 
     private sealed class PreviewPlacerState
