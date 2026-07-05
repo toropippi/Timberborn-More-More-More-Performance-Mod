@@ -117,6 +117,23 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         _currentMode == BenchmarkMode.Optimized;
 
     /// <summary>
+    /// Tick-side suppression gate: true whenever the blackout is requested in
+    /// Optimized mode, IGNORING the one-frame render peek. The peek frame is
+    /// frame-time-clamp limited (maximumDeltaTime 0.6s x timeScale), so that
+    /// single visible frame can carry dozens of ticks; measured on n10c about
+    /// half of all blackout ticks executed inside peek frames and paid the
+    /// full vanilla visual cost (animated MoveAlongPath, cosmetic ticks).
+    /// Tick-driven suppressions key off this so they stay engaged for those
+    /// ticks; frame-driven visual updaters keep keying off
+    /// RenderBlackoutActive so the peek frame itself still renders fresh
+    /// (cameras, water/terrain rendering, animator poses, UI).
+    /// </summary>
+    public static bool BlackoutTickSuppressionActive => BenchmarkSettings.EnableOptimizedRenderBlackout &&
+        _renderBlackoutRequested &&
+        (BenchmarkSettings.EnableBlackoutPeekTickSuppression || !_renderPeekActive) &&
+        _currentMode == BenchmarkMode.Optimized;
+
+    /// <summary>
     /// Called once per completed full tick (from the benchmark probe's full
     /// tick postfix). Drives the render peek and feeds the live speedup meter.
     /// </summary>

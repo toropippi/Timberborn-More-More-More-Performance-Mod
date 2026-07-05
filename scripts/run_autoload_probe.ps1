@@ -16,6 +16,7 @@ param(
     [switch] $BenchTopoUi,
     [switch] $BenchSmoothMode,
     [switch] $BenchTypeSort,
+    [switch] $BenchHotspot,
     [switch] $AutoResumeAfterLoad,
     [switch] $SkipAutoResumeAfterLoad,
     [switch] $ForceOptimizedAfterLoad,
@@ -226,6 +227,11 @@ $arguments = if ($UseSteamLaunchOptions) {
         # Measurement-only experiment: type-sorted bucket sweep (results NOT
         # vanilla-identical; never use for correctness comparisons).
         $argList += '-benchTypeSort'
+    }
+    if ($BenchHotspot) {
+        # Attribution-only: per-component-type Tick timing reported every ~20s.
+        # Stopwatch overhead contaminates ticks/s - never use for A/B numbers.
+        $argList += '-benchHotspot'
     }
     $argList -join ' '
 }

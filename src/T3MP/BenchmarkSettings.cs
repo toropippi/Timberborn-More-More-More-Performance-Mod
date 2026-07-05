@@ -28,6 +28,13 @@ internal static class BenchmarkSettings
     public static readonly bool BenchTypeSortRequested =
         HasCommandLineFlag("-benchTypeSort");
 
+    // TEMP ATTRIBUTION (measurement only): per-component-type Tick timing in
+    // the flat sweep, reported every ~20s window. The stopwatch overhead
+    // contaminates ticks/s, so probed runs are attribution-only. Behavior is
+    // unchanged (same ticks, same order) - safe but pointless outside runs.
+    public static readonly bool BenchHotspotRequested =
+        HasCommandLineFlag("-benchHotspot");
+
     private static bool HasCommandLineFlag(string flag)
     {
         var arguments = System.Environment.GetCommandLineArgs();
@@ -316,10 +323,18 @@ internal static class BenchmarkSettings
     public static readonly bool EnableRuntimeOverlay = false;
     public static readonly bool EnableHitchLogging = false;
     public static readonly bool EnableOptimizedRenderBlackout = true;
+    // Peek-tick suppression (2026-07-05): keep tick-side blackout fast paths
+    // (exact fast move, cosmetic tick suppression) engaged for ticks carried
+    // by the render-peek frame. False restores the old behavior (those ticks
+    // ran the full visual paths) - A/B ablation only. Keep true.
+    public static readonly bool EnableBlackoutPeekTickSuppression = true;
     // During render blackout, lift the blackout for exactly one frame every
     // RenderPeekIntervalFullTicks full ticks so the screen shows a fresh
-    // snapshot of the colony. All suppression paths key off
+    // snapshot of the colony. Frame-driven suppression paths key off
     // RenderBlackoutActive, so the peek frame runs the normal visual updates.
+    // Tick-driven suppressions (exact fast move, cosmetic component ticks) key
+    // off BlackoutTickSuppressionActive instead and stay engaged for the ticks
+    // the clamped peek frame carries (measured ~half of all blackout ticks).
     public static readonly bool EnableBlackoutRenderPeek = true;
     public const int RenderPeekIntervalFullTicks = 100;
     // On-screen live tick-rate meter (bottom-right) while the mod is active.

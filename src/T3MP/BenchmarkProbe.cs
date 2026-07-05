@@ -3639,7 +3639,8 @@ internal static class BenchmarkProbe
         }
 
         var prefix = typeof(BenchmarkProbe).GetMethod(nameof(MaybeRunUnattendedVisualUpdate), BindingFlags.Static | BindingFlags.NonPublic);
-        if (prefix is null)
+        var tickPrefix = typeof(BenchmarkProbe).GetMethod(nameof(MaybeRunUnattendedVisualTick), BindingFlags.Static | BindingFlags.NonPublic);
+        if (prefix is null || tickPrefix is null)
         {
             Debug.LogWarning("[T3MP] Unattended visual suppression patch method was not found.");
             return 0;
@@ -3694,11 +3695,17 @@ internal static class BenchmarkProbe
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.Terraforming.DrillHeadVisualizer", "Update", prefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.MechanicalSystem.MechanicalNodeTransformHeight", "Update", prefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.Buildings.FireIntensityController", "Update", prefix);
-        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WorkshopsEffects.WorkshopSounds", "Tick", prefix);
-        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WorkshopsEffects.WorkshopWorkerHider", "Tick", prefix);
-        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.SleepSystem.SleepSoundEmitter", "Tick", prefix);
-        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WaterBuildings.WaterMoverParticleController", "Tick", prefix);
-        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WorkSystemUI.WorkplaceIlluminator", "Tick", prefix);
+        // Tick-driven cosmetic components (sounds, worker hiding, workplace
+        // lights, particles) use the peek-agnostic gate: their effects are
+        // invisible during the blackout AND during the one-frame peek, so the
+        // dozens of ticks a clamped peek frame carries should not run them.
+        // Frame-driven updaters above stay on RenderBlackoutActive so the peek
+        // frame itself renders fresh.
+        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WorkshopsEffects.WorkshopSounds", "Tick", tickPrefix);
+        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WorkshopsEffects.WorkshopWorkerHider", "Tick", tickPrefix);
+        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.SleepSystem.SleepSoundEmitter", "Tick", tickPrefix);
+        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WaterBuildings.WaterMoverParticleController", "Tick", tickPrefix);
+        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WorkSystemUI.WorkplaceIlluminator", "Tick", tickPrefix);
         return patched;
     }
 
@@ -3706,6 +3713,12 @@ internal static class BenchmarkProbe
     {
         return !BenchmarkSettings.EnableUnattendedVisualSuppression ||
             !BenchmarkModeController.RenderBlackoutActive;
+    }
+
+    private static bool MaybeRunUnattendedVisualTick()
+    {
+        return !BenchmarkSettings.EnableUnattendedVisualSuppression ||
+            !BenchmarkModeController.BlackoutTickSuppressionActive;
     }
 
     private static int PatchSoundListenerStaticCameraOptimizer(object harmony, Type harmonyMethodType, MethodInfo patchMethod)

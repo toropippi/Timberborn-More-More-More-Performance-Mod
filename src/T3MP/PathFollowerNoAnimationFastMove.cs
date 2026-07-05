@@ -67,9 +67,14 @@ internal static class PathFollowerNoAnimationFastMove
 
     public static bool TryMove(PathFollower instance, float tickDeltaTime, string animationName, Func<float> movementSpeedProvider)
     {
+        // Peek-agnostic gate: ticks carried by the one-frame render peek must
+        // keep the exact fast move, or they pay the full animated MoveAlongPath
+        // (measured ~half of all blackout ticks on n10c). The peek frame's
+        // visuals stay correct because ResyncAfterBlackout snaps every
+        // fast-moved model when the peek lifts the blackout.
         if (!BenchmarkSettings.EnablePathFollowerNoAnimationFastMove ||
             BenchmarkModeController.CurrentMode != BenchmarkMode.Optimized ||
-            !BenchmarkModeController.RenderBlackoutActive)
+            !BenchmarkModeController.BlackoutTickSuppressionActive)
         {
             return false;
         }
