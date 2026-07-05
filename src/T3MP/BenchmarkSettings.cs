@@ -49,6 +49,12 @@ internal static class BenchmarkSettings
     public static readonly bool BenchSpawnRequested =
         HasCommandLineFlag("-benchSpawn");
 
+    // TEMP ATTRIBUTION (measurement only): splits the per-frame Timbermesh
+    // animation sampling into vertex material-set vs node transform-write vs
+    // loop overhead (see AnimSplitProbe). Same contamination caveat.
+    public static readonly bool BenchAnimRequested =
+        HasCommandLineFlag("-benchAnim");
+
     private static bool HasCommandLineFlag(string flag)
     {
         var arguments = System.Environment.GetCommandLineArgs();

@@ -149,6 +149,7 @@ internal static class BenchmarkProbe
             var patchedSentinelTemplateMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchSentinelTemplateInjection(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedRegistryFastRemoveMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchRegistryFastRemoves(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedRoadReachabilityCacheMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchRoadReachabilityCache(harmony, harmonyMethodType, patchMethod) : 0;
+            var patchedAnimSplitProbeMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchAnimSplitProbe(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedEmptyInventoriesFastPathMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchEmptyInventoriesFastPath(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedNavMeshInvalidationMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchNavMeshUpdateInvalidation(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTickMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTickBuckets(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
@@ -2080,6 +2081,100 @@ internal static class BenchmarkProbe
     private static void InvalidateRoadReachabilityCache()
     {
         RoadReachabilityCache.OnNavMeshUpdate();
+    }
+
+    private static int PatchAnimSplitProbe(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        if (!BenchmarkSettings.BenchAnimRequested)
+        {
+            return 0;
+        }
+
+        var patched = 0;
+        try
+        {
+            var vertexType = FindType("Timberborn.TimbermeshAnimations.VertexAnimationUpdater") ??
+                TryLoadAssemblyAndFindType("Timberborn.TimbermeshAnimations", "Timberborn.TimbermeshAnimations.VertexAnimationUpdater");
+            var nodeType = FindType("Timberborn.TimbermeshAnimations.NodeAnimationUpdater") ??
+                TryLoadAssemblyAndFindType("Timberborn.TimbermeshAnimations", "Timberborn.TimbermeshAnimations.NodeAnimationUpdater");
+            var registryType = FindType("Timberborn.TimbermeshAnimations.AnimatorRegistry") ??
+                TryLoadAssemblyAndFindType("Timberborn.TimbermeshAnimations", "Timberborn.TimbermeshAnimations.AnimatorRegistry");
+
+            var beginTimed = typeof(BenchmarkProbe).GetMethod(nameof(BeginTimedAnim), BindingFlags.Static | BindingFlags.NonPublic);
+            var endVertex = typeof(BenchmarkProbe).GetMethod(nameof(EndVertexAnim), BindingFlags.Static | BindingFlags.NonPublic);
+            var endNode = typeof(BenchmarkProbe).GetMethod(nameof(EndNodeAnim), BindingFlags.Static | BindingFlags.NonPublic);
+            var endLoop = typeof(BenchmarkProbe).GetMethod(nameof(EndLoopAnim), BindingFlags.Static | BindingFlags.NonPublic);
+
+            var vertexUpdate = vertexType?.GetMethod("UpdateAnimation", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (vertexUpdate is not null && beginTimed is not null && endVertex is not null)
+            {
+                if (TryPatch(harmony, patchMethod, vertexUpdate,
+                    Activator.CreateInstance(harmonyMethodType, beginTimed),
+                    Activator.CreateInstance(harmonyMethodType, endVertex)))
+                {
+                    patched++;
+                }
+            }
+
+            var nodeUpdate = nodeType?.GetMethod("UpdateAnimation", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (nodeUpdate is not null && beginTimed is not null && endNode is not null)
+            {
+                if (TryPatch(harmony, patchMethod, nodeUpdate,
+                    Activator.CreateInstance(harmonyMethodType, beginTimed),
+                    Activator.CreateInstance(harmonyMethodType, endNode)))
+                {
+                    patched++;
+                }
+            }
+
+            var registryUpdate = registryType?.GetMethod("UpdateSingleton", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (registryUpdate is not null && beginTimed is not null && endLoop is not null)
+            {
+                if (TryPatch(harmony, patchMethod, registryUpdate,
+                    Activator.CreateInstance(harmonyMethodType, beginTimed),
+                    Activator.CreateInstance(harmonyMethodType, endLoop)))
+                {
+                    patched++;
+                }
+            }
+
+            Debug.Log($"[T3MP] AnimSplit probe patched {patched} methods.");
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[T3MP] AnimSplit probe installation failed: {exception}");
+        }
+
+        return patched;
+    }
+
+    private static void BeginTimedAnim(out long __state)
+    {
+        __state = Stopwatch.GetTimestamp();
+    }
+
+    private static void EndVertexAnim(long __state)
+    {
+        if (__state != 0)
+        {
+            AnimSplitProbe.RecordVertex(Stopwatch.GetTimestamp() - __state);
+        }
+    }
+
+    private static void EndNodeAnim(long __state)
+    {
+        if (__state != 0)
+        {
+            AnimSplitProbe.RecordNode(Stopwatch.GetTimestamp() - __state);
+        }
+    }
+
+    private static void EndLoopAnim(long __state)
+    {
+        if (__state != 0)
+        {
+            AnimSplitProbe.RecordLoop(Stopwatch.GetTimestamp() - __state);
+        }
     }
 
     private static bool FastRoadReachableNeighbors(int startingNodeId, int range, List<int> reachableRoadNodes, out int __state)

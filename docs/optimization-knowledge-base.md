@@ -148,6 +148,34 @@ individually (WaitInsideIdly 0.7 s, Planter 0.55 s @512 µs/call, Labor 0.53 s).
   QUANTIZATION (work crossing 16.7 ms snaps to 33/50 ms slots) plus GC spikes.
   Anim sampling ~4.5 ms/frame unpaused (AnimatorRegistry samples even paused:
   2.0 ms); script Updates ~3.3 ms.
+- **Animation architecture (decompiled 2026-07-05, why anim can rival the sim
+  per frame)**: beavers use Timbermesh VERTEX animation (skinning on the GPU
+  via a shader that reads `_Offsets`/`_Rotations` textures + a per-instance
+  `_AnimationTime` float). `AnimatorRegistry.UpdateSingleton` loops EVERY
+  registered `TimbermeshAnimator` each frame; per animator it calls
+  `TimbermeshAnimator.UpdateAnimation` → per animated mesh node a
+  `VertexAnimationUpdater.UpdateAnimation` that does
+  `_meshRenderer.material.SetFloat(_AnimationTime, t)`. So the CPU cost is
+  ~`animatorCount × (Renderer.material getter + Material.SetFloat)` of Mono→
+  native interop every frame (a model has one updater PER animated node, so
+  the updater count exceeds the beaver count). `MovementAnimator.Update`
+  (per character/frame, IUpdatableComponent) adds two SEPARATE native transform
+  writes (`CharacterModel.Position` then `.Rotation`, each `_model.position=/
+  rotation=`). Node-animated props (gears, drills) instead write a transform
+  per bone (`NodeAnimationUpdater`, already uses `SetLocalPositionAndRotation`).
+  `AnimationUpdatedEventArgs` is a `readonly struct` (no alloc — that GC lead is
+  dead). **Root cause of "anim costs more than sim": per-object native Unity
+  calls at scale, not one hot loop — and Timberborn uses `Renderer.material`
+  (a unique instanced material per beaver) instead of a `MaterialPropertyBlock`,
+  which DEFEATS GPU instancing → the render thread also issues ~one draw call
+  per beaver (CPU-bound draw submission, matches "not GPU-bound").** Attribution
+  probe `-benchAnim` (AnimSplitProbe) splits vertex-material-set vs
+  node-transform-write vs loop overhead — run it to confirm the split before
+  choosing a fix. Safe mod wins are small (cache the material ref to drop the
+  per-frame `.material` getter; combine the two `MovementAnimator` transform
+  writes into one `SetPositionAndRotation`); the big lever (MaterialPropertyBlock
+  + GPU instancing to collapse draw calls) is a rendering-pipeline change with
+  real risk and needs the vertex-anim shader to declare instancing support.
 - **EventBus**: ~680 subscribers; every entity spawn pays an
   EntityInitializedEvent fanout (~2 ms per PlantExecutor sapling spawn even
   with compiled delegates — the cost is the handler bodies).
