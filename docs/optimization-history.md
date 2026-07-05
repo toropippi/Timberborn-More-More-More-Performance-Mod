@@ -168,9 +168,13 @@ button is ignored as a ceiling; only a real pause suspends it), and the
 controller uncaps the frame rate while the mode is active so free-running fps is
 a true CPU signal — a vsync cap would quantize 60↔30 and hide the headroom the
 governor climbs into. Flags: `EnableFpsPriorityAutoSpeed` (mode on; Shift+O then
-toggles this instead of the v2 cap), `FpsPriorityAutoStartAfterLoad` (engage
-after load for always-on play), `FpsPriorityTargetFps` (60), `FpsPriorityMaxSpeed`
-(50). Sim stays exactly vanilla for the speed achieved (only moves timeScale).
+toggles this instead of the v2 cap), `FpsPriorityAutoStartAfterLoad`
+(**false** per user 2026-07-05 — engages only on Shift+O, normal speed-button
+play untouched at load), `FpsPriorityTargetFps` (**30** per user 2026-07-05 — a
+lower target leaves more CPU headroom so the governor climbs higher; on the
+heavy overview save x1 renders ~52 fps, so a 30 fps target has real headroom to
+climb into whereas a 60 fps target pins at x1), `FpsPriorityMaxSpeed` (50). Sim
+stays exactly vanilla for the speed achieved (only moves timeScale).
 
 Verified (rendered, n10c ~660 beavers, overview camera = worst case): the climb
 works — at target 45 fps the governor holds ~44–46 fps and lifts speed to

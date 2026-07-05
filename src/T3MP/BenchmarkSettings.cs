@@ -280,7 +280,11 @@ internal static class BenchmarkSettings
     // the player presses Shift+O (like the legacy smooth mode). The game starts
     // with normal speed-button behavior untouched.
     public static readonly bool FpsPriorityAutoStartAfterLoad = false;
-    public const float FpsPriorityTargetFps = 60f;
+    // User decision 2026-07-05: target 30 fps (a lower, easier-to-sustain frame
+    // rate leaves more CPU headroom, so the governor climbs the sim speed
+    // higher than it could at 60 fps - especially on a heavy fully-rendered
+    // colony where 60 fps at x1 is already animation-bound).
+    public const float FpsPriorityTargetFps = 30f;
     public const float FpsPriorityMaxSpeed = 50f;
     public const float FpsPriorityMinSpeed = 1f;
     public const float FpsPriorityAdjustDownFactor = 0.95f;
