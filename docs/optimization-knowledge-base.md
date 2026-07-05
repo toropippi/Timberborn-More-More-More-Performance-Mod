@@ -5,6 +5,7 @@ consolidates everything learned across the 2026-06 → 2026-07 optimization
 campaign, **including the negative results**, so nobody re-runs a dead-end
 investigation. Companion docs:
 
+- `docs/automation-guide.md` — hands-free game launch / speed control / verification recipes.
 - `docs/optimization-history.md` — chronological record of every *shipped* win + LOO ablation how-to.
 - `docs/optimization-attribution.md` — v1.0 leave-one-out share table.
 - `docs/dev-findings.md` — externally-shareable engine findings (GC, alloc paths).
