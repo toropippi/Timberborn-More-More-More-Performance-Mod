@@ -14,6 +14,7 @@ param(
     [switch] $SkipModManager,
     [switch] $BenchAutoUltra,
     [switch] $BenchTopoUi,
+    [switch] $BenchSmoothMode,
     [switch] $AutoResumeAfterLoad,
     [switch] $SkipAutoResumeAfterLoad,
     [switch] $ForceOptimizedAfterLoad,
@@ -214,6 +215,11 @@ $arguments = if ($UseSteamLaunchOptions) {
         # '-benchTopoUi' and runs the automated gear/path selection scenario
         # at forced speed x50, rendered (see TopologyUiScenario).
         $argList += '-benchTopoUi'
+    }
+    if ($BenchSmoothMode) {
+        # Starts the Shift+O smooth mode (fps-priority timeScale governor)
+        # already enabled, for automated verification.
+        $argList += '-benchSmoothMode'
     }
     $argList -join ' '
 }

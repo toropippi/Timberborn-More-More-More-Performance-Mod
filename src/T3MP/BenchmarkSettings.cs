@@ -15,6 +15,11 @@ internal static class BenchmarkSettings
     public static readonly bool BenchTopoUiRequested =
         HasCommandLineFlag("-benchTopoUi");
 
+    // Automated verification of the Shift+O smooth mode: start with the
+    // governor already enabled (equivalent to pressing Shift+O once).
+    public static readonly bool BenchSmoothModeRequested =
+        HasCommandLineFlag("-benchSmoothMode");
+
     private static bool HasCommandLineFlag(string flag)
     {
         var arguments = System.Environment.GetCommandLineArgs();
@@ -181,6 +186,22 @@ internal static class BenchmarkSettings
     // Clicking always validates fresh placements, so nothing can be
     // mis-placed - only the ghost visuals update at this rate.
     public const float TopoPreviewDragMinIntervalSeconds = 0.1f;
+
+    // Smooth pacing v2 (user decision 2026-07-05: opt-in toggle, Shift+O).
+    // Governs Time.timeScale toward a target frame rate at high speeds -
+    // trading some achieved speed for smoothness, bounded below by
+    // max(1, requested * GovernorMinScaleFraction) so a render-bound colony
+    // never collapses to x1. All scaled clocks stay consistent (unlike the
+    // retired v1 delta-time cap), so sim results equal vanilla at the speed
+    // actually achieved. OFF unless the user presses Shift+O.
+    public static readonly bool EnableSmoothTimeScaleGovernor = true;
+    public const float GovernorTargetFps = 30f;
+    public const float GovernorMinScaleFraction = 0.15f;
+    // Absolute floor: never governs below min(requested, this), so pressing
+    // a modest speed like x7 is shaved to x3 at worst, not toward x1.
+    public const float GovernorAbsoluteMinSpeed = 3f;
+    public const float GovernorAdjustDownFactor = 0.97f;
+    public const float GovernorAdjustUpFactor = 1.03f;
     // Scenario pacing (see TopologyUiScenario). Settle covers post-load
     // stabilization before the first selection; hold keeps each selection
     // active long enough to catch event-driven re-highlights at speed.
