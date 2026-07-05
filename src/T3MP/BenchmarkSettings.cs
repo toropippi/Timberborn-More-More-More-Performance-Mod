@@ -181,6 +181,10 @@ internal static class BenchmarkSettings
     // flip even with the diff. One refresh per interval bounds that cost;
     // deferred dirt is re-armed so the final state always gets painted.
     public const float TopoHighlightMinRefreshIntervalSeconds = 0.25f;
+    // Budgeted highlight painting: at most this many highlight/unhighlight
+    // material operations per frame (~12us each => ~5ms/frame worst case).
+    // A full 1600-node repaint becomes a 4-frame sweep instead of one hitch.
+    public const int TopoHighlightOpsPerFrame = 400;
     // While dragging (placements changing every tile), still cap full
     // ShowPreviews runs: the ghost trails the cursor by at most this long.
     // Clicking always validates fresh placements, so nothing can be

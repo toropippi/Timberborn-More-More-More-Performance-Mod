@@ -86,6 +86,9 @@ internal static class TopologyUiOptimizer
                 // New game session: never trust the cache from a previous one.
                 _lastHighlightService = service;
                 CurrentlyHighlighted.Clear();
+                PendingUnhighlight.Clear();
+                PendingHighlight.Clear();
+                _finalClearPending = false;
             }
 
             var rootNodes = (IEnumerable<MechanicalNode>)_rootNodesField!.GetValue(service);
@@ -102,41 +105,63 @@ internal static class TopologyUiOptimizer
                 }
             }
 
+            PendingUnhighlight.Clear();
+            PendingHighlight.Clear();
+            _finalClearPending = false;
+
             if (!anyRoot)
             {
-                // Vanilla behavior on empty roots: clear all secondaries.
-                highlighter.UnhighlightAllSecondary();
-                CurrentlyHighlighted.Clear();
+                if (CurrentlyHighlighted.Count == 0)
+                {
+                    // Vanilla behavior on empty roots: clear all secondaries.
+                    highlighter.UnhighlightAllSecondary();
+                    return false;
+                }
+
+                // Amortized unpaint of our own set; one cheap global clear at
+                // the end catches any foreign secondaries (vanilla parity).
+                PendingUnhighlight.AddRange(CurrentlyHighlighted);
+                _finalClearPending = true;
+                ProcessHighlightQueues(highlighter);
                 return false;
             }
 
             FreshGraphNodes.Clear();
-            var iterator = _iteratorField!.GetValue(service);
-            _iterateMethod!.Invoke(iterator, new object[] { rootNodes, FreshGraphNodes, includeUnfinished });
-
-            // Unhighlight only nodes that left the set, highlight only nodes
-            // that entered it. Same end state as unhighlight-all + re-add.
-            CurrentlyHighlighted.RemoveWhere(node =>
+            if (!includeUnfinished && TryCollectFromGraphs(rootNodes))
             {
-                if (node && FreshGraphNodes.Contains(node))
-                {
-                    return false;
-                }
-
-                highlighter.UnhighlightSecondary(node);
-                return true;
-            });
-
-            var highlightColor = (Color)_highlightColorField!.GetValue(service);
-            foreach (var node in FreshGraphNodes)
+                // Fast path: for finished roots the network to highlight IS
+                // the root's MechanicalGraph (the game maintains connected
+                // components on every join/split), so the 7ms block-lookup
+                // DFS is unnecessary.
+            }
+            else
             {
-                if (CurrentlyHighlighted.Add(node))
+                var iterator = _iteratorField!.GetValue(service);
+                _iterateMethod!.Invoke(iterator, new object[] { rootNodes, FreshGraphNodes, includeUnfinished });
+            }
+
+            // Queue only actual changes; painting is budgeted per frame so a
+            // 1600-node repaint becomes a few-ms sweep over several frames
+            // instead of one 20ms+ hitch.
+            foreach (var node in CurrentlyHighlighted)
+            {
+                if (!node || !FreshGraphNodes.Contains(node))
                 {
-                    highlighter.HighlightSecondary(node, highlightColor);
+                    PendingUnhighlight.Add(node);
                 }
             }
 
+            foreach (var node in FreshGraphNodes)
+            {
+                if (!CurrentlyHighlighted.Contains(node))
+                {
+                    PendingHighlight.Add(node);
+                }
+            }
+
+            _pendingColor = (Color)_highlightColorField!.GetValue(service);
             FreshGraphNodes.Clear();
+            ProcessHighlightQueues(highlighter);
             return false;
         }
         catch (Exception exception)
@@ -156,6 +181,78 @@ internal static class TopologyUiOptimizer
     public static void OnUnhighlightAllSecondary()
     {
         CurrentlyHighlighted.Clear();
+    }
+
+    public static bool HighlightDrainPending =>
+        PendingUnhighlight.Count > 0 || PendingHighlight.Count > 0 || _finalClearPending;
+
+    private static readonly List<MechanicalNode> PendingUnhighlight = new List<MechanicalNode>();
+    private static readonly List<MechanicalNode> PendingHighlight = new List<MechanicalNode>();
+    private static Color _pendingColor;
+    private static bool _finalClearPending;
+
+    // Fast path for finished roots: union of their MechanicalGraph node sets.
+    // Returns false (caller falls back to the vanilla DFS) if any root is
+    // detached or has no graph yet.
+    private static bool TryCollectFromGraphs(IEnumerable<MechanicalNode> rootNodes)
+    {
+        foreach (var rootNode in rootNodes)
+        {
+            if (!rootNode || rootNode.IsDetached)
+            {
+                // Vanilla skips detached roots entirely.
+                continue;
+            }
+
+            var graph = rootNode.Graph;
+            if (graph is null)
+            {
+                FreshGraphNodes.Clear();
+                return false;
+            }
+
+            foreach (var node in graph.Nodes)
+            {
+                FreshGraphNodes.Add(node);
+            }
+        }
+
+        return true;
+    }
+
+    private static void ProcessHighlightQueues(Highlighter highlighter)
+    {
+        var budget = BenchmarkSettings.TopoHighlightOpsPerFrame;
+        while (budget > 0 && PendingUnhighlight.Count > 0)
+        {
+            var index = PendingUnhighlight.Count - 1;
+            var node = PendingUnhighlight[index];
+            PendingUnhighlight.RemoveAt(index);
+            if (CurrentlyHighlighted.Remove(node))
+            {
+                highlighter.UnhighlightSecondary(node);
+                budget--;
+            }
+        }
+
+        while (budget > 0 && PendingHighlight.Count > 0)
+        {
+            var index = PendingHighlight.Count - 1;
+            var node = PendingHighlight[index];
+            PendingHighlight.RemoveAt(index);
+            if (node && CurrentlyHighlighted.Add(node))
+            {
+                highlighter.HighlightSecondary(node, _pendingColor);
+                budget--;
+            }
+        }
+
+        if (_finalClearPending && PendingUnhighlight.Count == 0)
+        {
+            _finalClearPending = false;
+            highlighter.UnhighlightAllSecondary();
+            CurrentlyHighlighted.Clear();
+        }
     }
 
     // --- 1b. Mechanical highlight refresh coalescing ----------------------
@@ -183,8 +280,10 @@ internal static class TopologyUiOptimizer
             return;
         }
 
+        // Drain frames (budgeted painting still pending) bypass the interval:
+        // the refresh must keep running until the queues are empty.
         var now = Time.realtimeSinceStartup;
-        if (now < _nextAllowedHighlightRefreshRealtime)
+        if (now < _nextAllowedHighlightRefreshRealtime && !HighlightDrainPending)
         {
             _highlightDirtyField.SetValue(service, false);
             _highlightDeferredDirty = true;
@@ -197,9 +296,20 @@ internal static class TopologyUiOptimizer
 
     public static void AfterHighlightLateUpdate(object service)
     {
-        if (_highlightDirtyField is not null && _highlightDeferredDirty)
+        if (_highlightDirtyField is null)
+        {
+            return;
+        }
+
+        if (_highlightDeferredDirty)
         {
             _highlightDeferredDirty = false;
+            _highlightDirtyField.SetValue(service, true);
+        }
+        else if (HighlightDrainPending)
+        {
+            // Keep the service dirty so the next LateUpdate continues the
+            // budgeted paint sweep.
             _highlightDirtyField.SetValue(service, true);
         }
     }
