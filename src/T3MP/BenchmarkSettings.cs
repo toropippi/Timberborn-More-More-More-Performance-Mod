@@ -20,6 +20,14 @@ internal static class BenchmarkSettings
     public static readonly bool BenchSmoothModeRequested =
         HasCommandLineFlag("-benchSmoothMode");
 
+    // EXPERIMENT (measurement only, never ship): sweep each bucket's flat
+    // component array in stable TYPE-SORTED order instead of entity order,
+    // to measure the icache/branch-prediction ceiling of ECS-style grouped
+    // execution. Changes intra-bucket execution order, so results are NOT
+    // vanilla-identical - the flag only exists behind this game arg.
+    public static readonly bool BenchTypeSortRequested =
+        HasCommandLineFlag("-benchTypeSort");
+
     private static bool HasCommandLineFlag(string flag)
     {
         var arguments = System.Environment.GetCommandLineArgs();

@@ -294,6 +294,68 @@ internal static class TickDispatchOptimizer
         public TickableComponent[] Components = Array.Empty<TickableComponent>();
         public ulong[] EnabledBits = Array.Empty<ulong>();
         public readonly Dictionary<TickableComponent, int> SlotMap = new Dictionary<TickableComponent, int>();
+        // -benchTypeSort experiment: component slots in stable type-sorted
+        // order, plus each slot's owning entity index for the active check.
+        public int[] SlotEntityIndex = Array.Empty<int>();
+        public int[] TypeSortedOrder = Array.Empty<int>();
+    }
+
+    // -benchTypeSort experiment scratch (single-threaded rebuilds).
+    private static readonly Dictionary<Type, int> ExperimentTypeIds = new Dictionary<Type, int>();
+    private static int[] _experimentSlotTypeIds = Array.Empty<int>();
+    private static int[] _experimentTypeCounts = Array.Empty<int>();
+
+    private static void BuildTypeSortedOrder(BucketSnapshot snapshot, int componentCount)
+    {
+        if (snapshot.TypeSortedOrder.Length < componentCount)
+        {
+            snapshot.TypeSortedOrder = new int[Math.Max(componentCount, snapshot.TypeSortedOrder.Length * 2)];
+        }
+
+        if (_experimentSlotTypeIds.Length < componentCount)
+        {
+            _experimentSlotTypeIds = new int[Math.Max(componentCount, _experimentSlotTypeIds.Length * 2)];
+        }
+
+        var components = snapshot.Components;
+        for (var k = 0; k < componentCount; k++)
+        {
+            var type = components[k].GetType();
+            if (!ExperimentTypeIds.TryGetValue(type, out var typeId))
+            {
+                typeId = ExperimentTypeIds.Count;
+                ExperimentTypeIds[type] = typeId;
+            }
+
+            _experimentSlotTypeIds[k] = typeId;
+        }
+
+        var typeCount = ExperimentTypeIds.Count;
+        if (_experimentTypeCounts.Length < typeCount)
+        {
+            _experimentTypeCounts = new int[Math.Max(typeCount, _experimentTypeCounts.Length * 2)];
+        }
+
+        Array.Clear(_experimentTypeCounts, 0, typeCount);
+        for (var k = 0; k < componentCount; k++)
+        {
+            _experimentTypeCounts[_experimentSlotTypeIds[k]]++;
+        }
+
+        // Counting sort (stable): same-type slots keep their bucket-relative
+        // order, so only cross-type interleaving changes.
+        var offset = 0;
+        for (var t = 0; t < typeCount; t++)
+        {
+            var next = offset + _experimentTypeCounts[t];
+            _experimentTypeCounts[t] = offset;
+            offset = next;
+        }
+
+        for (var k = 0; k < componentCount; k++)
+        {
+            snapshot.TypeSortedOrder[_experimentTypeCounts[_experimentSlotTypeIds[k]]++] = k;
+        }
     }
 
     private static readonly ConditionalWeakTable<object, BucketSnapshot> Snapshots = new ConditionalWeakTable<object, BucketSnapshot>();
@@ -368,6 +430,11 @@ internal static class TickDispatchOptimizer
             snapshot.Components = new TickableComponent[Math.Max(totalComponents, snapshot.Components.Length * 2)];
         }
 
+        if (BenchmarkSettings.BenchTypeSortRequested && snapshot.SlotEntityIndex.Length < totalComponents)
+        {
+            snapshot.SlotEntityIndex = new int[Math.Max(totalComponents, snapshot.SlotEntityIndex.Length * 2)];
+        }
+
         var words = (totalComponents + 63) >> 6;
         if (snapshot.EnabledBits.Length < words)
         {
@@ -395,6 +462,11 @@ internal static class TickDispatchOptimizer
             {
                 var component = components[j];
                 snapshot.Components[flatIndex] = component;
+                if (BenchmarkSettings.BenchTypeSortRequested)
+                {
+                    snapshot.SlotEntityIndex[flatIndex] = i;
+                }
+
                 snapshot.SlotMap[component] = flatIndex;
                 ComponentSnapshots.AddOrUpdate(component, snapshot);
                 if (component.Enabled)
@@ -423,6 +495,11 @@ internal static class TickDispatchOptimizer
 
         snapshot.EntityCount = count;
         snapshot.ComponentCount = flatIndex;
+        if (BenchmarkSettings.BenchTypeSortRequested)
+        {
+            BuildTypeSortedOrder(snapshot, flatIndex);
+        }
+
         snapshot.Dirty = false;
     }
 
@@ -502,6 +579,52 @@ internal static class TickDispatchOptimizer
             var starts = snapshot.Starts;
             var components = snapshot.Components;
             var enabledBits = snapshot.EnabledBits;
+            if (BenchmarkSettings.BenchTypeSortRequested)
+            {
+                // EXPERIMENT sweep: fallback-shaped entities first (entity
+                // order), then all flat components in stable type-sorted
+                // order. Intra-bucket order differs from vanilla by design;
+                // mid-sweep adds just mark the snapshot dirty (no vanilla
+                // continuation semantics - measurement only).
+                for (var e = 0; e < entityCount; e++)
+                {
+                    if (gameObjects[e] is null)
+                    {
+                        fallbackEntityTicks++;
+                        snapshotEntities[e].Tick();
+                    }
+                }
+
+                var order = snapshot.TypeSortedOrder;
+                var slotEntity = snapshot.SlotEntityIndex;
+                var componentCount = snapshot.ComponentCount;
+                for (var k = 0; k < componentCount; k++)
+                {
+                    var slot = order[k];
+                    if ((enabledBits[slot >> 6] & (1UL << (slot & 63))) == 0UL)
+                    {
+                        continue;
+                    }
+
+                    var e = slotEntity[slot];
+                    var activeSlot = activeSlots[e];
+                    var isActive = activeSlot >= 0
+                        ? (activeBits[activeSlot >> 6] & (1UL << (activeSlot & 63))) != 0UL
+                        : gameObjects[e]!.activeInHierarchy;
+                    if (isActive)
+                    {
+                        componentTicks++;
+                        components[slot].Tick();
+                    }
+                }
+
+                if (snapshot.MidSweepAdd)
+                {
+                    snapshot.Dirty = true;
+                }
+            }
+            else
+            {
             var liveContinuationFrom = -1;
             for (var e = 0; e < entityCount; e++)
             {
@@ -568,6 +691,7 @@ internal static class TickDispatchOptimizer
                     fallbackEntityTicks++;
                     liveValues[i].Tick();
                 }
+            }
             }
         }
         else
