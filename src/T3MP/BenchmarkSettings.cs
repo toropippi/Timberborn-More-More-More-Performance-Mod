@@ -70,7 +70,7 @@ internal static class BenchmarkSettings
     // Development-only A/B measurement: Vanilla<->Optimized cycling, frame
     // sampling, and SimProgress/aggregate log output. Off in the distributed
     // build so the mod runs purely in Optimized mode with no log spam.
-    public static readonly bool EnableBenchmarkMeasurement = true; // TEMP: investigation session 2026-07-05, restore to false before store build
+    public static readonly bool EnableBenchmarkMeasurement = false;
     // Temporary measurement helper: run the save in VANILLA (optimizations off)
     // at ultra speed so it can be compared against Optimized at the same speed.
     // Keep false in the shipped build.
@@ -114,7 +114,7 @@ internal static class BenchmarkSettings
     public static readonly bool EnableNeedTravelCacheMetrics = false;
     public static readonly bool EnableNeedBehaviorDecisionMetrics = false;
     public static readonly bool EnableBeaverDecisionFrequencySampler = false;
-    public static readonly bool EnableHotOptimizerMetrics = true; // TEMP verification run, restore false
+    public static readonly bool EnableHotOptimizerMetrics = false;
     public static readonly bool EnableNeedManagerDirectCriticalState = false;
     public static readonly bool EnableNeedManagerFastTick = false;
     public static readonly bool EnableHaulCandidateOrderCache = false;
@@ -314,8 +314,9 @@ internal static class BenchmarkSettings
 
     // Exact result cache for the road-reachability BFS behind wander decides
     // (pure function of the road navmesh; see RoadReachabilityCache).
-    // Invalidated by the regular-navmesh update notifier; requires
-    // EnableNavMeshEventTravelCacheInvalidation for the hook to be installed.
+    // Invalidated directly on RoadNavMeshGraph.ConnectNodes/DisconnectNodes
+    // (the only graph mutators), so it can never serve a stale result -
+    // required for behavior-exactness (wander destinations feed the sim RNG).
     public static readonly bool EnableRoadReachabilityCache = true;
 
     // Flat-array bucket dispatch (v2 of the tick dispatch optimizer): per bucket,

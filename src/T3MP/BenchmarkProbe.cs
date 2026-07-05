@@ -2016,13 +2016,11 @@ internal static class BenchmarkProbe
     private static void RecordRegularNavMeshUpdate()
     {
         NeedBehaviorTravelOptimizer.OnRegularNavMeshUpdate();
-        RoadReachabilityCache.OnNavMeshUpdate();
     }
 
     private static int PatchRoadReachabilityCache(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
     {
-        if (!BenchmarkSettings.EnableRoadReachabilityCache ||
-            !BenchmarkSettings.EnableNavMeshEventTravelCacheInvalidation)
+        if (!BenchmarkSettings.EnableRoadReachabilityCache)
         {
             return 0;
         }
@@ -2038,9 +2036,50 @@ internal static class BenchmarkProbe
             return 0;
         }
 
+        // Airtight invalidation: hook the ONLY mutators of the RoadNavMeshGraph
+        // the BFS reads (ConnectNodes/DisconnectNodes). This is independent of
+        // navmesh-event timing, so the cache can never serve a result computed
+        // against a stale graph - required for behavior-exactness (wander
+        // destinations feed the sim RNG stream).
+        var graphType = FindType("Timberborn.Navigation.RoadNavMeshGraph") ??
+            TryLoadAssemblyAndFindType("Timberborn.Navigation", "Timberborn.Navigation.RoadNavMeshGraph");
+        var invalidatePostfix = typeof(BenchmarkProbe).GetMethod(nameof(InvalidateRoadReachabilityCache), BindingFlags.Static | BindingFlags.NonPublic);
+        var connectNodes = graphType?.GetMethod("ConnectNodes", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        var disconnectNodes = graphType?.GetMethod("DisconnectNodes", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        var loadMethod = graphType?.GetMethod("Load", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (invalidatePostfix is null || connectNodes is null || disconnectNodes is null)
+        {
+            Debug.LogWarning("[T3MP] RoadNavMeshGraph mutators were not found; road reachability cache disabled.");
+            return 0;
+        }
+
+        var patched = 0;
+        if (TryPatch(harmony, patchMethod, connectNodes, null, Activator.CreateInstance(harmonyMethodType, invalidatePostfix)))
+        {
+            patched++;
+        }
+        if (TryPatch(harmony, patchMethod, disconnectNodes, null, Activator.CreateInstance(harmonyMethodType, invalidatePostfix)))
+        {
+            patched++;
+        }
+        if (loadMethod is not null)
+        {
+            TryPatch(harmony, patchMethod, loadMethod, null, Activator.CreateInstance(harmonyMethodType, invalidatePostfix));
+        }
+
         var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, prefix);
         var postfixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, postfix);
-        return TryPatch(harmony, patchMethod, targetMethod, prefixHarmonyMethod, postfixHarmonyMethod) ? 1 : 0;
+        if (TryPatch(harmony, patchMethod, targetMethod, prefixHarmonyMethod, postfixHarmonyMethod))
+        {
+            patched++;
+        }
+
+        return patched;
+    }
+
+    private static void InvalidateRoadReachabilityCache()
+    {
+        RoadReachabilityCache.OnNavMeshUpdate();
     }
 
     private static bool FastRoadReachableNeighbors(int startingNodeId, int range, List<int> reachableRoadNodes, out int __state)
