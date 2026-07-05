@@ -189,15 +189,9 @@ Rule: any future tick-side suppression gates on `BlackoutTickSuppressionActive`.
 
 ## How to run a leave-one-out ablation
 
-1. Set the target flag(s) to `false` in `src/T3MP/BenchmarkSettings.cs`.
-2. `scripts\deploy.ps1 -Configuration Release`
-3. `scripts\run_autoload_probe.ps1 -SecondsAfterLoad 170 -SkipModManager -BenchAutoUltra -StopAfter`
-4. Compare full-ticks/s over equal windows (aggregate 2+) against a same-day
-   baseline run. Keep the game version identical; re-anchor the baseline after
-   any game update. Make sure the run is CPU-bound (measured ticks/s must stay
-   below `effectiveSpeed / 0.6`, see the speed-wall pitfall above).
-
-The production build intentionally contains **no measurement scaffolding**
-(probes are added temporarily during investigations and deleted afterwards);
-rates for ablation runs come from a temporary windowed counter added for the
-session, or from the dev measurement mode (`EnableBenchmarkMeasurement`).
+Set the target flag(s) to `false` in `src/T3MP/BenchmarkSettings.cs` and run
+a clean A/B — the full procedure and validity rules are in
+`docs/automation-guide.md` (recipe B) and
+`docs/optimization-knowledge-base.md` §2. The production build intentionally
+contains **no measurement scaffolding**; ablation rates come from the dev
+measurement mode (`EnableBenchmarkMeasurement`, restore to false after).

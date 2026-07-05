@@ -38,13 +38,12 @@ Last full update: **2026-07-05** (after the peek-tick suppression fix, commit 6d
 7. Public texts (store, README, reddit): player language only, no unconfirmed
    or experimental claims, numbers must be reproduced before publication.
 
-## 2. Benchmark protocol (violating any of these produced false results at least once)
+## 2. Benchmark rules (violating any of these produced false results at least once)
 
-- Pipeline: `scripts\deploy.ps1` → `scripts\run_autoload_probe.ps1
-  -SkipModManager -BenchAutoUltra -SecondsAfterLoad 150 -StopAfter` →
-  `scripts\analyze_simprogress.ps1 -LogPath testlogs\autoload-<stamp>.log`.
-  SimProgress rows require `EnableBenchmarkMeasurement=true` (restore to false
-  after).
+Operational how-to (commands, launch args, speed control, recipes) lives in
+`docs/automation-guide.md` — this section is only the *rules* that make a
+comparison valid:
+
 - **Speed wall**: ideal ticks/s = effectiveSpeed / 0.6, and vanilla's
   `GameSpeedThrottler` population-scales requested speed (x50 → effective
   ~x20.6 at ~660 beavers unless throttler removal is on). If measured ticks/s
@@ -180,19 +179,11 @@ individually (WaitInsideIdly 0.7 s, Planter 0.55 s @512 µs/call, Labor 0.53 s).
   BuildingsNavigation, BaseComponentSystem). MUST set
   `IncludeCompilerGeneratedMembers="false"` or event backing fields collide
   (CS0229). Unity Mono does not enforce member visibility at runtime.
-- **Arg-gated harnesses** (all inert without the arg; `run_autoload_probe.ps1`
-  has a switch for each): `-benchAutoUltra` (blackout ultra benchmark),
-  `-benchHotspot` (per-component-type Tick timing → `analyze_hotspot.ps1`),
-  `-benchTopoUi` (automated gear/path selection scenario →
-  `analyze_topoui.ps1`), `-benchSmoothMode` (governor pre-enabled),
-  `-benchTypeSort` (order-changing experiment — never ship active).
-- **Dev flags** (all must be false in store builds):
-  `EnableBenchmarkMeasurement` (SimProgress A/B rows),
-  `EnableHotOptimizerMetrics` (per-optimizer hit/latency counters),
-  `EnableTopologyUiProbe` (UI timing sites; one site is on a sim hot path).
-- Automation pitfalls: game loads with `Time.timeScale=0` (never trust scaled
-  clocks post-load); the probe refuses to start if Timberborn is running;
-  `pgrep` does not exist in Git Bash here (use `Get-Process`).
+- **Benchmark harnesses, launch args, dev measurement flags, and automation
+  pitfalls**: see `docs/automation-guide.md` (single source of truth for
+  operations). Reminder only: `EnableBenchmarkMeasurement` /
+  `EnableHotOptimizerMetrics` / `EnableTopologyUiProbe` must all be false in
+  store builds, and `-benchTypeSort` must never ship active.
 
 ## 8. Harmony / measurement pitfalls (each cost real time at least once)
 
