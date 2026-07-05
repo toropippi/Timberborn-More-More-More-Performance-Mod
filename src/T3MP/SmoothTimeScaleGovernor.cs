@@ -30,8 +30,34 @@ internal static class SmoothTimeScaleGovernor
     private static float _governedScale = 1f;
     private static float _smoothedFrameSeconds;
     private static float _nextLogRealtime;
+    private static bool _autoMaxActive;
 
     public static bool Enabled => _enabled;
+
+    // True only while the fps-priority auto-max governor is actively driving
+    // Time.timeScale this frame. The controller reads this to uncap the frame
+    // rate (vsync off) so free-running fps is a true CPU signal for the climb.
+    public static bool AutoMaxActive => _autoMaxActive;
+
+    private static bool AutoMaxMode => BenchmarkSettings.EnableFpsPriorityAutoSpeed;
+
+    // Engage the governor without a keypress (post-load auto-start).
+    public static void ForceEnable()
+    {
+        if (_enabled)
+        {
+            return;
+        }
+
+        _enabled = true;
+        _governedScale = Mathf.Max(1f, Time.timeScale);
+        _smoothedFrameSeconds = Mathf.Max(Time.unscaledDeltaTime, 1f / 240f);
+        Debug.Log(string.Format(
+            CultureInfo.InvariantCulture,
+            "[T3MP] Smooth mode auto-started. mode={0} targetFps={1}",
+            AutoMaxMode ? "fps-priority-auto-max" : "cap-at-requested",
+            AutoMaxMode ? BenchmarkSettings.FpsPriorityTargetFps : BenchmarkSettings.GovernorTargetFps));
+    }
 
     public static void RecordSpeedManager(object instance)
     {
@@ -53,9 +79,10 @@ internal static class SmoothTimeScaleGovernor
 
         Debug.Log(string.Format(
             CultureInfo.InvariantCulture,
-            "[T3MP] Smooth mode (fps-priority timeScale governor) {0}. targetFps={1}",
+            "[T3MP] Smooth mode {0}. mode={1} targetFps={2}",
             _enabled ? "ON" : "OFF",
-            BenchmarkSettings.GovernorTargetFps));
+            AutoMaxMode ? "fps-priority-auto-max" : "cap-at-requested",
+            AutoMaxMode ? BenchmarkSettings.FpsPriorityTargetFps : BenchmarkSettings.GovernorTargetFps));
     }
 
     // Called every frame from the controller. Governs only while enabled, in
@@ -74,10 +101,19 @@ internal static class SmoothTimeScaleGovernor
                 RestoreRequestedSpeed();
             }
 
+            _autoMaxActive = false;
             return;
         }
 
         var requestedSpeed = ReadRequestedSpeed();
+
+        if (AutoMaxMode)
+        {
+            TickAutoMax(requestedSpeed);
+            return;
+        }
+
+        _autoMaxActive = false;
         if (requestedSpeed <= 1f || Time.timeScale <= 0f)
         {
             // Paused or at x1: nothing to shave. Do not touch the clock.
@@ -120,9 +156,65 @@ internal static class SmoothTimeScaleGovernor
         }
     }
 
+    // FPS-priority auto-max: pin fps at FpsPriorityTargetFps and climb the sim
+    // speed into whatever CPU headroom exists, bounded by [MinSpeed, MaxSpeed].
+    // The pressed speed is ignored as a ceiling; only a real pause (CurrentSpeed
+    // == 0) suspends governing. Assumes the controller has uncapped the frame
+    // rate while _autoMaxActive so unscaledDeltaTime is the true CPU frame time.
+    private static void TickAutoMax(float requestedSpeed)
+    {
+        if (requestedSpeed <= 0f)
+        {
+            // Genuinely paused (CurrentSpeed 0). Leave the clock at pause and
+            // stop uncapping; do not force a speed.
+            if (_overriding)
+            {
+                RestoreRequestedSpeed();
+            }
+
+            _autoMaxActive = false;
+            return;
+        }
+
+        _smoothedFrameSeconds = Mathf.Lerp(_smoothedFrameSeconds, Time.unscaledDeltaTime, 0.1f);
+        var targetSeconds = 1f / BenchmarkSettings.FpsPriorityTargetFps;
+        // Wide deadband so the speed parks instead of hunting: only back off if
+        // a frame runs clearly long (fps below target/1.06), only climb if there
+        // is clear headroom (fps above target/0.94). Inside the band, hold.
+        if (_smoothedFrameSeconds > targetSeconds * 1.06f)
+        {
+            _governedScale *= BenchmarkSettings.FpsPriorityAdjustDownFactor;
+        }
+        else if (_smoothedFrameSeconds < targetSeconds * 0.94f)
+        {
+            _governedScale *= BenchmarkSettings.FpsPriorityAdjustUpFactor;
+        }
+
+        _governedScale = Mathf.Clamp(
+            _governedScale,
+            BenchmarkSettings.FpsPriorityMinSpeed,
+            BenchmarkSettings.FpsPriorityMaxSpeed);
+        Time.timeScale = _governedScale;
+        _overriding = true;
+        _autoMaxActive = true;
+
+        var now = Time.realtimeSinceStartup;
+        if (now >= _nextLogRealtime)
+        {
+            _nextLogRealtime = now + 10f;
+            Debug.Log(string.Format(
+                CultureInfo.InvariantCulture,
+                "[T3MP] FPS-priority auto-max: speed={0:F1} fps={1:F1} targetFps={2:F0}",
+                _governedScale,
+                1f / Mathf.Max(_smoothedFrameSeconds, 0.001f),
+                BenchmarkSettings.FpsPriorityTargetFps));
+        }
+    }
+
     private static void RestoreRequestedSpeed()
     {
         _overriding = false;
+        _autoMaxActive = false;
         var requestedSpeed = ReadRequestedSpeed();
         if (requestedSpeed > 0f)
         {

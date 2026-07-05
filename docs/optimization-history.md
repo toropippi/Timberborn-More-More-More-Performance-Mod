@@ -158,6 +158,31 @@ by construction, so v1's walk-in-place desync cannot occur. Verified at x50:
 8 fps → 17–27 fps at a governed ~x7.5. Flags: `EnableSmoothTimeScaleGovernor`,
 `GovernorTargetFps`, `-benchSmoothMode` starts it enabled.
 
+### Smooth mode v3 — fps-priority auto-max governor (2026-07-05)
+
+User goal: pin the frame rate at 60 and continuously run the HIGHEST sim speed
+that sustains it, always, during rendered play (instead of the v2 "cap a
+requested speed down to 30 fps"). Same `Time.timeScale` control law, but the
+speed floats in `[FpsPriorityMinSpeed, FpsPriorityMaxSpeed]` (the pressed speed
+button is ignored as a ceiling; only a real pause suspends it), and the
+controller uncaps the frame rate while the mode is active so free-running fps is
+a true CPU signal — a vsync cap would quantize 60↔30 and hide the headroom the
+governor climbs into. Flags: `EnableFpsPriorityAutoSpeed` (mode on; Shift+O then
+toggles this instead of the v2 cap), `FpsPriorityAutoStartAfterLoad` (engage
+after load for always-on play), `FpsPriorityTargetFps` (60), `FpsPriorityMaxSpeed`
+(50). Sim stays exactly vanilla for the speed achieved (only moves timeScale).
+
+Verified (rendered, n10c ~660 beavers, overview camera = worst case): the climb
+works — at target 45 fps the governor holds ~44–46 fps and lifts speed to
+~x1.8–2.0; 0 exceptions. **Key finding:** at target 60 fps this heavy save sits
+at x1 because fully-rendered it already renders only ~52 fps at x1 — the gate is
+per-frame ANIMATION cost (AnimatorRegistry 5.9, MovementAnimator 2.1 ms/frame,
+etc.), not the sim. So on a big rendered colony the achievable "smooth speed" is
+animation-bound; zoomed-in play (InvisibleAnimatorPoseSkip trims off-screen
+animators) has more headroom. This is the case where render-side optimization
+finally pays off (it raises both the fps floor AND the speed the governor can add
+at 60 fps) — unlike the x50-blackout case (negative result #17).
+
 ### Topology-UI round (2026-07-05, commits 5384d85…567a3a5)
 
 UI-only lag fixes for gear/path placement on huge networks (sim untouched):
