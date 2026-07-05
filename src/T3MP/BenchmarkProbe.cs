@@ -2476,7 +2476,21 @@ internal static class BenchmarkProbe
             }
         }
 
-        if (BenchmarkSettings.EnablePathOverlayRebuildThrottle)
+        if (BenchmarkSettings.EnablePathOverlayAmortizedRebuild)
+        {
+            var drawerType = FindType("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer");
+            var lateUpdateMethod = drawerType?.GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            var prefix = typeof(PathOverlayAmortizer).GetMethod(nameof(PathOverlayAmortizer.AmortizedLateUpdate), BindingFlags.Static | BindingFlags.NonPublic);
+            if (lateUpdateMethod is null || prefix is null)
+            {
+                Debug.LogWarning("[T3MP] Path overlay amortizer targets were not found.");
+            }
+            else if (TryPatch(harmony, patchMethod, lateUpdateMethod, Activator.CreateInstance(harmonyMethodType, prefix), null))
+            {
+                patched++;
+            }
+        }
+        else if (BenchmarkSettings.EnablePathOverlayRebuildThrottle)
         {
             var drawerType = FindType("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer");
             var lateUpdateMethod = drawerType?.GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
