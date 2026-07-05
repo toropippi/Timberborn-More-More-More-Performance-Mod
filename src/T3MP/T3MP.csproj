@@ -10,6 +10,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Compile-time access to the game's internal types (runtime Mono does
+         not enforce member visibility, the standard Timberborn modding
+         pattern). Publicized per-assembly, only where deep optimizations
+         need typed hot-loop access. -->
+    <PackageReference Include="Krafs.Publicizer" Version="2.2.1" PrivateAssets="all" />
+    <Publicize Include="Timberborn.Navigation" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="System.Collections.Immutable">
       <HintPath>$(TimberbornManagedDir)\System.Collections.Immutable.dll</HintPath>
       <Private>false</Private>

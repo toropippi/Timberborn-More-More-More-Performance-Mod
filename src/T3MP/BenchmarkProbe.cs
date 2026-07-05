@@ -2509,6 +2509,22 @@ internal static class BenchmarkProbe
             }
         }
 
+        if (BenchmarkSettings.EnableFlowFieldFastPath)
+        {
+            var generatorType = FindType("Timberborn.Navigation.RoadFlowFieldGenerator");
+            var fillMethod = generatorType?.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+                .FirstOrDefault(method => method.Name == "FillFlowField");
+            var prefix = typeof(FlowFieldFastPath).GetMethod(nameof(FlowFieldFastPath.FastFillFlowField), BindingFlags.Static | BindingFlags.NonPublic);
+            if (fillMethod is null || prefix is null)
+            {
+                Debug.LogWarning("[T3MP] Flow field fast path targets were not found.");
+            }
+            else if (TryPatch(harmony, patchMethod, fillMethod, Activator.CreateInstance(harmonyMethodType, prefix), null))
+            {
+                patched++;
+            }
+        }
+
         if (BenchmarkSettings.EnableModelUpdateBatching)
         {
             var controllerType = FindType("Timberborn.BlockObjectModelSystem.BlockObjectModelController");

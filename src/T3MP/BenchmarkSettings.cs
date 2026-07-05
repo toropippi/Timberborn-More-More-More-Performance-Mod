@@ -193,6 +193,11 @@ internal static class BenchmarkSettings
     // multi-tile objects once PER TILE; measured 276k calls / 366ms in a 5s
     // burst). Rendering sees only end-of-frame state, so visually identical.
     public static readonly bool EnableModelUpdateBatching = true;
+    // Identical-result FillFlowField fast path (stamped visited array +
+    // pre-sized output dictionary, vanilla heap instance reused so the
+    // push/pop order - and therefore parents, distances and insertion order -
+    // is bit-identical). See FlowFieldFastPath.
+    public static readonly bool EnableFlowFieldFastPath = true;
     // While dragging (placements changing every tile), still cap full
     // ShowPreviews runs: the ghost trails the cursor by at most this long.
     // Clicking always validates fresh placements, so nothing can be
