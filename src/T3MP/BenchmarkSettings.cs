@@ -198,6 +198,13 @@ internal static class BenchmarkSettings
     // push/pop order - and therefore parents, distances and insertion order -
     // is bit-identical). See FlowFieldFastPath.
     public static readonly bool EnableFlowFieldFastPath = true;
+    // Amortized district path overlay rebuild: node refresh on the start
+    // frame, connection-key loop in budgeted chunks, mesh uploads on separate
+    // frames. Replaces (and includes) the plain rebuild rate limit. The old
+    // mesh keeps drawing during the sweep, so worst-frame cost drops from
+    // 32-46ms to ~17ms (the larger single mesh upload).
+    public static readonly bool EnablePathOverlayAmortizedRebuild = true;
+    public const int TopoOverlayTilesPerFrame = 2000;
     // While dragging (placements changing every tile), still cap full
     // ShowPreviews runs: the ghost trails the cursor by at most this long.
     // Clicking always validates fresh placements, so nothing can be

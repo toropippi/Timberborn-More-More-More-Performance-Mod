@@ -15,7 +15,9 @@
          pattern). Publicized per-assembly, only where deep optimizations
          need typed hot-loop access. -->
     <PackageReference Include="Krafs.Publicizer" Version="2.2.1" PrivateAssets="all" />
-    <Publicize Include="Timberborn.Navigation" />
+    <Publicize Include="Timberborn.Navigation" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.BuildingsNavigation" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.BaseComponentSystem" IncludeCompilerGeneratedMembers="false" />
   </ItemGroup>
 
   <ItemGroup>
