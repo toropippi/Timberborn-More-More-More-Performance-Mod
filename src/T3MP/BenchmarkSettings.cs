@@ -255,6 +255,27 @@ internal static class BenchmarkSettings
     public const float GovernorAbsoluteMinSpeed = 3f;
     public const float GovernorAdjustDownFactor = 0.97f;
     public const float GovernorAdjustUpFactor = 1.03f;
+
+    // FPS-PRIORITY AUTO-MAX MODE (user decision 2026-07-05): instead of the
+    // legacy "cap a requested speed down to hold 30 fps", pin the frame rate at
+    // FpsPriorityTargetFps and continuously seek the HIGHEST sim speed that
+    // sustains it - the speed floats up when there is CPU headroom and backs
+    // off when a frame runs long. The pressed speed button is ignored as a
+    // ceiling (only pause still pauses); the climb is bounded by
+    // FpsPriorityMaxSpeed. Requires the frame rate uncapped while active (the
+    // controller does this) so free-running fps is a true CPU signal - a vsync
+    // cap would quantize 60->30 and hide the headroom the governor climbs into.
+    // When this is true, Shift+O toggles THIS mode (not the legacy 30 fps cap);
+    // FpsPriorityAutoStartAfterLoad engages it automatically for always-on play.
+    // Sim results stay exactly vanilla for the speed actually achieved (it only
+    // moves Time.timeScale, like pressing a speed button).
+    public static readonly bool EnableFpsPriorityAutoSpeed = true;
+    public static readonly bool FpsPriorityAutoStartAfterLoad = true;
+    public const float FpsPriorityTargetFps = 60f;
+    public const float FpsPriorityMaxSpeed = 50f;
+    public const float FpsPriorityMinSpeed = 1f;
+    public const float FpsPriorityAdjustDownFactor = 0.95f;
+    public const float FpsPriorityAdjustUpFactor = 1.02f;
     // Scenario pacing (see TopologyUiScenario). Settle covers post-load
     // stabilization before the first selection; hold keeps each selection
     // active long enough to catch event-driven re-highlights at speed.

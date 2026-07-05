@@ -56,6 +56,8 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     private bool _renderPolicyApplied;
     private bool _blackoutWasActive;
     private bool _autoForceOptimizedApplied;
+    private bool _autoMaxFrameRateApplied;
+    private bool _fpsPriorityAutoStarted;
     private float _gameSceneEnteredRealtime = -1f;
     // True only while the actual game scene (buildIndex 2) is active. The
     // controller is DontDestroyOnLoad, so without this the speed meter would keep
@@ -259,7 +261,19 @@ internal sealed class BenchmarkModeController : MonoBehaviour
 
         HandleHotkeys(now);
         TryAutoForceOptimizedAfterLoad(now);
-        SmoothTimeScaleGovernor.Tick(_inGameScene, RenderBlackoutActive);
+        // Gate the governor off whenever blackout is REQUESTED (not just
+        // currently active): during a Shift+P / -benchAutoUltra blackout the
+        // user wants raw max speed, and the periodic 1-frame render peek must
+        // NOT let the governor briefly re-engage and shave the speed.
+        SmoothTimeScaleGovernor.Tick(_inGameScene, RenderBlackoutActive || _renderBlackoutRequested);
+        // The auto-max governor uncaps/recaps the frame rate as it engages and
+        // disengages; re-apply the frame-rate policy on any transition so vsync
+        // tracks the governor without waiting for another blackout/mode event.
+        if (SmoothTimeScaleGovernor.AutoMaxActive != _autoMaxFrameRateApplied)
+        {
+            _autoMaxFrameRateApplied = SmoothTimeScaleGovernor.AutoMaxActive;
+            ApplyFrameRatePolicy();
+        }
         UpdateRenderPeek();
         UpdateSpeedupMeter(now);
         UpdateSpeedupOverlayUi();
@@ -545,6 +559,19 @@ internal sealed class BenchmarkModeController : MonoBehaviour
             AutoRuntimeControl.RequestOptimizedUltraSpeed();
         }
 
+        // Always-on fps-priority auto-max: engage the governor after load so
+        // rendered play automatically runs at the highest speed that holds the
+        // target fps. Harmless while paused (governor no-ops) or during a
+        // blackout (governor is gated off), and toggleable with Shift+O.
+        if (BenchmarkSettings.EnableSmoothTimeScaleGovernor &&
+            BenchmarkSettings.EnableFpsPriorityAutoSpeed &&
+            BenchmarkSettings.FpsPriorityAutoStartAfterLoad &&
+            !_fpsPriorityAutoStarted)
+        {
+            _fpsPriorityAutoStarted = true;
+            SmoothTimeScaleGovernor.ForceEnable();
+        }
+
         Debug.Log(string.Format(
             CultureInfo.InvariantCulture,
             "[T3MP] Optimizations enabled after load. delaySeconds={0:F1}",
@@ -703,9 +730,15 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         // at normal speeds) and makes the game's "FPS: avg / min" readout jump to
         // 100-600 on a light map. So outside the blackout, leave the game's own
         // vsync / frame cap untouched.
+        //
+        // EXCEPTION: while the fps-priority auto-max governor is actively
+        // driving Time.timeScale, uncap the frame rate too - the governor needs
+        // a free-running (CPU-bound) fps to sense headroom and hold the target,
+        // and it loads the CPU with sim work so fps settles at the target rather
+        // than running away. A vsync cap would quantize 60->30 and defeat it.
         var uncapFrameRate = BenchmarkSettings.EnableOptimizedFrameRateUncap &&
             _currentMode == BenchmarkMode.Optimized &&
-            _renderBlackoutRequested;
+            (_renderBlackoutRequested || SmoothTimeScaleGovernor.AutoMaxActive);
         if (uncapFrameRate)
         {
             QualitySettings.vSyncCount = 0;
