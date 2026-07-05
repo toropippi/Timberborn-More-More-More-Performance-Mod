@@ -170,12 +170,29 @@ individually (WaitInsideIdly 0.7 s, Planter 0.55 s @512 µs/call, Labor 0.53 s).
   which DEFEATS GPU instancing → the render thread also issues ~one draw call
   per beaver (CPU-bound draw submission, matches "not GPU-bound").** Attribution
   probe `-benchAnim` (AnimSplitProbe) splits vertex-material-set vs
-  node-transform-write vs loop overhead — run it to confirm the split before
-  choosing a fix. Safe mod wins are small (cache the material ref to drop the
-  per-frame `.material` getter; combine the two `MovementAnimator` transform
-  writes into one `SetPositionAndRotation`); the big lever (MaterialPropertyBlock
-  + GPU instancing to collapse draw calls) is a rendering-pipeline change with
-  real risk and needs the vertex-anim shader to declare instancing support.
+  node-transform-write vs loop overhead.
+- **`-benchAnim` MEASURED (2026-07-05, rendered x3, overview camera = all
+  visible = worst case), per frame:** AnimatorRegistry loop total **8.3 ms**;
+  of that **node (bone) transform writes = 3.3 ms across ~10,465 writes/frame**
+  (~656 animators × ~16 bones, 0.31 µs each), vanilla loop + visibility-check
+  overhead ~2.5–3 ms, **vertex material-set only 0.9 ms** (656 calls, 1.38 µs),
+  plus ~1 ms probe overhead. **This OVERTURNED the `.material`/vertex hypothesis:
+  the dominant animation CPU cost is SKELETAL BONE TRANSFORM WRITES, not the
+  vertex material set.** Bone writes are inherent Unity CPU skeletal animation
+  (per-`Transform.SetLocalPositionAndRotation` native, no batch API without a
+  Jobs/ECS/`TransformAccessArray` rewrite the game would have to own) — there is
+  NO single implementation bug a mod can exploit for a big win. Only reductions:
+  (a) visibility culling — the shipped `InvisibleAnimatorPoseSkip` already skips
+  whole off-screen animators (the overview benchmark camera defeats it; real
+  zoomed play benefits a lot), (b) accepting a quality tradeoff (animation
+  thinning — user REFUSED, 2026-07-05). The `.material`-instead-of-MPB pattern
+  still affects DRAW-CALL submission (render thread, separate from this 8.3 ms
+  sampling and NOT yet measured); converting to `MaterialPropertyBlock` +
+  instancing is the only remaining "render" lever but is a risky rendering
+  change needing the vertex-anim shader to declare instancing support (can't be
+  verified from managed DLLs — asset-bundle shader). Safe micro-wins (material
+  ref cache 0.9 ms path; combine `MovementAnimator`'s two transform writes) are
+  sub-millisecond — not worth the Harmony overhead they add.
 - **EventBus**: ~680 subscribers; every entity spawn pays an
   EntityInitializedEvent fanout (~2 ms per PlantExecutor sapling spawn even
   with compiled delegates — the cost is the handler bodies).

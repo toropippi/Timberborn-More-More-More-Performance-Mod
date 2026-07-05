@@ -276,7 +276,10 @@ internal static class BenchmarkSettings
     // Sim results stay exactly vanilla for the speed actually achieved (it only
     // moves Time.timeScale, like pressing a speed button).
     public static readonly bool EnableFpsPriorityAutoSpeed = true;
-    public static readonly bool FpsPriorityAutoStartAfterLoad = true;
+    // User decision 2026-07-05: do NOT auto-start; the mode engages only when
+    // the player presses Shift+O (like the legacy smooth mode). The game starts
+    // with normal speed-button behavior untouched.
+    public static readonly bool FpsPriorityAutoStartAfterLoad = false;
     public const float FpsPriorityTargetFps = 60f;
     public const float FpsPriorityMaxSpeed = 50f;
     public const float FpsPriorityMinSpeed = 1f;
