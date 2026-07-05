@@ -274,6 +274,8 @@ internal static class BenchmarkMetrics
         BehaviorManagerProcessOptimizer.LogAndReset(aggregateId);
         ExecutorTickProfiler.LogAndReset(aggregateId);
         DistrictResourceCounterThrottle.LogAndReset(aggregateId);
+        OrderedListFastRemove.LogAndReset(aggregateId);
+        RoadReachabilityCache.LogAndReset(aggregateId);
         WaterObjectServiceThrottle.LogAndReset(aggregateId);
         WaterObjectServiceFastSkip.LogAndReset(aggregateId);
         ThreadSafeWaterMapTickThrottle.LogAndReset(aggregateId);

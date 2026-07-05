@@ -17,6 +17,8 @@ param(
     [switch] $BenchSmoothMode,
     [switch] $BenchTypeSort,
     [switch] $BenchHotspot,
+    [switch] $BenchDecide,
+    [switch] $BenchSpawn,
     [switch] $AutoResumeAfterLoad,
     [switch] $SkipAutoResumeAfterLoad,
     [switch] $ForceOptimizedAfterLoad,
@@ -232,6 +234,16 @@ $arguments = if ($UseSteamLaunchOptions) {
         # Attribution-only: per-component-type Tick timing reported every ~20s.
         # Stopwatch overhead contaminates ticks/s - never use for A/B numbers.
         $argList += '-benchHotspot'
+    }
+    if ($BenchDecide) {
+        # Attribution-only: per-type Behavior.Decide timing + no-action rates
+        # inside BehaviorManager. Same caveat as -benchHotspot.
+        $argList += '-benchDecide'
+    }
+    if ($BenchSpawn) {
+        # Attribution-only: entity spawn/delete tax split (event fanout,
+        # template instantiate, lifecycle phases). Same caveat as -benchHotspot.
+        $argList += '-benchSpawn'
     }
     $argList -join ' '
 }

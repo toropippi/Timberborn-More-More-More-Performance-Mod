@@ -165,6 +165,10 @@
       <HintPath>$(TimberbornManagedDir)\Timberborn.TickSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.EntitySystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.EntitySystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.WalkingSystem">
       <HintPath>$(TimberbornManagedDir)\Timberborn.WalkingSystem.dll</HintPath>
       <Private>false</Private>

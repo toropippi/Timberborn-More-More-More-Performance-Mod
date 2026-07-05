@@ -35,6 +35,20 @@ internal static class BenchmarkSettings
     public static readonly bool BenchHotspotRequested =
         HasCommandLineFlag("-benchHotspot");
 
+    // TEMP ATTRIBUTION (measurement only): per-type Behavior.Decide timing +
+    // no-action rates and per-executor Tick timing inside BehaviorManager,
+    // reported every ~20s window. Same contamination caveat as -benchHotspot:
+    // attribution-only, never quote absolute ticks/s from probed runs.
+    public static readonly bool BenchDecideRequested =
+        HasCommandLineFlag("-benchDecide");
+
+    // TEMP ATTRIBUTION (measurement only): entity spawn/delete tax split -
+    // fixed sites (PlantNew, template instantiate, entity lifecycle phases),
+    // per-event-type EventBus.PostNow timing, and per-handler [OnEvent] body
+    // timing. Attribution-only; same caveats as -benchHotspot.
+    public static readonly bool BenchSpawnRequested =
+        HasCommandLineFlag("-benchSpawn");
+
     private static bool HasCommandLineFlag(string flag)
     {
         var arguments = System.Environment.GetCommandLineArgs();
@@ -56,7 +70,7 @@ internal static class BenchmarkSettings
     // Development-only A/B measurement: Vanilla<->Optimized cycling, frame
     // sampling, and SimProgress/aggregate log output. Off in the distributed
     // build so the mod runs purely in Optimized mode with no log spam.
-    public static readonly bool EnableBenchmarkMeasurement = false;
+    public static readonly bool EnableBenchmarkMeasurement = true; // TEMP: investigation session 2026-07-05, restore to false before store build
     // Temporary measurement helper: run the save in VANILLA (optimizations off)
     // at ultra speed so it can be compared against Optimized at the same speed.
     // Keep false in the shipped build.
@@ -100,7 +114,7 @@ internal static class BenchmarkSettings
     public static readonly bool EnableNeedTravelCacheMetrics = false;
     public static readonly bool EnableNeedBehaviorDecisionMetrics = false;
     public static readonly bool EnableBeaverDecisionFrequencySampler = false;
-    public static readonly bool EnableHotOptimizerMetrics = false;
+    public static readonly bool EnableHotOptimizerMetrics = true; // TEMP verification run, restore false
     public static readonly bool EnableNeedManagerDirectCriticalState = false;
     public static readonly bool EnableNeedManagerFastTick = false;
     public static readonly bool EnableHaulCandidateOrderCache = false;
@@ -175,7 +189,7 @@ internal static class BenchmarkSettings
     // patched methods (DistrictMap.RecalculateRoadFlowFields) is also on the
     // sim pathfinding hot path, so SET FALSE FOR SHIPPED BUILDS and never
     // compare absolute ticks/s from probe-enabled runs.
-    public static readonly bool EnableTopologyUiProbe = true;
+    public static readonly bool EnableTopologyUiProbe = false;
     public const float TopoUiReportWindowSeconds = 5f;
     // UI-only fixes for the topology hot paths (see TopologyUiOptimizer):
     // diff-based mechanical network highlight instead of unhighlight-all +
@@ -280,6 +294,29 @@ internal static class BenchmarkSettings
     // time). Replaces ~18M native activeInHierarchy calls per 20s in the flat
     // sweep; measured ~+8% ticks at the compute ceiling.
     public static readonly bool EnableActiveInHierarchyMirror = true;
+
+    // Add the sentinel ONCE to each cached template GameObject (inactive, so
+    // no callbacks fire) so Object.Instantiate clones carry it natively,
+    // instead of per-entity AddComponent - which measured ~460us/call during
+    // load (~12.6s of the 63s load on n10c) and up to ~2.7ms/call at runtime
+    // (the dominant per-spawn cost). Clones start with SlotIndex -1 because
+    // the field is not Unity-serialized; AddComponent remains as fallback for
+    // objects that bypass the template cache.
+    public static readonly bool EnableSentinelTemplateInjection = true;
+
+    // Replace the O(n) List.Remove linear scans on entity delete with an
+    // exact stamp-ordered binary search + RemoveAt (see OrderedListFastRemove):
+    // EntityRegistry._entitiesInInstantiationOrder (~435us/delete) and
+    // EntityComponentRegistry._registeredComponents[type] (~1ms/delete
+    // combined) on n10c. List identity and ordering are preserved exactly.
+    public static readonly bool EnableEntityRegistryFastRemove = true;
+    public static readonly bool EnableComponentRegistryFastRemove = true;
+
+    // Exact result cache for the road-reachability BFS behind wander decides
+    // (pure function of the road navmesh; see RoadReachabilityCache).
+    // Invalidated by the regular-navmesh update notifier; requires
+    // EnableNavMeshEventTravelCacheInvalidation for the hook to be installed.
+    public static readonly bool EnableRoadReachabilityCache = true;
 
     // Flat-array bucket dispatch (v2 of the tick dispatch optimizer): per bucket,
     // all tickable components are cached in one flat array swept front-to-back,

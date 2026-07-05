@@ -144,6 +144,11 @@ internal static class BenchmarkProbe
             var patchedTopologyUiProbeMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiProbe(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTopologyUiScenarioMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiScenario(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTopologyUiOptimizerMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiOptimizers(harmony, harmonyMethodType, patchMethod) : 0;
+            var patchedDecideSplitProbeMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchDecideSplitProbe(harmony, harmonyMethodType, patchMethod) : 0;
+            var patchedSpawnSplitProbeMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchSpawnSplitProbe(harmony, harmonyMethodType, patchMethod) : 0;
+            var patchedSentinelTemplateMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchSentinelTemplateInjection(harmony, harmonyMethodType, patchMethod) : 0;
+            var patchedRegistryFastRemoveMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchRegistryFastRemoves(harmony, harmonyMethodType, patchMethod) : 0;
+            var patchedRoadReachabilityCacheMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchRoadReachabilityCache(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedEmptyInventoriesFastPathMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchEmptyInventoriesFastPath(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedNavMeshInvalidationMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchNavMeshUpdateInvalidation(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTickMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTickBuckets(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
@@ -2011,6 +2016,57 @@ internal static class BenchmarkProbe
     private static void RecordRegularNavMeshUpdate()
     {
         NeedBehaviorTravelOptimizer.OnRegularNavMeshUpdate();
+        RoadReachabilityCache.OnNavMeshUpdate();
+    }
+
+    private static int PatchRoadReachabilityCache(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        if (!BenchmarkSettings.EnableRoadReachabilityCache ||
+            !BenchmarkSettings.EnableNavMeshEventTravelCacheInvalidation)
+        {
+            return 0;
+        }
+
+        var targetType = FindType("Timberborn.Navigation.RoadReachabilityService") ??
+            TryLoadAssemblyAndFindType("Timberborn.Navigation", "Timberborn.Navigation.RoadReachabilityService");
+        var targetMethod = targetType?.GetMethod("GetReachableNeighborsInRange", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        var prefix = typeof(BenchmarkProbe).GetMethod(nameof(FastRoadReachableNeighbors), BindingFlags.Static | BindingFlags.NonPublic);
+        var postfix = typeof(BenchmarkProbe).GetMethod(nameof(StoreRoadReachableNeighbors), BindingFlags.Static | BindingFlags.NonPublic);
+        if (targetMethod is null || prefix is null || postfix is null)
+        {
+            Debug.LogWarning("[T3MP] RoadReachabilityService.GetReachableNeighborsInRange was not found.");
+            return 0;
+        }
+
+        var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, prefix);
+        var postfixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, postfix);
+        return TryPatch(harmony, patchMethod, targetMethod, prefixHarmonyMethod, postfixHarmonyMethod) ? 1 : 0;
+    }
+
+    private static bool FastRoadReachableNeighbors(int startingNodeId, int range, List<int> reachableRoadNodes, out int __state)
+    {
+        __state = -1;
+        if (!BenchmarkSettings.EnableRoadReachabilityCache ||
+            BenchmarkModeController.CurrentMode != BenchmarkMode.Optimized)
+        {
+            return true;
+        }
+
+        if (RoadReachabilityCache.TryGet(startingNodeId, range, reachableRoadNodes))
+        {
+            return false;
+        }
+
+        __state = reachableRoadNodes.Count;
+        return true;
+    }
+
+    private static void StoreRoadReachableNeighbors(int startingNodeId, int range, List<int> reachableRoadNodes, int __state)
+    {
+        if (__state >= 0)
+        {
+            RoadReachabilityCache.Store(startingNodeId, range, reachableRoadNodes, __state);
+        }
     }
 
     private static int PatchEmptyInventoriesFastPath(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
@@ -4035,6 +4091,524 @@ internal static class BenchmarkProbe
                 method.ReturnType == typeof(void) &&
                 !method.IsAbstract &&
                 !method.ContainsGenericParameters);
+    }
+
+    private static int PatchDecideSplitProbe(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        if (!BenchmarkSettings.BenchDecideRequested)
+        {
+            return 0;
+        }
+
+        var patched = 0;
+        try
+        {
+            // Behavior subclasses live in many lazily-loaded assemblies; force
+            // load every Timberborn.*.dll so the enumeration below is complete.
+            var managedDir = System.IO.Path.GetDirectoryName(typeof(Behavior).Assembly.Location);
+            if (managedDir is not null)
+            {
+                foreach (var dllPath in System.IO.Directory.GetFiles(managedDir, "Timberborn.*.dll"))
+                {
+                    try
+                    {
+                        Assembly.Load(AssemblyName.GetAssemblyName(dllPath));
+                    }
+                    catch (Exception)
+                    {
+                        // Non-loadable assemblies cannot contain reachable behaviors.
+                    }
+                }
+            }
+
+            var decidePrefix = typeof(BenchmarkProbe).GetMethod(nameof(RecordDecideSplitCall), BindingFlags.Static | BindingFlags.NonPublic);
+            var decidePostfix = typeof(BenchmarkProbe).GetMethod(nameof(RecordDecideSplitReturn), BindingFlags.Static | BindingFlags.NonPublic);
+            if (decidePrefix is null || decidePostfix is null)
+            {
+                Debug.LogWarning("[T3MP] DecideSplit probe patch methods were not found.");
+                return 0;
+            }
+
+            // Run the timing prefix FIRST (Priority.First) so optimizer prefixes
+            // that replace a Decide (return false) are still timed; the postfix
+            // guards on __state == 0 in case another prefix suppressed ours.
+            var decideMethods = new HashSet<MethodBase>();
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                foreach (var type in GetLoadableTypes(assembly))
+                {
+                    if (type is null || !IsAssignableTo(type, "Timberborn.BehaviorSystem.Behavior"))
+                    {
+                        continue;
+                    }
+
+                    foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                    {
+                        if (method.Name != "Decide" ||
+                            method.IsAbstract ||
+                            method.ContainsGenericParameters ||
+                            method.ReturnType != typeof(Decision))
+                        {
+                            continue;
+                        }
+
+                        var parameters = method.GetParameters();
+                        if (parameters.Length == 1 && parameters[0].ParameterType == typeof(BehaviorAgent))
+                        {
+                            decideMethods.Add(method);
+                        }
+                    }
+                }
+            }
+
+            foreach (var method in decideMethods)
+            {
+                var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, decidePrefix);
+                harmonyMethodType.GetField("priority")?.SetValue(prefixHarmonyMethod, 800);
+                var postfixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, decidePostfix);
+                if (TryPatch(harmony, patchMethod, method, prefixHarmonyMethod, postfixHarmonyMethod))
+                {
+                    patched++;
+                }
+            }
+
+            var behaviorManagerType = FindType("Timberborn.BehaviorSystem.BehaviorManager");
+            var processBehavior = behaviorManagerType?.GetMethod("ProcessBehavior", BindingFlags.Instance | BindingFlags.NonPublic);
+            var processPrefix = typeof(BenchmarkProbe).GetMethod(nameof(RecordProcessBehaviorCall), BindingFlags.Static | BindingFlags.NonPublic);
+            var processPostfix = typeof(BenchmarkProbe).GetMethod(nameof(RecordProcessBehaviorReturn), BindingFlags.Static | BindingFlags.NonPublic);
+            if (processBehavior is not null && processPrefix is not null && processPostfix is not null)
+            {
+                var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, processPrefix);
+                harmonyMethodType.GetField("priority")?.SetValue(prefixHarmonyMethod, 800);
+                var postfixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, processPostfix);
+                if (TryPatch(harmony, patchMethod, processBehavior, prefixHarmonyMethod, postfixHarmonyMethod))
+                {
+                    patched++;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[T3MP] DecideSplit probe: BehaviorManager.ProcessBehavior was not found.");
+            }
+
+            var tickRunningExecutor = behaviorManagerType?.GetMethod("TickRunningExecutor", BindingFlags.Instance | BindingFlags.NonPublic);
+            var executorPrefix = typeof(BenchmarkProbe).GetMethod(nameof(RecordTickExecutorCall), BindingFlags.Static | BindingFlags.NonPublic);
+            var executorPostfix = typeof(BenchmarkProbe).GetMethod(nameof(RecordTickExecutorReturn), BindingFlags.Static | BindingFlags.NonPublic);
+            if (tickRunningExecutor is not null && executorPrefix is not null && executorPostfix is not null)
+            {
+                var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, executorPrefix);
+                harmonyMethodType.GetField("priority")?.SetValue(prefixHarmonyMethod, 800);
+                var postfixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, executorPostfix);
+                if (TryPatch(harmony, patchMethod, tickRunningExecutor, prefixHarmonyMethod, postfixHarmonyMethod))
+                {
+                    patched++;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[T3MP] DecideSplit probe: BehaviorManager.TickRunningExecutor was not found.");
+            }
+
+            Debug.Log($"[T3MP] DecideSplit probe patched {patched} methods ({decideMethods.Count} Decide overrides found).");
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[T3MP] DecideSplit probe installation failed: {exception}");
+        }
+
+        return patched;
+    }
+
+    private static int PatchSentinelTemplateInjection(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        if (!BenchmarkSettings.EnableActiveInHierarchyMirror || !BenchmarkSettings.EnableSentinelTemplateInjection)
+        {
+            return 0;
+        }
+
+        var templateInstantiatorType = FindType("Timberborn.TemplateInstantiation.TemplateInstantiator") ??
+            TryLoadAssemblyAndFindType("Timberborn.TemplateInstantiation", "Timberborn.TemplateInstantiation.TemplateInstantiator");
+        var getCachedTemplate = templateInstantiatorType?.GetMethod("GetCachedTemplate", BindingFlags.Instance | BindingFlags.NonPublic);
+        var postfix = typeof(BenchmarkProbe).GetMethod(nameof(InjectSentinelIntoCachedTemplate), BindingFlags.Static | BindingFlags.NonPublic);
+        if (getCachedTemplate is null || postfix is null)
+        {
+            Debug.LogWarning("[T3MP] Sentinel template injection target was not found.");
+            return 0;
+        }
+
+        _cachedTemplatePrefabProperty = getCachedTemplate.ReturnType.GetProperty("Prefab", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        _cachedTemplatePrefabField = getCachedTemplate.ReturnType.GetField("_prefab", BindingFlags.Instance | BindingFlags.NonPublic) ??
+            getCachedTemplate.ReturnType.GetField("Prefab", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        if (_cachedTemplatePrefabProperty is null && _cachedTemplatePrefabField is null)
+        {
+            Debug.LogWarning("[T3MP] CachedTemplate.Prefab accessor was not found; sentinel template injection disabled.");
+            return 0;
+        }
+
+        var postfixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, postfix);
+        return TryPatch(harmony, patchMethod, getCachedTemplate, null, postfixHarmonyMethod) ? 1 : 0;
+    }
+
+    private static PropertyInfo? _cachedTemplatePrefabProperty;
+    private static FieldInfo? _cachedTemplatePrefabField;
+
+    private static void InjectSentinelIntoCachedTemplate(object __result)
+    {
+        if (__result is null)
+        {
+            return;
+        }
+
+        var prefab = _cachedTemplatePrefabProperty?.GetValue(__result) ?? _cachedTemplatePrefabField?.GetValue(__result);
+        if (prefab is GameObject templatePrefab)
+        {
+            TickDispatchOptimizer.InjectSentinelIntoTemplate(templatePrefab);
+        }
+    }
+
+    private static int PatchRegistryFastRemoves(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        if (!BenchmarkSettings.EnableEntityRegistryFastRemove && !BenchmarkSettings.EnableComponentRegistryFastRemove)
+        {
+            return 0;
+        }
+
+        var patched = 0;
+
+        if (BenchmarkSettings.EnableEntityRegistryFastRemove)
+        {
+            var addEntity = typeof(Timberborn.EntitySystem.EntityRegistry).GetMethod("AddEntity", BindingFlags.Instance | BindingFlags.Public);
+            var removeEntity = typeof(Timberborn.EntitySystem.EntityRegistry).GetMethod("RemoveEntity", BindingFlags.Instance | BindingFlags.Public);
+            var stampPostfix = typeof(BenchmarkProbe).GetMethod(nameof(StampRegisteredEntity), BindingFlags.Static | BindingFlags.NonPublic);
+            var removePrefix = typeof(BenchmarkProbe).GetMethod(nameof(FastEntityRegistryRemove), BindingFlags.Static | BindingFlags.NonPublic);
+            if (addEntity is not null && removeEntity is not null && stampPostfix is not null && removePrefix is not null)
+            {
+                if (TryPatch(harmony, patchMethod, addEntity, null, Activator.CreateInstance(harmonyMethodType, stampPostfix)))
+                {
+                    patched++;
+                }
+                if (TryPatch(harmony, patchMethod, removeEntity, Activator.CreateInstance(harmonyMethodType, removePrefix), null))
+                {
+                    patched++;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[T3MP] EntityRegistry fast remove targets were not found.");
+            }
+        }
+
+        if (BenchmarkSettings.EnableComponentRegistryFastRemove)
+        {
+            var registryType = typeof(Timberborn.EntitySystem.EntityComponentRegistry);
+            var registerAsType = registryType.GetMethod("RegisterAsType", BindingFlags.Instance | BindingFlags.NonPublic);
+            var unregisterAsType = registryType.GetMethod("UnregisterAsType", BindingFlags.Instance | BindingFlags.NonPublic);
+            var stampPostfix = typeof(BenchmarkProbe).GetMethod(nameof(StampRegisteredComponent), BindingFlags.Static | BindingFlags.NonPublic);
+            var removePrefix = typeof(BenchmarkProbe).GetMethod(nameof(FastUnregisterAsType), BindingFlags.Static | BindingFlags.NonPublic);
+            if (registerAsType is not null && unregisterAsType is not null && stampPostfix is not null && removePrefix is not null)
+            {
+                if (TryPatch(harmony, patchMethod, registerAsType, null, Activator.CreateInstance(harmonyMethodType, stampPostfix)))
+                {
+                    patched++;
+                }
+                if (TryPatch(harmony, patchMethod, unregisterAsType, Activator.CreateInstance(harmonyMethodType, removePrefix), null))
+                {
+                    patched++;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[T3MP] EntityComponentRegistry fast remove targets were not found.");
+            }
+        }
+
+        return patched;
+    }
+
+    private static void StampRegisteredEntity(Timberborn.EntitySystem.EntityComponent entityComponent)
+    {
+        OrderedListFastRemove.Stamp(entityComponent);
+    }
+
+    private static bool FastEntityRegistryRemove(
+        Dictionary<Guid, Timberborn.EntitySystem.EntityComponent> ____entities,
+        List<Timberborn.EntitySystem.EntityComponent> ____entitiesInInstantiationOrder,
+        Timberborn.EntitySystem.EntityComponent entityComponent)
+    {
+        if (!BenchmarkSettings.EnableEntityRegistryFastRemove ||
+            BenchmarkModeController.CurrentMode != BenchmarkMode.Optimized)
+        {
+            return true;
+        }
+
+        if (!OrderedListFastRemove.TryRemove(____entitiesInInstantiationOrder, entityComponent))
+        {
+            return true;
+        }
+
+        ____entities.Remove(entityComponent.EntityId);
+        return false;
+    }
+
+    private static void StampRegisteredComponent(Timberborn.EntitySystem.IRegisteredComponent registeredComponent)
+    {
+        OrderedListFastRemove.Stamp(registeredComponent);
+    }
+
+    private static bool FastUnregisterAsType(
+        Dictionary<Type, List<Timberborn.EntitySystem.IRegisteredComponent>> ____registeredComponents,
+        Timberborn.EntitySystem.IRegisteredComponent registeredComponent,
+        Type type)
+    {
+        if (!BenchmarkSettings.EnableComponentRegistryFastRemove ||
+            BenchmarkModeController.CurrentMode != BenchmarkMode.Optimized)
+        {
+            return true;
+        }
+
+        if (!____registeredComponents.TryGetValue(type, out var list))
+        {
+            // Vanilla would throw KeyNotFoundException here - run it.
+            return true;
+        }
+
+        return !OrderedListFastRemove.TryRemove(list, registeredComponent);
+    }
+
+    private static int PatchSpawnSplitProbe(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        if (!BenchmarkSettings.BenchSpawnRequested)
+        {
+            return 0;
+        }
+
+        var patched = 0;
+        try
+        {
+            var sitePrefix = typeof(BenchmarkProbe).GetMethod(nameof(RecordSpawnSiteCall), BindingFlags.Static | BindingFlags.NonPublic);
+            var sitePostfix = typeof(BenchmarkProbe).GetMethod(nameof(RecordSpawnSiteReturn), BindingFlags.Static | BindingFlags.NonPublic);
+            var postPrefix = typeof(BenchmarkProbe).GetMethod(nameof(RecordPostNowCall), BindingFlags.Static | BindingFlags.NonPublic);
+            var postPostfix = typeof(BenchmarkProbe).GetMethod(nameof(RecordPostNowReturn), BindingFlags.Static | BindingFlags.NonPublic);
+            if (sitePrefix is null || sitePostfix is null || postPrefix is null || postPostfix is null)
+            {
+                Debug.LogWarning("[T3MP] SpawnSplit probe patch methods were not found.");
+                return 0;
+            }
+
+            var siteTargets = new List<MethodBase>();
+
+            var naturalResourceFactoryType = FindType("Timberborn.NaturalResources.NaturalResourceFactory") ??
+                TryLoadAssemblyAndFindType("Timberborn.NaturalResources", "Timberborn.NaturalResources.NaturalResourceFactory");
+            var plantNew = naturalResourceFactoryType?.GetMethod("PlantNew", BindingFlags.Instance | BindingFlags.Public);
+            if (plantNew is not null)
+            {
+                siteTargets.Add(plantNew);
+            }
+
+            var templateInstantiatorType = FindType("Timberborn.TemplateInstantiation.TemplateInstantiator") ??
+                TryLoadAssemblyAndFindType("Timberborn.TemplateInstantiation", "Timberborn.TemplateInstantiation.TemplateInstantiator");
+            var templateInstantiate = templateInstantiatorType?.GetMethod("Instantiate", BindingFlags.Instance | BindingFlags.Public);
+            if (templateInstantiate is not null)
+            {
+                siteTargets.Add(templateInstantiate);
+            }
+
+            var baseInstantiatorType = templateInstantiatorType?.GetField("_baseInstantiator", BindingFlags.Instance | BindingFlags.NonPublic)?.FieldType;
+            var instantiateInactive = baseInstantiatorType?.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+                .FirstOrDefault(method => method.Name == "InstantiateInactive" && !method.ContainsGenericParameters);
+            if (instantiateInactive is not null)
+            {
+                siteTargets.Add(instantiateInactive);
+            }
+
+            var entityComponentType = FindType("Timberborn.EntitySystem.EntityComponent") ??
+                TryLoadAssemblyAndFindType("Timberborn.EntitySystem", "Timberborn.EntitySystem.EntityComponent");
+            foreach (var phaseName in new[] { "PreInitialize", "Initialize", "PostInitialize", "PostLoad" })
+            {
+                var phase = entityComponentType?.GetMethod(phaseName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+                if (phase is not null)
+                {
+                    siteTargets.Add(phase);
+                }
+            }
+
+            var entityServiceType = FindType("Timberborn.EntitySystem.EntityService") ??
+                TryLoadAssemblyAndFindType("Timberborn.EntitySystem", "Timberborn.EntitySystem.EntityService");
+            var deleteMethod = entityServiceType?.GetMethod("Delete", BindingFlags.Instance | BindingFlags.Public);
+            if (deleteMethod is not null)
+            {
+                siteTargets.Add(deleteMethod);
+            }
+
+            // Sub-sites of the TickableEntityLifecycleManager spawn tax.
+            var lifecycleManagerType = FindType("Timberborn.TickSystem.TickableEntityLifecycleManager");
+            var addTickableEntity = lifecycleManagerType?.GetMethod("AddTickableEntity", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (addTickableEntity is not null)
+            {
+                siteTargets.Add(addTickableEntity);
+            }
+
+            var createMetered = lifecycleManagerType?.GetMethod("CreateMeteredComponent", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (createMetered is not null)
+            {
+                siteTargets.Add(createMetered);
+            }
+
+            var tickableEntityType = FindType("Timberborn.TickSystem.TickableEntity");
+            var tickableEntityCtor = tickableEntityType?.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault();
+            if (tickableEntityCtor is not null)
+            {
+                siteTargets.Add(tickableEntityCtor);
+            }
+
+            var bucketType = FindType("Timberborn.TickSystem.TickableEntityBucket");
+            var bucketAdd = bucketType?.GetMethod("Add", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (bucketAdd is not null)
+            {
+                siteTargets.Add(bucketAdd);
+            }
+
+            // Delete-side sub-sites.
+            var entityRegistryType = FindType("Timberborn.EntitySystem.EntityRegistry");
+            var removeEntity = entityRegistryType?.GetMethod("RemoveEntity", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            if (removeEntity is not null)
+            {
+                siteTargets.Add(removeEntity);
+            }
+
+            var entityComponentDelete = entityComponentType?.GetMethod("Delete", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+            if (entityComponentDelete is not null)
+            {
+                siteTargets.Add(entityComponentDelete);
+            }
+
+            var componentRegistryUnregister = typeof(Timberborn.EntitySystem.EntityComponentRegistry)
+                .GetMethod("Unregister", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(Timberborn.EntitySystem.EntityComponent) }, null);
+            if (componentRegistryUnregister is not null)
+            {
+                siteTargets.Add(componentRegistryUnregister);
+            }
+
+            var eventBusUnregisterNow = FindType("Timberborn.SingletonSystem.EventBus")
+                ?.GetMethod("UnregisterNow", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (eventBusUnregisterNow is not null)
+            {
+                siteTargets.Add(eventBusUnregisterNow);
+            }
+
+            foreach (var target in siteTargets)
+            {
+                var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, sitePrefix);
+                harmonyMethodType.GetField("priority")?.SetValue(prefixHarmonyMethod, 800);
+                var postfixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, sitePostfix);
+                if (TryPatch(harmony, patchMethod, target, prefixHarmonyMethod, postfixHarmonyMethod))
+                {
+                    patched++;
+                }
+            }
+
+            var eventBusType = FindType("Timberborn.SingletonSystem.EventBus");
+            var postNow = eventBusType?.GetMethod("PostNow", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (postNow is not null)
+            {
+                var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, postPrefix);
+                harmonyMethodType.GetField("priority")?.SetValue(prefixHarmonyMethod, 800);
+                var postfixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, postPostfix);
+                if (TryPatch(harmony, patchMethod, postNow, prefixHarmonyMethod, postfixHarmonyMethod))
+                {
+                    patched++;
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[T3MP] SpawnSplit probe: EventBus.PostNow was not found.");
+            }
+
+            Debug.Log($"[T3MP] SpawnSplit probe patched {patched} methods.");
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning($"[T3MP] SpawnSplit probe installation failed: {exception}");
+        }
+
+        return patched;
+    }
+
+    private static void RecordSpawnSiteCall(out long __state)
+    {
+        __state = Stopwatch.GetTimestamp();
+    }
+
+    private static void RecordSpawnSiteReturn(MethodBase __originalMethod, long __state)
+    {
+        if (__state == 0)
+        {
+            return;
+        }
+
+        SpawnSplitProbe.RecordSite(
+            $"{__originalMethod.DeclaringType?.Name}.{__originalMethod.Name}",
+            Stopwatch.GetTimestamp() - __state);
+    }
+
+    private static void RecordPostNowCall(out long __state)
+    {
+        __state = Stopwatch.GetTimestamp();
+    }
+
+    private static void RecordPostNowReturn(object eventObject, long __state)
+    {
+        if (__state == 0)
+        {
+            return;
+        }
+
+        SpawnSplitProbe.RecordEvent(eventObject.GetType(), Stopwatch.GetTimestamp() - __state);
+    }
+
+    private static void RecordDecideSplitCall(out long __state)
+    {
+        __state = Stopwatch.GetTimestamp();
+    }
+
+    private static void RecordDecideSplitReturn(MethodBase __originalMethod, Decision __result, long __state)
+    {
+        if (__state == 0)
+        {
+            return;
+        }
+
+        DecideSplitProbe.RecordDecide(__originalMethod, Stopwatch.GetTimestamp() - __state, __result.ShouldReleaseNow);
+    }
+
+    private static void RecordProcessBehaviorCall(out long __state)
+    {
+        __state = Stopwatch.GetTimestamp();
+    }
+
+    private static void RecordProcessBehaviorReturn(Behavior behavior, bool __result, long __state)
+    {
+        if (__state == 0)
+        {
+            return;
+        }
+
+        DecideSplitProbe.RecordRoot(behavior.GetType(), Stopwatch.GetTimestamp() - __state, __result);
+    }
+
+    private static void RecordTickExecutorCall(object ____runningExecutor, out DecideSplitProbe.ExecState __state)
+    {
+        __state = new DecideSplitProbe.ExecState(Stopwatch.GetTimestamp(), ____runningExecutor?.GetType());
+    }
+
+    private static void RecordTickExecutorReturn(DecideSplitProbe.ExecState __state)
+    {
+        if (__state.Timestamp == 0)
+        {
+            return;
+        }
+
+        DecideSplitProbe.RecordExecutor(__state.ExecutorType, Stopwatch.GetTimestamp() - __state.Timestamp);
     }
 
     private static bool TryPatch(
