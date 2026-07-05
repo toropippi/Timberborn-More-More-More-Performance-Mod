@@ -147,6 +147,46 @@ active, Timbermesh animation sampling optionally runs every Nth frame
   achievable smooth speed, which keeps every clock consistent by construction
   (needs a control loop with headroom probing to avoid ratcheting down).
 
+### Smooth mode v2 — Shift+O timeScale governor (2026-07-05, commit 62baa8f)
+
+Replaces pacing v1's flawed ticker clamp with a governor on `Time.timeScale`
+itself: while enabled (Shift+O toggle, whole-game switch chosen by the user),
+the requested speed is multiplicatively adjusted toward a 30 fps target with a
+floor of `max(requested×0.15, min(requested, 3))`. All clocks stay consistent
+by construction, so v1's walk-in-place desync cannot occur. Verified at x50:
+8 fps → 17–27 fps at a governed ~x7.5. Flags: `EnableSmoothTimeScaleGovernor`,
+`GovernorTargetFps`, `-benchSmoothMode` starts it enabled.
+
+### Topology-UI round (2026-07-05, commits 5384d85…567a3a5)
+
+UI-only lag fixes for gear/path placement on huge networks (sim untouched):
+diff-based + budgeted mechanical-graph highlight (46.3 → 6.2 ms worst
+refresh), rate-limited + amortized path overlay rebuild (worst frame 46 →
+22.5 ms), overlay invalidation filtered to affected drawers, frame-batched
+`BlockObjectModelController.UpdateModel` (741 → 202 ms, worst 36.8 → 2.25 ms),
+preview re-adds capped at 10 Hz while dragging, and a bit-identical
+`FillFlowField` fast path (~5%, memory-bound ceiling). Details and remaining
+ceilings: `docs/optimization-knowledge-base.md` §4–5.
+
+### Type-sorted dispatch experiment — negative result (2026-07-05, commit e9e3c1e)
+
+ECS-style grouping of component ticks by type within each bucket measured
+**~0%** (33.12 vs 32.91 full-ticks/s): dispatch order / icache is not the
+bottleneck; the cost is the Tick() bodies' scattered heap data, which a mod
+cannot re-layout. Kept behind `-benchTypeSort` (changes tick order — never
+ship active). Bucket merging is a no-op by construction.
+
+### Peek-tick suppression fix (2026-07-05, commit 6decc74)
+
+The 1-frame render peek is frame-time-clamp limited, so that single frame
+carries up to ~40 ticks — measured ~half of ALL blackout ticks executed inside
+peek frames and bypassed every tick-side blackout fast path. New peek-agnostic
+gate `BlackoutTickSuppressionActive` keeps the exact fast move and the
+tick-driven cosmetic suppressions engaged for those ticks; frame-driven visual
+updaters still key off `RenderBlackoutActive` so the peek frame renders fresh.
+Clean A/B: 33.99 → **35.08** full-ticks/s (**+3.2%**, new n10c save baseline).
+Rule: any future tick-side suppression gates on `BlackoutTickSuppressionActive`.
+
 ## How to run a leave-one-out ablation
 
 1. Set the target flag(s) to `false` in `src/T3MP/BenchmarkSettings.cs`.

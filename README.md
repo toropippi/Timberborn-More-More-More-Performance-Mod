@@ -45,6 +45,11 @@ speed. See `docs/optimization-history.md`.) The full change-by-change record
 with per-item measurements and leave-one-out instructions is in
 [`docs/optimization-history.md`](docs/optimization-history.md).
 
+**Starting new optimization work?** Read
+[`docs/optimization-knowledge-base.md`](docs/optimization-knowledge-base.md)
+first — it consolidates the benchmark protocol, all hard rules, the tooling,
+and every **negative result** so dead-end investigations are not repeated.
+
 ## Install
 
 1. Install the **Harmony** mod (required).
