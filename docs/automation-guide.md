@@ -63,6 +63,8 @@ There is no runtime remote-control channel; speed/mode selection happens via
 | Rendered (visible) high-speed run | `-BenchTopoUi` forces x50 rendered with the gear/path selection scenario; or `-BenchAutoUltra` with `EnableOptimizedRenderBlackout=false` (rebuild) |
 | Smooth mode (Shift+O governor) pre-enabled | `-BenchSmoothMode` |
 | Per-type tick attribution | `-BenchHotspot` (see recipe C) |
+| Per-type `Behavior.Decide` + executor attribution | `-BenchDecide` (grep `DecideRoot`/`DecideExec`/`Decide \|`) |
+| Entity spawn/delete tax attribution | `-BenchSpawn` (grep `SpawnSite`/`SpawnEvent`/`SpawnHandler`) |
 | A/B a feature flag | flags are compile-time: build+run control (flag false), build+run experiment (flag true) — see recipe B |
 | Send a raw keypress after load | `-ForceOptimizedAfterLoad` (Ctrl+Shift+O dev force), `-PressUltraAfterLoad` (legacy key 4 — the shipped build no longer binds it; avoid) |
 

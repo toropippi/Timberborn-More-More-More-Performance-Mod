@@ -67,9 +67,23 @@ comparison valid:
 
 ## 3. Current state (2026-07-05, new n10c save, blackout ceiling)
 
-Clean A/B on the current build: **35.08 fullTicks/s** (peek fix ON) vs 33.99
-(OFF). Lineage on the OLD save (not comparable, shape only): vanilla 17.95 →
-v1.0 31.24 → flat dispatch v2 40.2 → active mirror 43.9.
+Clean A/B after the entity spawn/delete tax round (matched game-day aggregates,
+same build/day): **39.00 fullTicks/s** (spawn/wander opts ON) vs 37.29 (OFF),
+**+4.6%**, plus **load time 60.9 → 50.9 s (−16%)**. Earlier peek-fix A/B on this
+save was 35.08 vs 33.99. Lineage on the OLD save (not comparable, shape only):
+vanilla 17.95 → v1.0 31.24 → flat dispatch v2 40.2 → active mirror 43.9.
+
+Decide split on the new save (`-benchDecide`, 20 s window; DecideRoot ~5.0 s +
+DecideExec ~3.4 s ≈ 42% of wall): WorkerRoot 1.7 s (56k calls, 30 µs, 26%
+release), Wander 1.08 s (17.5k, 61 µs — now road-cached), NeederRoot 0.77 s
+(66% release), CarryRoot 0.65 s (94% release), CriticalNeeder 0.33 s.
+Executors: PlantExecutor 1.5–3.4 s (spawn tax, now cut), RemoveYieldExecutor
+0.8 s (delete tax, now cut), WalkInside 0.38 s, Produce 0.24 s.
+Spawn split (`-benchSpawn`): after the sentinel fix, per-spawn
+`EntityInitializedEvent` = 622 µs (was 3081), ~925 handlers, top handler is
+`TickableEntityLifecycleManager.OnEntityInitialized` ~30 µs (was 998 — it
+CONTAINED the nested sentinel AddComponent). Remaining spawn cost is inherent
+Unity instantiate + the event fanout body.
 
 Fresh per-type hotspot table (`-benchHotspot`, 120 s blackout, share of ~96 s
 component-tick time):
@@ -152,24 +166,39 @@ individually (WaitInsideIdly 0.7 s, Planter 0.55 s @512 µs/call, Labor 0.53 s).
   CORNERS, so its inputs are corner positions in both vanilla and the fast
   path (exactness anchor for any future rewrite).
 
-## 6. Open leads (ranked, as of 2026-07-05)
+## 6. Open leads (ranked, as of 2026-07-05, after the spawn/delete round)
 
-1. **BehaviorManager 51.7%** — re-drill the Decide split on the new save; the
-   only proven pattern is a no-action frame cache with an airtight invariant.
-2. **DistrictResourceCounter 301 µs/call** — anomalous unit cost, only 7.7k
-   calls/120 s; a throttle flag exists (`EnableDistrictResourceCounterThrottle`,
-   0.3% LOO) — figure out why one call is so expensive instead.
-3. Per-beaver maintenance pool (NeedManager, RangedEffectSubject,
-   ContaminationApplier, LifeProgressor…) ≈ 25% combined — scattered-heap
-   reads, hardest class; needs per-type decompile + event-driven redesign
-   ideas with exactness proofs.
-4. EventBus.Post subscriber-lookup/fanout cost (helps every spawn).
-5. Fast-move transform hoisting (WalkerMover 6.3%): keep `transform.position`
+1. **BehaviorManager Decide ≈ 42% of wall** — WorkerRoot 1.7 s is the biggest
+   single root (26% release rate). The only proven pattern is a no-action frame
+   cache with an airtight invariant (the shipped Haul one = 18.3% LOO). Wander
+   (1.08 s) is now partly road-cached; the terrain BFS in the same picker is
+   NOT cached (start node varies per pick → low hit rate, not worth it).
+2. Per-beaver maintenance pool (NeedManager 7%, RangedEffectSubject 6.3%,
+   ContaminationApplier 5.1%, LifeProgressor 3.2%) ≈ 21% combined — scattered-
+   heap reads, hardest class. Decompiled 2026-07-05: each Tick body is cheap
+   and mostly early-outs (Contamination: dry-land beavers no-op after a
+   position read + water-map lookup; RangedEffect: outdoor beavers get an empty
+   effect list; LifeProgressor: one dict-keyed bonus lookup + float add). The
+   cost is the sheer count (×660 beavers × ~35 ticks/s), not any one body, so
+   there is no concentrated target — only a lazy-accumulator or
+   disable-when-idle redesign per component, each with its own exactness proof.
+   Low value per unit of risk; deprioritized.
+3. EventBus fanout body: `EntityInitializedEvent` is 622 µs/post over ~925
+   handlers (0.67 µs each, mostly compiled-delegate dispatch + handler
+   early-outs). Reducing the fanout needs per-handler relevance filtering =
+   risky. Inherent for now.
+4. Fast-move transform hoisting (WalkerMover 6.3%): keep `transform.position`
    in a local through the corner loop, write at corner boundaries (before each
    speed-provider call) and at loop exit. Bit-exactness requires the provider
    to keep reading the corner position it reads today; see §5 last bullet.
-6. Visible-fps side: animation stride at normal speeds (needs user approval —
+5. Visible-fps side: animation stride at normal speeds (needs user approval —
    visual tradeoff), engine render floor is out of reach.
+
+**Closed this round:** DistrictResourceCounter 301 µs/call (was lead #2) —
+assessed as a full O(inventories) recount per tick; an incremental/event-driven
+rewrite touches a large exact surface (stock/capacity/carrier/processor events)
+feeding UI + possibly behavior reads, too risky for 2.4%. Existing interval=2
+throttle is the pragmatic lever; not extending.
 
 ## 7. Tooling
 

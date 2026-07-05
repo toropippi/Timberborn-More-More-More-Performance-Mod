@@ -17,6 +17,7 @@ fairest figure, used for public claims).
 | Harmony `__args` boxing fix (2026-07-04) | (GC side) | — | heap growth halved: 182–186 → 82–113 MB/20s |
 | Smooth frame pacing (2026-07-04) | (visible mode) | — | high-speed rendered play: 0.8 fps → ~8 fps at ~82% of max ticks |
 | **activeInHierarchy mirror** (2026-07-04) | **43.9** | **2.45x** | sentinel MonoBehaviour mirrors GameObject activity into dense bits |
+| **Entity spawn/delete tax** (2026-07-05) | (see below) | — | sentinel template injection (−16% load), registry fast-remove, road-reachability cache: +4.6% on the new n10c save clean A/B |
 
 Visible-mode (rendered, no Shift+P, pacing off) ceiling moved 26.7 → **33.5**
 full-ticks/s with flat dispatch v2.
@@ -186,6 +187,46 @@ tick-driven cosmetic suppressions engaged for those ticks; frame-driven visual
 updaters still key off `RenderBlackoutActive` so the peek frame renders fresh.
 Clean A/B: 33.99 → **35.08** full-ticks/s (**+3.2%**, new n10c save baseline).
 Rule: any future tick-side suppression gates on `BlackoutTickSuppressionActive`.
+
+### Entity spawn/delete tax round (2026-07-05, commit after 6decc74)
+
+Two new attribution probes (`-benchDecide` splits `Behavior.Decide` by type +
+per-executor tick timing; `-benchSpawn` splits the spawn/delete tax into fixed
+sites, per-event-type `EventBus.PostNow`, and per-`[OnEvent]`-handler bodies)
+found that the mod's own `activeInHierarchy` sentinel was the dominant per-spawn
+cost, and it was NESTED inside `EntityInitializedEvent` handling (so it inflated
+every parent site). Wins, all behavior-exact:
+
+- **Sentinel template injection** (`EnableSentinelTemplateInjection`): add the
+  `ActiveInHierarchySentinel` once to each cached template GameObject (inactive,
+  no callbacks fire) so `Object.Instantiate` clones carry it natively, instead
+  of `AddComponent` per entity. Clones start `SlotIndex = -1` (field not
+  Unity-serialized) exactly like a fresh AddComponent. Measured per-spawn:
+  `bucket.Add` 2754 → 7.6 µs, `EntityInitializedEvent` 3081 → 622 µs,
+  `EntityComponent.Initialize` 3573 → 817 µs; **load time 60.9 → 50.9 s (−16%)**.
+- **Registry fast-remove** (`EnableEntityRegistryFastRemove`,
+  `EnableComponentRegistryFastRemove`): replace the O(n) `List.Remove` linear
+  scans on entity delete with a stamp-ordered binary search + `RemoveAt`
+  (`OrderedListFastRemove`) — list identity and ordering preserved exactly.
+  `EntityRegistry.RemoveEntity` 435 → ~85 µs/delete (~90% hit the fast path,
+  the rest safely fall back to vanilla).
+- **Road reachability cache** (`EnableRoadReachabilityCache`): exact result
+  cache for the radius-10 road BFS behind wander decides (99.4% hit rate,
+  wander destinations pick from the beaver's home road node). Invalidated
+  directly on `RoadNavMeshGraph.ConnectNodes`/`DisconnectNodes` (the only graph
+  mutators) so it can never serve a stale result — required because wander
+  destinations feed the sim RNG stream.
+
+Clean A/B (matched game-day aggregates 2–8, all four flags on vs off, same
+build/day): **37.29 → 39.00 full-ticks/s (+4.6%)**, consistent +3.1…5.4% across
+every aggregate. Plus the −16% load-time win above.
+
+Negative sub-result: turning the shipped-default `EnableTopologyUiProbe` on vs
+off during blackout play was 38.91 vs 39.04 (−0.3%, within noise) — the topology
+stopwatch probe does NOT contaminate the sim during normal play (no tool
+selected → the road-flow-field methods it patches are cold). The KB "set false
+for shipped builds" rule is dev hygiene, not a measurable perf lever. Set false
+regardless (it is measurement scaffolding).
 
 ## How to run a leave-one-out ablation
 
