@@ -55,7 +55,7 @@ internal static class SmoothTimeScaleGovernor
         Debug.Log(string.Format(
             CultureInfo.InvariantCulture,
             "[T3MP] Smooth mode auto-started. mode={0} targetFps={1}",
-            AutoMaxMode ? "fps-priority-auto-max" : "cap-at-requested",
+            AutoMaxMode ? "fps-priority" : "cap-at-requested",
             AutoMaxMode ? BenchmarkSettings.FpsPriorityTargetFps : BenchmarkSettings.GovernorTargetFps));
     }
 
@@ -81,7 +81,7 @@ internal static class SmoothTimeScaleGovernor
             CultureInfo.InvariantCulture,
             "[T3MP] Smooth mode {0}. mode={1} targetFps={2}",
             _enabled ? "ON" : "OFF",
-            AutoMaxMode ? "fps-priority-auto-max" : "cap-at-requested",
+            AutoMaxMode ? "fps-priority" : "cap-at-requested",
             AutoMaxMode ? BenchmarkSettings.FpsPriorityTargetFps : BenchmarkSettings.GovernorTargetFps));
     }
 
@@ -156,17 +156,25 @@ internal static class SmoothTimeScaleGovernor
         }
     }
 
-    // FPS-priority auto-max: pin fps at FpsPriorityTargetFps and climb the sim
-    // speed into whatever CPU headroom exists, bounded by [MinSpeed, MaxSpeed].
-    // The pressed speed is ignored as a ceiling; only a real pause (CurrentSpeed
-    // == 0) suspends governing. Assumes the controller has uncapped the frame
-    // rate while _autoMaxActive so unscaledDeltaTime is the true CPU frame time.
+    // FPS-priority mode (user spec 2026-07-05): pin fps at FpsPriorityTargetFps
+    // by governing the sim speed within [x1, the PRESSED speed button]. The
+    // pressed speed (x1/x3/x7 with the throttler removed) is the CEILING - the
+    // governor never runs the sim FASTER than the button asks (so the freed
+    // frame time can't drive the sim to runaway x50 and provoke GC / render
+    // spikes), and never SLOWER than x1 (no slow-motion). At the x1 button
+    // there is nothing to govern (ceiling==floor), so the mode is inert and
+    // normal vsync play is left untouched; a real pause (CurrentSpeed 0) also
+    // suspends it. Assumes the controller uncaps the frame rate while
+    // _autoMaxActive so unscaledDeltaTime is the true CPU frame time.
     private static void TickAutoMax(float requestedSpeed)
     {
-        if (requestedSpeed <= 0f)
+        // Effective ceiling = pressed speed, hard-capped by the safety max.
+        var ceiling = Mathf.Min(requestedSpeed, BenchmarkSettings.FpsPriorityMaxSpeed);
+        if (ceiling <= BenchmarkSettings.FpsPriorityMinSpeed)
         {
-            // Genuinely paused (CurrentSpeed 0). Leave the clock at pause and
-            // stop uncapping; do not force a speed.
+            // Paused (0), or the x1 button (ceiling == floor == 1): nothing to
+            // govern. Restore the requested speed and stop uncapping so x1 play
+            // keeps its normal vsync frame rate.
             if (_overriding)
             {
                 RestoreRequestedSpeed();
@@ -193,7 +201,7 @@ internal static class SmoothTimeScaleGovernor
         _governedScale = Mathf.Clamp(
             _governedScale,
             BenchmarkSettings.FpsPriorityMinSpeed,
-            BenchmarkSettings.FpsPriorityMaxSpeed);
+            ceiling);
         Time.timeScale = _governedScale;
         _overriding = true;
         _autoMaxActive = true;
@@ -204,7 +212,7 @@ internal static class SmoothTimeScaleGovernor
             _nextLogRealtime = now + 10f;
             Debug.Log(string.Format(
                 CultureInfo.InvariantCulture,
-                "[T3MP] FPS-priority auto-max: speed={0:F1} fps={1:F1} targetFps={2:F0}",
+                "[T3MP] FPS-priority: speed={0:F1} fps={1:F1} targetFps={2:F0}",
                 _governedScale,
                 1f / Mathf.Max(_smoothedFrameSeconds, 0.001f),
                 BenchmarkSettings.FpsPriorityTargetFps));

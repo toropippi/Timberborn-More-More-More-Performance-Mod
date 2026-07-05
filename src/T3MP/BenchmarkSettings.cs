@@ -262,29 +262,32 @@ internal static class BenchmarkSettings
     public const float GovernorAdjustDownFactor = 0.97f;
     public const float GovernorAdjustUpFactor = 1.03f;
 
-    // FPS-PRIORITY AUTO-MAX MODE (user decision 2026-07-05): instead of the
-    // legacy "cap a requested speed down to hold 30 fps", pin the frame rate at
-    // FpsPriorityTargetFps and continuously seek the HIGHEST sim speed that
-    // sustains it - the speed floats up when there is CPU headroom and backs
-    // off when a frame runs long. The pressed speed button is ignored as a
-    // ceiling (only pause still pauses); the climb is bounded by
-    // FpsPriorityMaxSpeed. Requires the frame rate uncapped while active (the
-    // controller does this) so free-running fps is a true CPU signal - a vsync
-    // cap would quantize 60->30 and hide the headroom the governor climbs into.
-    // When this is true, Shift+O toggles THIS mode (not the legacy 30 fps cap);
-    // FpsPriorityAutoStartAfterLoad engages it automatically for always-on play.
+    // FPS-PRIORITY MODE (hidden, Shift+O, default OFF - user decision
+    // 2026-07-05): pin the frame rate at FpsPriorityTargetFps by governing the
+    // sim speed within [x1, the PRESSED speed button]. The pressed speed
+    // (x1/x3/x7 with the throttler removed) is the CEILING - the governor never
+    // runs the sim faster than the button asks, so the frame time freed by the
+    // 30 fps cap can't drive the sim to a runaway x50 that provokes GC / render
+    // spikes; and never slower than x1 (FpsPriorityMinSpeed, no slow-motion).
+    // At the x1 button the ceiling equals the floor, so the mode is inert and
+    // normal vsync play is untouched. Requires the frame rate uncapped while
+    // active (the controller does this) so free-running fps is a true CPU
+    // signal - a vsync cap would quantize and hide the headroom. Shift+O
+    // toggles this; FpsPriorityAutoStartAfterLoad (false) keeps it off at load.
     // Sim results stay exactly vanilla for the speed actually achieved (it only
     // moves Time.timeScale, like pressing a speed button).
     public static readonly bool EnableFpsPriorityAutoSpeed = true;
     // User decision 2026-07-05: do NOT auto-start; the mode engages only when
-    // the player presses Shift+O (like the legacy smooth mode). The game starts
-    // with normal speed-button behavior untouched.
+    // the player presses Shift+O (hidden mode). The game starts with normal
+    // speed-button behavior untouched.
     public static readonly bool FpsPriorityAutoStartAfterLoad = false;
-    // User decision 2026-07-05: target 30 fps (a lower, easier-to-sustain frame
-    // rate leaves more CPU headroom, so the governor climbs the sim speed
-    // higher than it could at 60 fps - especially on a heavy fully-rendered
-    // colony where 60 fps at x1 is already animation-bound).
+    // User decision 2026-07-05: target 30 fps. A lower, easier-to-sustain frame
+    // rate lets the governor keep more of the pressed speed (it only shaves the
+    // speed down toward x1 when a frame runs long), and on a heavy colony 60 fps
+    // is already animation-bound at x1 anyway.
     public const float FpsPriorityTargetFps = 30f;
+    // Absolute safety cap on the ceiling (the effective ceiling is the pressed
+    // speed button; this only bounds a pathological external speed request).
     public const float FpsPriorityMaxSpeed = 50f;
     public const float FpsPriorityMinSpeed = 1f;
     public const float FpsPriorityAdjustDownFactor = 0.95f;
