@@ -99,6 +99,28 @@ internal static class EventBusFastDelegates
     public static Action<object> CreateWrapper<T>(object subscriber, MethodInfo method)
     {
         var typed = (Action<T>)Delegate.CreateDelegate(typeof(Action<T>), subscriber, method);
+        if (SpawnSplitProbe.Enabled)
+        {
+            // TEMP ATTRIBUTION wrapper (-benchSpawn runs only): identical
+            // semantics plus a stopwatch pair around the handler body.
+            return eventObject =>
+            {
+                var start = System.Diagnostics.Stopwatch.GetTimestamp();
+                try
+                {
+                    typed((T)eventObject);
+                }
+                catch (Exception exception)
+                {
+                    throw new TargetInvocationException(exception);
+                }
+                finally
+                {
+                    SpawnSplitProbe.RecordHandler(method, System.Diagnostics.Stopwatch.GetTimestamp() - start);
+                }
+            };
+        }
+
         return eventObject =>
         {
             try

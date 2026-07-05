@@ -166,6 +166,7 @@ internal static class TickDispatchOptimizer
 
         try
         {
+            var probeStart = SpawnSplitProbe.Enabled ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
             if (_entityComponentField?.GetValue(tickableEntity) is not BaseComponent entityComponent)
             {
                 return;
@@ -177,17 +178,69 @@ internal static class TickDispatchOptimizer
                 return;
             }
 
-            // OnEnable may fire during AddComponent with SlotIndex still -1
-            // (guarded no-op); the slot is initialized from the current truth
-            // and every later transition is mirrored by the callbacks.
-            var sentinel = gameObject.AddComponent<ActiveInHierarchySentinel>();
+            // Preferred path: the sentinel was cloned in from the cached
+            // template (see InjectSentinelIntoTemplate) with SlotIndex -1
+            // (the field is not Unity-serialized, so clones always start at
+            // the field initializer value). AddComponent is the fallback for
+            // objects that did not come through the template cache - measured
+            // ~460us per call at load and up to ~2.7ms at runtime, it was the
+            // dominant per-spawn cost of the mirror.
+            var sentinel = gameObject.GetComponent<ActiveInHierarchySentinel>();
+            if (sentinel == null)
+            {
+                var addStart = SpawnSplitProbe.Enabled ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
+                sentinel = gameObject.AddComponent<ActiveInHierarchySentinel>();
+                if (addStart != 0)
+                {
+                    SpawnSplitProbe.RecordSite("Sentinel.AddComponent", System.Diagnostics.Stopwatch.GetTimestamp() - addStart);
+                }
+            }
+
+            // OnEnable may have fired during AddComponent/clone activation
+            // with SlotIndex still -1 (guarded no-op); the slot is initialized
+            // from the current truth and every later transition is mirrored by
+            // the callbacks.
             var slot = AllocateActiveSlot(gameObject.activeInHierarchy);
             sentinel.SlotIndex = slot;
             EntityActiveSlots.GetValue(tickableEntity, CreateActiveSlotBox).Slot = slot;
+            if (probeStart != 0)
+            {
+                SpawnSplitProbe.RecordSite("AttachSentinelForEntity", System.Diagnostics.Stopwatch.GetTimestamp() - probeStart);
+            }
         }
         catch (Exception)
         {
             // The entity keeps the exact native activeInHierarchy fallback.
+        }
+    }
+
+    /// <summary>
+    /// Called from the TemplateInstantiator.GetCachedTemplate Harmony postfix:
+    /// adds the sentinel ONCE to the inactive cached template GameObject so
+    /// every Object.Instantiate clone carries it natively. The cached object
+    /// is never activated, so no callbacks fire on it; clones start with
+    /// SlotIndex -1 (field not serialized) exactly like a fresh AddComponent.
+    /// </summary>
+    internal static void InjectSentinelIntoTemplate(GameObject templatePrefab)
+    {
+        if (!BenchmarkSettings.EnableActiveInHierarchyMirror ||
+            !BenchmarkSettings.EnableSentinelTemplateInjection ||
+            _disabled)
+        {
+            return;
+        }
+
+        try
+        {
+            if (templatePrefab != null && templatePrefab &&
+                templatePrefab.GetComponent<ActiveInHierarchySentinel>() == null)
+            {
+                templatePrefab.AddComponent<ActiveInHierarchySentinel>();
+            }
+        }
+        catch (Exception)
+        {
+            // Entities from this template fall back to per-entity AddComponent.
         }
     }
 
