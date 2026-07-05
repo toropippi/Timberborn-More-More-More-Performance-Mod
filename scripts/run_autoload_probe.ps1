@@ -19,6 +19,7 @@ param(
     [switch] $BenchHotspot,
     [switch] $BenchDecide,
     [switch] $BenchSpawn,
+    [switch] $BenchAnim,
     [switch] $AutoResumeAfterLoad,
     [switch] $SkipAutoResumeAfterLoad,
     [switch] $ForceOptimizedAfterLoad,
@@ -244,6 +245,11 @@ $arguments = if ($UseSteamLaunchOptions) {
         # Attribution-only: entity spawn/delete tax split (event fanout,
         # template instantiate, lifecycle phases). Same caveat as -benchHotspot.
         $argList += '-benchSpawn'
+    }
+    if ($BenchAnim) {
+        # Attribution-only: per-frame animation sampling split (vertex material
+        # set vs node transform write vs loop). Same caveat as -benchHotspot.
+        $argList += '-benchAnim'
     }
     $argList -join ' '
 }
