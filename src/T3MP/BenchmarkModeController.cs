@@ -193,6 +193,13 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         Debug.Log("[T3MP] Optimizations auto-enable after load. Shift+P toggles render blackout + animation thinning. Shift+O toggles smooth mode (fps-priority). Game speed is otherwise left to the base game.");
     }
 
+    private void LateUpdate()
+    {
+        // Flush the frame's deduplicated block-object model updates after all
+        // game logic, before rendering (see TopologyUiOptimizer).
+        TopologyUiOptimizer.FlushDeferredModelUpdates();
+    }
+
     private void Update()
     {
         var now = Time.realtimeSinceStartup;

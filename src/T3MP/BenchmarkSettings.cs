@@ -185,6 +185,14 @@ internal static class BenchmarkSettings
     // material operations per frame (~12us each => ~5ms/frame worst case).
     // A full 1600-node repaint becomes a 4-frame sweep instead of one hitch.
     public const int TopoHighlightOpsPerFrame = 400;
+    // Only re-render the district path overlay when a navmesh change touches
+    // (or neighbors) the drawn area, instead of on every change map-wide.
+    public static readonly bool EnablePathOverlayInvalidationFilter = true;
+    // Defer + dedupe BlockObjectModelController.UpdateModel into one flush
+    // per frame (BuildingModelUpdater re-fires it per changed coordinate,
+    // multi-tile objects once PER TILE; measured 276k calls / 366ms in a 5s
+    // burst). Rendering sees only end-of-frame state, so visually identical.
+    public static readonly bool EnableModelUpdateBatching = true;
     // While dragging (placements changing every tile), still cap full
     // ShowPreviews runs: the ghost trails the cursor by at most this long.
     // Clicking always validates fresh placements, so nothing can be
