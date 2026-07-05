@@ -15,6 +15,7 @@ param(
     [switch] $BenchAutoUltra,
     [switch] $BenchTopoUi,
     [switch] $BenchSmoothMode,
+    [switch] $BenchTypeSort,
     [switch] $AutoResumeAfterLoad,
     [switch] $SkipAutoResumeAfterLoad,
     [switch] $ForceOptimizedAfterLoad,
@@ -220,6 +221,11 @@ $arguments = if ($UseSteamLaunchOptions) {
         # Starts the Shift+O smooth mode (fps-priority timeScale governor)
         # already enabled, for automated verification.
         $argList += '-benchSmoothMode'
+    }
+    if ($BenchTypeSort) {
+        # Measurement-only experiment: type-sorted bucket sweep (results NOT
+        # vanilla-identical; never use for correctness comparisons).
+        $argList += '-benchTypeSort'
     }
     $argList -join ' '
 }
