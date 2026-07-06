@@ -38,6 +38,12 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     private float _lastUpdateRealtime;
     private float _lastBlackoutKeyRealtime = -10f;
     private float _lastSmoothModeKeyRealtime = -10f;
+    // Realtime up to which the Shift+O smooth-mode toast line is shown. Set on the
+    // keypress that turns the mode ON; the line disappears after ~5s so it stays
+    // out of the way during play (the compact iSPD "(auto)" tag is the lasting
+    // indicator that the mode is still governing).
+    private float _smoothHintUntilRealtime = -10f;
+    private const float SmoothHintSeconds = 5f;
     private long _lastManagedMemory;
     private int _lastGc0;
     private int _lastGc1;
@@ -356,6 +362,13 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         {
             _lastSmoothModeKeyRealtime = now;
             SmoothTimeScaleGovernor.Toggle();
+            // Show the mode line briefly as a keypress confirmation, then let it
+            // fade. Only on the ON press - turning it off needs no toast (the
+            // meter simply drops the "(auto)" tag).
+            if (SmoothTimeScaleGovernor.Enabled)
+            {
+                _smoothHintUntilRealtime = Time.realtimeSinceStartup + SmoothHintSeconds;
+            }
         }
     }
 
@@ -686,10 +699,13 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         // While the render blackout is active, show a persistent reminder line
         // above the meter so an accidental Shift+P is obvious and easy to undo.
         var blackout = RenderBlackoutActive;
-        // Shift+O smooth mode is active (and not blacked out): show the same kind
-        // of persistent mode line so the auto-varying iSPD is self-explanatory and
-        // the toggle key is discoverable.
-        var smooth = !blackout && SmoothTimeScaleGovernor.AutoMaxActive;
+        // Shift+O smooth mode: show the mode line only for a few seconds after the
+        // keypress (a confirmation toast), then hide it so it does not clutter the
+        // screen during play. The lasting indicator is the compact iSPD "(auto)"
+        // tag, which stays for as long as the governor is actually driving speed.
+        var smooth = !blackout &&
+            SmoothTimeScaleGovernor.Enabled &&
+            Time.realtimeSinceStartup < _smoothHintUntilRealtime;
         var hintRect = new Rect(rect.x, rect.y - hintHeight, width, hintHeight);
 
         // During the render blackout the camera is disabled, so the frame buffer
