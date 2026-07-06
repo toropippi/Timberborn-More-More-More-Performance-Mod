@@ -95,9 +95,20 @@ internal static class TopologyUiOptimizer
             var highlighter = (Highlighter)_highlighterField!.GetValue(service);
             var anyRoot = false;
             var includeUnfinished = false;
+            var hasRefPos = false;
+            var refPos = Vector3.zero;
             foreach (var rootNode in rootNodes)
             {
                 anyRoot = true;
+                if (!hasRefPos && rootNode)
+                {
+                    // Anchor of the reveal: the selected node's position. The
+                    // budgeted paint then radiates outward from here instead of
+                    // appearing in graph-internal order (which looks like stray
+                    // highlights flying in from far away).
+                    refPos = rootNode.Transform.position;
+                    hasRefPos = true;
+                }
                 var blockObject = rootNode ? rootNode.GetComponent<BlockObject>() : null;
                 if (blockObject is not null && (blockObject.IsUnfinished || blockObject.IsPreview))
                 {
@@ -122,7 +133,8 @@ internal static class TopologyUiOptimizer
                 // the end catches any foreign secondaries (vanilla parity).
                 PendingUnhighlight.AddRange(CurrentlyHighlighted);
                 _finalClearPending = true;
-                ProcessHighlightQueues(highlighter);
+                // Deselection (clicked empty / away): clear instantly.
+                ProcessHighlightQueues(highlighter, true);
                 return false;
             }
 
@@ -140,9 +152,12 @@ internal static class TopologyUiOptimizer
                 _iterateMethod!.Invoke(iterator, new object[] { rootNodes, FreshGraphNodes, includeUnfinished });
             }
 
-            // Queue only actual changes; painting is budgeted per frame so a
-            // 1600-node repaint becomes a few-ms sweep over several frames
-            // instead of one 20ms+ hitch.
+            // Instant for a plain selection click (finished network); budgeted
+            // only while a preview/unfinished network is involved (drag-place),
+            // where the network repaints repeatedly and one-shot paint stutters.
+            var instant = BenchmarkSettings.EnableInstantHighlightOnSelect && !includeUnfinished;
+
+            // Queue only actual changes.
             foreach (var node in CurrentlyHighlighted)
             {
                 if (!node || !FreshGraphNodes.Contains(node))
@@ -159,9 +174,25 @@ internal static class TopologyUiOptimizer
                 }
             }
 
+            // Only matters when budgeted (drag): reveal radiates OUTWARD from
+            // the selected node. ProcessHighlightQueues paints from the tail
+            // (LIFO), so sort farthest-first (descending distance) => nearest
+            // painted first. Skipped for the instant click (order is moot when
+            // the whole set paints in one frame, and it saves the sort cost).
+            if (!instant && BenchmarkSettings.EnableHighlightSpatialOrder && hasRefPos && PendingHighlight.Count > 1)
+            {
+                var anchor = refPos;
+                PendingHighlight.Sort((a, b) =>
+                {
+                    var da = a ? (a.Transform.position - anchor).sqrMagnitude : float.MaxValue;
+                    var db = b ? (b.Transform.position - anchor).sqrMagnitude : float.MaxValue;
+                    return db.CompareTo(da);
+                });
+            }
+
             _pendingColor = (Color)_highlightColorField!.GetValue(service);
             FreshGraphNodes.Clear();
-            ProcessHighlightQueues(highlighter);
+            ProcessHighlightQueues(highlighter, instant);
             return false;
         }
         catch (Exception exception)
@@ -220,9 +251,13 @@ internal static class TopologyUiOptimizer
         return true;
     }
 
-    private static void ProcessHighlightQueues(Highlighter highlighter)
+    private static void ProcessHighlightQueues(Highlighter highlighter, bool instant)
     {
-        var budget = BenchmarkSettings.TopoHighlightOpsPerFrame;
+        // A single selection click paints the whole network THIS frame (instant,
+        // no staggered reveal). Only the drag/preview case stays budgeted, where
+        // the network repaints many times per second and one-shot painting would
+        // stutter. int.MaxValue = "no per-frame cap".
+        var budget = instant ? int.MaxValue : BenchmarkSettings.TopoHighlightOpsPerFrame;
         while (budget > 0 && PendingUnhighlight.Count > 0)
         {
             var index = PendingUnhighlight.Count - 1;
