@@ -220,6 +220,17 @@ internal static class BenchmarkSettings
     // material operations per frame (~12us each => ~5ms/frame worst case).
     // A full 1600-node repaint becomes a 4-frame sweep instead of one hitch.
     public const int TopoHighlightOpsPerFrame = 400;
+    // Paint the mechanical highlight of a plain SELECTION click in ONE frame
+    // (instant, no staggered reveal). The per-frame budget above then applies
+    // only while dragging a gear preview (network repaints many times/sec, where
+    // one-shot painting would stutter). A one-shot repaint of an extreme
+    // ~1600-node network is only a ~19 ms single-frame blip on the click.
+    public static readonly bool EnableInstantHighlightOnSelect = true;
+    // Budgeted (drag) case only: reveal radiating OUTWARD from the selected node
+    // (nearest first) instead of in graph-internal order, which otherwise looks
+    // like stray highlights flying in from far away. Pure paint order; the
+    // highlighted set is identical to vanilla.
+    public static readonly bool EnableHighlightSpatialOrder = true;
     // Only re-render the district path overlay when a navmesh change touches
     // (or neighbors) the drawn area, instead of on every change map-wide.
     public static readonly bool EnablePathOverlayInvalidationFilter = true;
