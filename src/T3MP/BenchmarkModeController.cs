@@ -640,10 +640,17 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         //        after its population throttle (a big colony caps x50 down to less).
         // When rSPD < iSPD the machine can't keep up (CPU-bound); equal = keeping up.
         // UPS  = raw simulation updates (ticks) per second.
+        // In Shift+O smooth mode the governor auto-drives Time.timeScale to hold
+        // the target fps, so iSPD is no longer the fixed button speed but an
+        // auto-tuned value that hunts up and down. Tag it "(auto)" so the moving
+        // number reads as the mode working, not a glitch.
         var idealSpeed = Time.timeScale;
+        var autoGoverned = SmoothTimeScaleGovernor.AutoMaxActive;
         return string.Format(
             CultureInfo.InvariantCulture,
-            "rSPD/iSPD x{0:F1} / x{1:F1}\nUPS {2:F1} ticks/s",
+            autoGoverned
+                ? "rSPD/iSPD x{0:F1} / x{1:F1} (auto)\nUPS {2:F1} ticks/s"
+                : "rSPD/iSPD x{0:F1} / x{1:F1}\nUPS {2:F1} ticks/s",
             _speedupMultiplier,
             idealSpeed,
             _speedupTicksPerSecond);
@@ -679,6 +686,10 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         // While the render blackout is active, show a persistent reminder line
         // above the meter so an accidental Shift+P is obvious and easy to undo.
         var blackout = RenderBlackoutActive;
+        // Shift+O smooth mode is active (and not blacked out): show the same kind
+        // of persistent mode line so the auto-varying iSPD is self-explanatory and
+        // the toggle key is discoverable.
+        var smooth = !blackout && SmoothTimeScaleGovernor.AutoMaxActive;
         var hintRect = new Rect(rect.x, rect.y - hintHeight, width, hintHeight);
 
         // During the render blackout the camera is disabled, so the frame buffer
@@ -701,6 +712,25 @@ internal sealed class BenchmarkModeController : MonoBehaviour
             _blackoutHintStyle.normal.textColor = new Color(0f, 0f, 0f, 0.65f);
             GUI.Label(new Rect(hintRect.x + 1f, hintRect.y + 1f, hintRect.width, hintRect.height), hint, _blackoutHintStyle);
             _blackoutHintStyle.normal.textColor = new Color(1f, 0.85f, 0.4f, 0.95f);
+            GUI.Label(hintRect, hint, _blackoutHintStyle);
+        }
+        else if (smooth)
+        {
+            // No fill strip needed here: the camera stays on in smooth mode, so
+            // the game clears the frame each draw (unlike the blackout path).
+            _blackoutHintStyle ??= new GUIStyle
+            {
+                alignment = TextAnchor.MiddleRight,
+                fontSize = 12,
+                fontStyle = FontStyle.Bold
+            };
+            var hint = string.Format(
+                CultureInfo.InvariantCulture,
+                "(Smooth {0:F0}fps - auto speed [Shift+O])",
+                BenchmarkSettings.FpsPriorityTargetFps);
+            _blackoutHintStyle.normal.textColor = new Color(0f, 0f, 0f, 0.65f);
+            GUI.Label(new Rect(hintRect.x + 1f, hintRect.y + 1f, hintRect.width, hintRect.height), hint, _blackoutHintStyle);
+            _blackoutHintStyle.normal.textColor = new Color(0.6f, 1f, 0.7f, 0.95f);
             GUI.Label(hintRect, hint, _blackoutHintStyle);
         }
 
