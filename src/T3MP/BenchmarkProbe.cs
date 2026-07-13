@@ -2680,23 +2680,6 @@ internal static class BenchmarkProbe
                 patched++;
             }
         }
-        else if (BenchmarkSettings.EnablePathOverlayRebuildThrottle)
-        {
-            var drawerType = FindType("Timberborn.BuildingsNavigation.DistrictPathNavRangeDrawer");
-            var lateUpdateMethod = drawerType?.GetMethod("LateUpdate", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-            var prefix = typeof(BenchmarkProbe).GetMethod(nameof(ThrottleDrawerLateUpdateCall), BindingFlags.Static | BindingFlags.NonPublic);
-            var postfix = typeof(BenchmarkProbe).GetMethod(nameof(ThrottleDrawerLateUpdateReturn), BindingFlags.Static | BindingFlags.NonPublic);
-            if (lateUpdateMethod is null || prefix is null || postfix is null)
-            {
-                Debug.LogWarning("[T3MP] Path overlay throttle targets were not found.");
-            }
-            else if (TryPatch(harmony, patchMethod, lateUpdateMethod,
-                Activator.CreateInstance(harmonyMethodType, prefix),
-                Activator.CreateInstance(harmonyMethodType, postfix)))
-            {
-                patched++;
-            }
-        }
 
         if (BenchmarkSettings.EnablePathOverlayInvalidationFilter)
         {
@@ -2745,26 +2728,6 @@ internal static class BenchmarkProbe
             }
         }
 
-        if (BenchmarkSettings.EnablePreviewPlacerSkip)
-        {
-            var placerType = FindType("Timberborn.BlockObjectTools.PreviewPlacer");
-            var showMethod = placerType?.GetMethod("ShowPreviews", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
-            var showPrefix = typeof(BenchmarkProbe).GetMethod(nameof(SkipUnchangedShowPreviews), BindingFlags.Static | BindingFlags.NonPublic);
-            var invalidatePostfix = typeof(BenchmarkProbe).GetMethod(nameof(InvalidatePreviewPlacerCache), BindingFlags.Static | BindingFlags.NonPublic);
-            var hideMethod = placerType?.GetMethod("HideAllPreviews", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
-            var buildableMethod = placerType?.GetMethod("GetBuildableCoordinates", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
-            if (showMethod is null || showPrefix is null || invalidatePostfix is null || hideMethod is null || buildableMethod is null)
-            {
-                Debug.LogWarning("[T3MP] Preview placer skip targets were not found.");
-            }
-            else if (TryPatch(harmony, patchMethod, hideMethod, null, Activator.CreateInstance(harmonyMethodType, invalidatePostfix)) &&
-                TryPatch(harmony, patchMethod, buildableMethod, null, Activator.CreateInstance(harmonyMethodType, invalidatePostfix)) &&
-                TryPatch(harmony, patchMethod, showMethod, Activator.CreateInstance(harmonyMethodType, showPrefix), null))
-            {
-                patched += 3;
-            }
-        }
-
         return patched;
     }
 
@@ -2788,16 +2751,6 @@ internal static class BenchmarkProbe
         TopologyUiOptimizer.AfterHighlightLateUpdate(__instance);
     }
 
-    private static void ThrottleDrawerLateUpdateCall(object __instance)
-    {
-        TopologyUiOptimizer.BeforeDrawerLateUpdate(__instance);
-    }
-
-    private static void ThrottleDrawerLateUpdateReturn(object __instance)
-    {
-        TopologyUiOptimizer.AfterDrawerLateUpdate(__instance);
-    }
-
     private static bool DeferModelUpdateCall(object __instance)
     {
         return TopologyUiOptimizer.DeferModelUpdate(__instance);
@@ -2806,16 +2759,6 @@ internal static class BenchmarkProbe
     private static bool FilterOverlayInvalidationCall(object __instance, Timberborn.Navigation.NavMeshUpdate navMeshUpdate)
     {
         return TopologyUiOptimizer.FilterOverlayInvalidation(__instance, navMeshUpdate);
-    }
-
-    private static bool SkipUnchangedShowPreviews(object __instance, IEnumerable<Timberborn.Coordinates.Placement> placements)
-    {
-        return TopologyUiOptimizer.ShouldRunShowPreviews(__instance, placements);
-    }
-
-    private static void InvalidatePreviewPlacerCache(object __instance)
-    {
-        TopologyUiOptimizer.OnHideAllPreviews(__instance);
     }
 
     private static void RecordTopologyUiCall(object __instance, MethodBase __originalMethod, out TopologyUiProbe.State __state)

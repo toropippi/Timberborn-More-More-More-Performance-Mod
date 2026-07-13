@@ -4,6 +4,39 @@ More performance. Then more. Then, because the name promised it, a little more.
 
 ---
 
+## v1.1.2 — "more steady"
+
+**More steady. More live. Zero more flicker.**
+
+- **No more blinking route lines.** While placing or connecting a road, the green
+  path-range overlay used to flicker on and off — the route light strobing roughly
+  every other frame. Fixed: it now stays solid the whole time you are placing.
+- **More live overlay.** The green range now tracks your cursor in real time while
+  you drag a road, instead of lagging a fraction of a second behind. What you are
+  about to connect is shown *now*, not after it catches up.
+- **Less code.** The change removed a preview-refresh shortcut that turned out to
+  be the source of the flicker, plus a superseded rebuild-throttle path that no
+  longer ran. Same speed, fewer moving parts.
+- **Still zero more gameplay changes.** Visual fix only — the simulation result is
+  *exactly* vanilla, as always.
+
+### 日本語
+
+**もっと安定。もっとライブ。チラつきゼロ。**
+
+- **道のルートラインが点滅しなくなりました。** 道を設置・接続している最中、緑の
+  到達範囲オーバーレイが1フレームおきくらいに点いたり消えたりしていました。修正済み：
+  設置中はずっと安定して表示されます。
+- **もっとライブなオーバーレイ。** 道をドラッグしている間、緑の範囲がコンマ数秒
+  遅れて追従するのではなく、カーソルにリアルタイムで追従するようになりました。
+  これから何が繋がるかが「今」見えます。
+- **コードも削減。** 点滅の原因だったプレビュー更新のショートカットと、すでに
+  使われていない旧リビルド抑制の分岐を削除しました。速度はそのまま、部品は少なく。
+- **ゲーム内容の変更はゼロのまま。** 見た目だけの修正で、シミュレーション結果は
+  いつもどおりバニラと完全に同一です。
+
+---
+
 ## v1.1.1 — "even more"
 
 **More instant. More smooth. More more.**
