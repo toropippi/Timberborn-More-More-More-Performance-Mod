@@ -189,6 +189,21 @@ internal static class BenchmarkSettings
     // which updates every water object every tick.
     public static readonly bool EnableThreadSafeWaterMapTickThrottle = false;
     public static readonly bool EnableThreadSafeWaterFlowDirectionThrottle = false;
+    // Fast, vanilla-EXACT replacement for WaterObjectService.Tick: skips the
+    // per-object Contains + CellToIndex + ReadOnlyArray-wrapping column search by
+    // resolving each object's map cell once and reading the current column via
+    // the cheap index-based IThreadSafeWaterMap methods. The actual state change
+    // (and its event) is still done by vanilla WaterObject.UpdateWaterAboveBase()
+    // and only when the integer WaterAboveBase changed - so flooding is identical
+    // to vanilla, with no cached column index that could go stale. Replaces the
+    // removed (broken) WaterObjectServiceFastSkip. See WaterObjectTickFastPath.
+    public static readonly bool EnableWaterObjectTickFastPath = true;
+    // Safety net: every this many ticks the fast path runs a full vanilla-exact
+    // pass over all water objects, so any divergence self-heals within the window.
+    // Kept tight (a full pass is only ~2-3ms even on a 17k-object map, i.e. well
+    // under ~0.03ms/tick amortized) so any residual discrepancy in the every-tick
+    // compute can never leave a building mis-flooded for more than this window.
+    public const int WaterObjectTickSafetyNetTicks = 120;
     public static readonly bool EnableRangedEffectSubjectThrottle = false;
     public static readonly bool EnableContaminationApplierThrottle = false;
     public static readonly bool EnableNoActionCooldown = false;
