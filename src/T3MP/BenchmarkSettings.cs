@@ -201,16 +201,13 @@ internal static class BenchmarkSettings
     // diff-based mechanical network highlight instead of unhighlight-all +
     // re-highlight-all on every refresh (46ms -> DFS-only on a 1643-node
     // network); rate-limited district path overlay rebuilds (33ms per rebuild,
-    // vanilla re-fires it on ANY instant-navmesh change while selected);
-    // preview placer skip when the placement list did not change since the
-    // last recent full pass (vanilla re-adds previews to the preview navmesh
-    // EVERY frame while a tool is held, even with the cursor still).
+    // vanilla re-fires it on ANY instant-navmesh change while selected).
     // Placement validation itself is untouched - only visuals refresh less.
     public static readonly bool EnableMechanicalHighlightDiff = true;
-    public static readonly bool EnablePathOverlayRebuildThrottle = true;
-    public static readonly bool EnablePreviewPlacerSkip = true;
+    // Non-preview rebuild rate limit (a selected building's overlay re-fired by
+    // navmesh churn at high speed). A placement PREVIEW overlay ignores this and
+    // rebuilds every frame so the ghost range never lags the cursor.
     public const float TopoPathOverlayMinRebuildIntervalSeconds = 0.35f;
-    public const float TopoPreviewRefreshIntervalSeconds = 0.25f;
     // Coalesce mechanical highlight refreshes: dragging a gear preview flips
     // the network between connected/disconnected, repainting ~all nodes per
     // flip even with the diff. One refresh per interval bounds that cost;
@@ -248,14 +245,11 @@ internal static class BenchmarkSettings
     // frame, connection-key loop in budgeted chunks, mesh uploads on separate
     // frames. Replaces (and includes) the plain rebuild rate limit. The old
     // mesh keeps drawing during the sweep, so worst-frame cost drops from
-    // 32-46ms to ~17ms (the larger single mesh upload).
+    // 32-46ms to ~17ms (the larger single mesh upload). While the overlay is a
+    // placement PREVIEW the rate limit is bypassed so the ghost range tracks
+    // the cursor live (see PathOverlayAmortizer).
     public static readonly bool EnablePathOverlayAmortizedRebuild = true;
     public const int TopoOverlayTilesPerFrame = 2000;
-    // While dragging (placements changing every tile), still cap full
-    // ShowPreviews runs: the ghost trails the cursor by at most this long.
-    // Clicking always validates fresh placements, so nothing can be
-    // mis-placed - only the ghost visuals update at this rate.
-    public const float TopoPreviewDragMinIntervalSeconds = 0.1f;
 
     // Smooth pacing v2 (user decision 2026-07-05: opt-in toggle, Shift+O).
     // Governs Time.timeScale toward a target frame rate at high speeds -

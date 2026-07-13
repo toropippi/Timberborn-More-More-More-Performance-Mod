@@ -25,17 +25,19 @@ namespace T3MP;
 // 2. District path overlay rebuild (33ms per rebuild, re-fired by ANY
 //    instant-navmesh change anywhere on the map while a path/building is
 //    selected or previewed): rate-limit rebuilds per drawer instance. The
-//    first rebuild after a selection is never deferred.
-//
-// 3. Preview placer churn (every frame while holding a placement tool the
-//    previews are removed/re-added to the preview navmesh, invalidating the
-//    preview district maps even when the cursor did not move): skip
-//    ShowPreviews entirely when the placement list is unchanged and the last
-//    full run is recent. Actual placement validation (GetBuildableCoordinates)
-//    is untouched, so what gets BUILT is exactly vanilla.
+//    first rebuild after a selection is never deferred. The rate limit is
+//    bypassed while the overlay is a placement PREVIEW (see PathOverlayAmortizer)
+//    so the ghost's range tracks the cursor live instead of trailing it.
 //
 // None of these touch the simulation: they only change when UI highlight /
-// overlay / preview visuals are recomputed.
+// overlay visuals are recomputed.
+//
+// (A former third optimization skipped PreviewPlacer.ShowPreviews when the
+// placement list was unchanged. It was removed: skipping ShowPreviews also
+// skipped the per-frame re-show that keeps the district path overlay component
+// enabled, so a held/placing road preview blinked its route overlay on and off.
+// The churn it avoided is manual-placement-only and already absorbed by the
+// overlay amortizer + invalidation filter above.)
 internal static class TopologyUiOptimizer
 {
     // --- 1. Mechanical highlight diff -----------------------------------
@@ -349,61 +351,7 @@ internal static class TopologyUiOptimizer
         }
     }
 
-    // --- 2. Path overlay rebuild throttle --------------------------------
-
-    private sealed class DrawerThrottleState
-    {
-        public float NextAllowedRebuildRealtime;
-        public bool DeferredDirty;
-    }
-
-    private static readonly ConditionalWeakTable<object, DrawerThrottleState> DrawerStates =
-        new ConditionalWeakTable<object, DrawerThrottleState>();
-    private static FieldInfo? _drawerDirtyField;
-
-    public static void BeforeDrawerLateUpdate(object drawer)
-    {
-        _drawerDirtyField ??= drawer.GetType().GetField("_dirty", BindingFlags.Instance | BindingFlags.NonPublic);
-        if (_drawerDirtyField is null)
-        {
-            return;
-        }
-
-        var state = DrawerStates.GetOrCreateValue(drawer);
-        state.DeferredDirty = false;
-        if (!(bool)_drawerDirtyField.GetValue(drawer))
-        {
-            return;
-        }
-
-        var now = Time.realtimeSinceStartup;
-        if (now < state.NextAllowedRebuildRealtime)
-        {
-            // Too soon: draw the existing mesh this frame, re-arm dirty after.
-            _drawerDirtyField.SetValue(drawer, false);
-            state.DeferredDirty = true;
-        }
-        else
-        {
-            state.NextAllowedRebuildRealtime = now + BenchmarkSettings.TopoPathOverlayMinRebuildIntervalSeconds;
-        }
-    }
-
-    public static void AfterDrawerLateUpdate(object drawer)
-    {
-        if (_drawerDirtyField is null)
-        {
-            return;
-        }
-
-        if (DrawerStates.TryGetValue(drawer, out var state) && state.DeferredDirty)
-        {
-            state.DeferredDirty = false;
-            _drawerDirtyField.SetValue(drawer, true);
-        }
-    }
-
-    // --- 2b. Path overlay invalidation filter -----------------------------
+    // --- 2. Path overlay invalidation filter ------------------------------
     // Vanilla PathNavRangeDrawerInvalidator marks EVERY drawer dirty on ANY
     // instant-navmesh change anywhere on the map. Filter: only mark a drawer
     // whose drawn road area contains (or neighbors, incl. above/below - the
@@ -495,7 +443,7 @@ internal static class TopologyUiOptimizer
         }
     }
 
-    // --- 2c. Frame-batched block object model updates ----------------------
+    // --- 2b. Frame-batched block object model updates ----------------------
     // BuildingModelUpdater re-runs BlockObjectModelController.UpdateModel for
     // every block object on every changed navmesh coordinate (and below), so
     // one water/navmesh tick can trigger 100k+ calls, with multi-tile objects
@@ -560,73 +508,4 @@ internal static class TopologyUiOptimizer
         }
     }
 
-    // --- 3. Preview placer same-placement skip ---------------------------
-
-    private sealed class PreviewPlacerState
-    {
-        public readonly List<Placement> LastPlacements = new List<Placement>();
-        public float LastFullRunRealtime = float.NegativeInfinity;
-        public readonly List<Placement> ScratchPlacements = new List<Placement>();
-    }
-
-    private static readonly ConditionalWeakTable<object, PreviewPlacerState> PreviewPlacerStates =
-        new ConditionalWeakTable<object, PreviewPlacerState>();
-
-    // Returns true when the original ShowPreviews must run.
-    public static bool ShouldRunShowPreviews(object previewPlacer, IEnumerable<Placement> placements)
-    {
-        var state = PreviewPlacerStates.GetOrCreateValue(previewPlacer);
-        var scratch = state.ScratchPlacements;
-        scratch.Clear();
-        foreach (var placement in placements)
-        {
-            scratch.Add(placement);
-        }
-
-        var now = Time.realtimeSinceStartup;
-        var unchanged = scratch.Count == state.LastPlacements.Count;
-        if (unchanged)
-        {
-            for (var i = 0; i < scratch.Count; i++)
-            {
-                if (!scratch[i].Equals(state.LastPlacements[i]))
-                {
-                    unchanged = false;
-                    break;
-                }
-            }
-        }
-
-        var sinceFullRun = now - state.LastFullRunRealtime;
-        if (unchanged && sinceFullRun < BenchmarkSettings.TopoPreviewRefreshIntervalSeconds)
-        {
-            return false;
-        }
-
-        // Changed placements (dragging): cap the full-run rate too. Do NOT
-        // update LastPlacements here, so the pending change keeps requesting
-        // a run until the interval opens up.
-        if (!unchanged && sinceFullRun < BenchmarkSettings.TopoPreviewDragMinIntervalSeconds)
-        {
-            return false;
-        }
-
-        state.LastPlacements.Clear();
-        state.LastPlacements.AddRange(scratch);
-        state.LastFullRunRealtime = now;
-        return true;
-    }
-
-    // HideAllPreviews (tool exit) and GetBuildableCoordinates (actual
-    // placement) invalidate the cache, so the next ShowPreviews after either
-    // always does a full pass - a just-placed object is re-validated
-    // immediately instead of after the refresh interval.
-    public static void OnHideAllPreviews(object previewPlacer)
-    {
-        if (PreviewPlacerStates.TryGetValue(previewPlacer, out var state))
-        {
-            state.LastPlacements.Clear();
-            state.LastFullRunRealtime = float.NegativeInfinity;
-        }
-    }
 }

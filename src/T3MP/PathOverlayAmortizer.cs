@@ -15,7 +15,10 @@ namespace T3MP;
 // budgeted chunks, then the two mesh Builds on separate frames. The
 // previously built mesh keeps drawing during the sweep, so the overlay is
 // simply a few frames stale while updating, never a single big hitch.
-// Rate limiting (one rebuild start per interval) is folded in here.
+// Rate limiting (one rebuild start per interval) is folded in here for the
+// non-preview case; a placement PREVIEW overlay skips the rate limit and
+// rebuilds as fast as each sweep completes, so the ghost's range tracks the
+// cursor live instead of lagging behind it.
 internal static class PathOverlayAmortizer
 {
     private sealed class State
@@ -39,9 +42,24 @@ internal static class PathOverlayAmortizer
         {
             var state = States.GetOrCreateValue(__instance);
             var now = Time.realtimeSinceStartup;
-            if (__instance._dirty && now >= state.NextAllowedRebuildRealtime)
+            // A placement PREVIEW overlay is live UI the player is actively
+            // watching, so it must track the cursor - not trail it by the
+            // rate-limit interval. For previews, start a fresh rebuild as soon
+            // as one isn't already sweeping (rather than once per interval);
+            // the sweep still spreads the work over frames, so there's no
+            // single-frame hitch and no starvation on a huge range. The
+            // interval rate limit stays for the non-preview case (a selected
+            // finished building's overlay re-fired by navmesh churn at high
+            // speed), which is where the 33-46ms rebuild cost actually hurts.
+            var isPreview = __instance._drawingParameters.IsPreview;
+            var canStartRebuild = isPreview ? !state.Sweeping : now >= state.NextAllowedRebuildRealtime;
+            if (__instance._dirty && canStartRebuild)
             {
-                state.NextAllowedRebuildRealtime = now + BenchmarkSettings.TopoPathOverlayMinRebuildIntervalSeconds;
+                if (!isPreview)
+                {
+                    state.NextAllowedRebuildRealtime = now + BenchmarkSettings.TopoPathOverlayMinRebuildIntervalSeconds;
+                }
+
                 __instance._dirty = false;
                 // Start frame: refresh the node set (flow-field query) and
                 // reset the staging mesh builders. The displayed mesh is
