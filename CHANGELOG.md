@@ -4,6 +4,34 @@ More performance. Then more. Then, because the name promised it, a little more.
 
 ---
 
+## v1.1.4 — "more drainage"
+
+**More drainage. More vanilla. Zero more stuck-flooded buildings.**
+
+- **Buildings recover from flooding again.** A building that was temporarily
+  submerged could stay stuck in the "flooded" state forever after the water
+  receded. The mod skipped the per-tick water-object update whenever no column
+  *structurally* changed — but a building's flooded state depends on water
+  *depth*, which keeps changing as water flows and drains. So a flow-driven
+  recede was never noticed. Reverted that skip to vanilla behavior, which
+  re-checks every water object every tick.
+- **More faithful.** Flooding and un-flooding now track the water exactly like
+  vanilla, with no dependence on a signal that didn't mean what it looked like.
+
+### 日本語
+
+**もっと水はけ。もっとバニラに。浸水したまま固まる建物をゼロに。**
+
+- **建物が浸水から復帰するようになりました。** 一時的に水没した建物が、水が引いた
+  あとも「浸水」状態のまま永久に固まることがありました。MODは「カラムの*構造*変化が
+  無い tick」の水オブジェクト更新をスキップしていましたが、建物の浸水判定は*水深*で
+  決まり、水深は流れ・排水で変わり続けます。そのため流れによる水位低下が検知されません
+  でした。このスキップをバニラ挙動（毎tick全水オブジェクトを再チェック）に戻しました。
+- **もっと忠実に。** 浸水・復帰が、見かけと意味の違う信号に依存せず、バニラと完全に
+  同じく水位を追うようになりました。
+
+---
+
 ## v1.1.3 — "more reachable"
 
 **More reachable. More vanilla. Zero more stuck workers.**
