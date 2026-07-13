@@ -4,6 +4,34 @@ More performance. Then more. Then, because the name promised it, a little more.
 
 ---
 
+## v1.1.3 — "more reachable"
+
+**More reachable. More vanilla. Zero more stuck workers.**
+
+- **Workers no longer ignore reachable resources after a route change.** If you
+  rerouted a path so a fruiting tree or crop became reachable (or moved it out of
+  reach), gatherers, farmhouses and lumberjacks could keep using the *old* road
+  layout — walking past a ripe tree they should harvest. Fixed: the reachability
+  the mod caches is now rebuilt the moment the paths change, exactly like vanilla
+  recomputes it every time.
+- **More faithful.** This closes a case where the mod's cached pathing could drift
+  from vanilla after you edited roads. Same speed, same results — now including
+  right after you change a route.
+
+### 日本語
+
+**もっと到達可能に。もっとバニラに。詰まる作業員をゼロに。**
+
+- **ルート変更後、到達できる資源を作業員が無視しなくなりました。** 道を引き直して
+  実った木や作物が新たに到達可能になった（または逆に届かなくなった）とき、採集者・
+  農家・木こりが*古い*道の状態を使い続け、採るべき実った木の前を素通りすることが
+  ありました。修正：MODがキャッシュしている到達可能性を、道が変わった瞬間に
+  再構築するようにしました（バニラが毎回再計算するのと同じ挙動）。
+- **もっと忠実に。** 道を編集した後にMODのキャッシュ経路がバニラからずれ得た事象を
+  解消。速度も結果もそのまま——ルート変更直後も含めてバニラと一致します。
+
+---
+
 ## v1.1.2 — "more steady"
 
 **More steady. More live. Zero more flicker.**
