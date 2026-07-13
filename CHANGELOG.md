@@ -4,6 +4,47 @@ More performance. Then more. Then, because the name promised it, a little more.
 
 ---
 
+## v1.1.5 — "more water, less work"
+
+**More water objects, less per-tick work. Same vanilla result.**
+
+- **Faster water-object updates on big, watery maps.** Every tick the game
+  re-checks every water object (floodable buildings and more) to see if the
+  water above it changed — ~10k-17k of them on a large late-game map. This adds
+  a fast path that caches each object's map cell once (its coordinates never
+  move) and then reads the live water column directly each tick, skipping the
+  repeated bounds/index/wrapper overhead vanilla pays per object. Measured
+  **~35% less time** on that step (e.g. ~1.6 ms → ~1.05 ms per tick with ~10.6k
+  objects).
+- **Exactly vanilla.** The water column is re-read from the live state every
+  tick (no cached lookup that could go stale as water rises or drains), and the
+  actual flooded/unflooded change + event is still performed by the game's own
+  WaterObject.UpdateWaterAboveBase(), only when the value changed. It replaces
+  the v1.1.4-removed skip that used the wrong signal. A tight full-vanilla safety
+  pass runs periodically as belt-and-suspenders.
+- **Still zero gameplay changes.** Only *when* the check is done cheaply — what
+  floods, and when, is identical to vanilla.
+
+### 日本語
+
+**水オブジェクトは増えても、1tickの手間は減る。結果はバニラ同一。**
+
+- **広大で水の多いマップで、水オブジェクト更新が高速に。** ゲームは毎tick、全ての
+  水オブジェクト（浸水しうる建物など。大規模終盤マップで約1〜1.7万個）の水位変化を
+  再チェックします。この処理に高速パスを追加：各オブジェクトのマップセルを一度だけ
+  キャッシュし（座標は動きません）、以降は毎tick現在の水柱を直接読むことで、バニラが
+  オブジェクトごとに払う境界判定・インデックス計算・ラッパ生成の重複を省きます。
+  **約35%短縮**（例：約1.6ms→約1.05ms/tick、水オブジェクト約1.06万個時）。
+- **バニラ完全一致。** 水柱は毎tick現在の状態から読み直すため（水位上昇・排水で
+  古くなる索引キャッシュは持ちません）、浸水の発生も復帰も取りこぼしません。実際の
+  浸水／復帰処理とイベントは、値が変わったときだけゲーム本体の
+  WaterObject.UpdateWaterAboveBase() が行います。v1.1.4 で撤去した「誤った信号を使う
+  スキップ」の正しい置き換えです。保険として短い間隔でフルバニラ一巡も回します。
+- **ゲーム内容の変更はゼロ。** 変えたのはチェックを安くする*やり方*だけ。何がいつ
+  浸水するかはバニラと同一です。
+
+---
+
 ## v1.1.4 — "more drainage"
 
 **More drainage. More vanilla. Zero more stuck-flooded buildings.**

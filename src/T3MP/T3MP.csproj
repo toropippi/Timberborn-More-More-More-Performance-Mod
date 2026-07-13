@@ -105,6 +105,14 @@
       <HintPath>$(TimberbornManagedDir)\Timberborn.Fields.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.WaterObjects">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.WaterObjects.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.WaterSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.WaterSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.Effects">
       <HintPath>$(TimberbornManagedDir)\Timberborn.Effects.dll</HintPath>
       <Private>false</Private>
