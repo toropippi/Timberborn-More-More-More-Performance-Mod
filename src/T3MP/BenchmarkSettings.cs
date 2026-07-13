@@ -180,7 +180,13 @@ internal static class BenchmarkSettings
     public const float BoundPruningGuardEpsilonHours = 0.001f;
     public static readonly bool EnableDistrictResourceCounterThrottle = true;
     public static readonly bool EnableWaterObjectServiceThrottle = false;
-    public static readonly bool EnableWaterObjectServiceFastSkip = true;
+    // (Removed) WaterObjectServiceFastSkip skipped WaterObjectService.Tick when
+    // IThreadSafeWaterMap.AnyColumnChanged was false. That flag only tracks
+    // STRUCTURAL column changes (obstacles/terrain/splits), not water-depth
+    // changes from normal flow - but a building's flooded state is driven by
+    // water depth (WaterObject.WaterAboveBase). So while water receded by flow
+    // the skip left buildings stuck "flooded" forever. Reverted to vanilla,
+    // which updates every water object every tick.
     public static readonly bool EnableThreadSafeWaterMapTickThrottle = false;
     public static readonly bool EnableThreadSafeWaterFlowDirectionThrottle = false;
     public static readonly bool EnableRangedEffectSubjectThrottle = false;

@@ -277,7 +277,6 @@ internal static class BenchmarkMetrics
         OrderedListFastRemove.LogAndReset(aggregateId);
         RoadReachabilityCache.LogAndReset(aggregateId);
         WaterObjectServiceThrottle.LogAndReset(aggregateId);
-        WaterObjectServiceFastSkip.LogAndReset(aggregateId);
         ThreadSafeWaterMapTickThrottle.LogAndReset(aggregateId);
         RangedEffectSubjectThrottle.LogAndReset(aggregateId);
         ContaminationApplierThrottle.LogAndReset(aggregateId);
@@ -304,7 +303,6 @@ internal static class BenchmarkMetrics
         DefaultMechanicalAnimatorOptimizer.Reset();
         RangedEffectSubjectProfiler.Reset();
         RangedEffectSubjectThrottle.Reset();
-        WaterObjectServiceFastSkip.Reset();
         ThreadSafeWaterMapTickThrottle.Reset();
         ContaminationApplierThrottle.Reset();
         StatusAggregatorThrottle.Reset();

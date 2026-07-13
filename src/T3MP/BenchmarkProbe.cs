@@ -117,7 +117,6 @@ internal static class BenchmarkProbe
             var patchedExecutorTickProfilerMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchExecutorTickProfiler(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedDistrictResourceCounterMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchDistrictResourceCounterThrottle(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedWaterObjectServiceMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchWaterObjectServiceThrottle(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
-            var patchedWaterObjectServiceFastSkipMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchWaterObjectServiceFastSkip(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedThreadSafeWaterMapTickMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchThreadSafeWaterMapTickThrottle(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedThreadSafeWaterFlowMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchThreadSafeWaterFlowDirectionThrottle(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedRangedEffectSubjectThrottleMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchRangedEffectSubjectThrottle(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
@@ -175,7 +174,7 @@ internal static class BenchmarkProbe
             var patchedSoundListenerMethods = PatchSoundListenerStaticCameraOptimizer(harmony, harmonyMethodType, patchMethod);
             var patchedPathFollowerGuardMethods = PatchMovementNreGuard(harmony, harmonyType, harmonyMethodType, patchMethod);
 
-            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerNoAnimation={patchedPathFollowerNoAnimationMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, WaterObjectServiceFastSkip={patchedWaterObjectServiceFastSkipMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorThrottle={patchedAnimatorThrottleMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, PathFollowerGuard={patchedPathFollowerGuardMethods}, MenuBlackoutCancel={patchedMenuBlackoutCancelMethods}, TopoUiProbe={patchedTopologyUiProbeMethods}, TopoUiScenario={patchedTopologyUiScenarioMethods}, TopoUiOptimizer={patchedTopologyUiOptimizerMethods}");
+            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerNoAnimation={patchedPathFollowerNoAnimationMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorThrottle={patchedAnimatorThrottleMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, PathFollowerGuard={patchedPathFollowerGuardMethods}, MenuBlackoutCancel={patchedMenuBlackoutCancelMethods}, TopoUiProbe={patchedTopologyUiProbeMethods}, TopoUiScenario={patchedTopologyUiScenarioMethods}, TopoUiOptimizer={patchedTopologyUiOptimizerMethods}");
         }
         catch (Exception exception)
         {
@@ -2834,37 +2833,6 @@ internal static class BenchmarkProbe
         InvisibleAnimatorPoseSkip.RepairFinishedPose((Component)__instance);
     }
 
-    private static int PatchWaterObjectServiceFastSkip(object harmony, Type harmonyType, Type harmonyMethodType, MethodInfo patchMethod)
-    {
-        if (!BenchmarkSettings.EnableWaterObjectServiceFastSkip)
-        {
-            return 0;
-        }
-
-        var targetType = FindType("Timberborn.WaterObjects.WaterObjectService") ??
-            TryLoadAssemblyAndFindType("Timberborn.WaterObjects", "Timberborn.WaterObjects.WaterObjectService");
-        var prefix = typeof(BenchmarkProbe).GetMethod(nameof(MaybeRunWaterObjectServiceFastSkip), BindingFlags.Static | BindingFlags.NonPublic);
-        if (targetType is null || prefix is null)
-        {
-            Debug.LogWarning("[T3MP] WaterObjectService fast-skip target was not found.");
-            return 0;
-        }
-
-        var targetMethod = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-            .FirstOrDefault(method =>
-                method.Name == "Tick" &&
-                method.ReturnType == typeof(void) &&
-                method.GetParameters().Length == 0 &&
-                !method.ContainsGenericParameters);
-        if (targetMethod is null)
-        {
-            Debug.LogWarning("[T3MP] WaterObjectService.Tick method was not found for fast-skip.");
-            return 0;
-        }
-
-        var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, prefix);
-        return TryPatch(harmony, patchMethod, targetMethod, prefixHarmonyMethod, null) ? 1 : 0;
-    }
 
     private static int PatchThreadSafeWaterMapTickThrottle(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
     {
@@ -5545,11 +5513,6 @@ internal static class BenchmarkProbe
     private static bool MaybeRunWaterObjectServiceTick(object __instance)
     {
         return WaterObjectServiceThrottle.ShouldRunOriginal(__instance);
-    }
-
-    private static bool MaybeRunWaterObjectServiceFastSkip(object __instance)
-    {
-        return WaterObjectServiceFastSkip.ShouldRunOriginal(__instance);
     }
 
     private static bool MaybeRunThreadSafeWaterMapTick()
