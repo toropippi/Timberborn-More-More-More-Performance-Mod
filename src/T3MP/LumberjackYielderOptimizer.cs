@@ -74,6 +74,23 @@ internal static class LumberjackYielderOptimizer
         }
     }
 
+    // The distance cache stores start.FindTerrainPath reachability keyed by area
+    // + accessible + start + area-version. None of those change when a road/path
+    // is added or removed, so a route change could otherwise leave a tree stale
+    // (unreachable-cached, or reachable-cached at a wrong distance). Drop the
+    // reachability cache on any regular-navmesh update so it is rebuilt against
+    // the current navmesh. Called from the NavMeshUpdateNotifier hook.
+    public static void OnNavMeshUpdate()
+    {
+        lock (CacheLock)
+        {
+            if (DistanceCache.Count > 0)
+            {
+                DistanceCache.Clear();
+            }
+        }
+    }
+
     public static bool TryFindCuttable(object lumberjackBehavior, int liftingCapacity, out YielderSearchResult result)
     {
         result = default;

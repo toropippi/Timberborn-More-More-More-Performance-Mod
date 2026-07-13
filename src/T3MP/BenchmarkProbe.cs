@@ -2017,6 +2017,15 @@ internal static class BenchmarkProbe
     private static void RecordRegularNavMeshUpdate()
     {
         NeedBehaviorTravelOptimizer.OnRegularNavMeshUpdate();
+        // Yielder-finding optimizers cache start.FindTerrainPath reachability but
+        // are otherwise refreshed only on spatial/area changes, so a road/path
+        // change would leave a resource stale (a fruiting tree the worker never
+        // walks to, or one it keeps trying at a wrong distance). Vanilla recomputes
+        // the path every search; invalidating here restores that on route changes.
+        GatherWorkplaceOptimizer.OnNavMeshUpdate();
+        FarmYielderOptimizer.OnNavMeshUpdate();
+        LumberjackYielderOptimizer.OnNavMeshUpdate();
+        FastYielderFinder.OnNavMeshUpdate();
     }
 
     private static int PatchRoadReachabilityCache(object harmony, Type harmonyMethodType, MethodInfo patchMethod)

@@ -218,6 +218,23 @@ internal static class FastYielderFinder
         }
     }
 
+    // The distance cache stores start.FindTerrainPath reachability keyed only by
+    // start + candidate set; it self-expires after FastYielderDistanceCacheMaxAgeFrames,
+    // but until then a road/path change would leave reachability stale (diverging
+    // from vanilla, which recomputes the path every search). Drop it on any
+    // regular-navmesh update so reachability matches the current navmesh
+    // immediately. Called from the NavMeshUpdateNotifier hook.
+    public static void OnNavMeshUpdate()
+    {
+        lock (DistanceCacheLock)
+        {
+            if (DistanceCache.Count > 0)
+            {
+                DistanceCache.Clear();
+            }
+        }
+    }
+
     public static void LogAndReset(long aggregateId)
     {
         var attempts = Interlocked.Exchange(ref _capacityPrecheckAttempts, 0);

@@ -147,6 +147,22 @@ internal static class FarmYielderOptimizer
         return true;
     }
 
+    // See GatherWorkplaceOptimizer.OnNavMeshUpdate: the per-slot terrain-path
+    // reachability is cached and otherwise only refreshed on spatial/range
+    // changes, so a road/path change would leave a newly-reachable (or newly
+    // unreachable) crop stale. Force a distance rebuild on the next search after
+    // any regular-navmesh update. Called from the NavMeshUpdateNotifier hook.
+    public static void OnNavMeshUpdate()
+    {
+        lock (IndexLock)
+        {
+            foreach (var index in Indexes.Values)
+            {
+                index.MarkDistanceDirty();
+            }
+        }
+    }
+
     private static FarmIndex GetIndex(InRangeYielders inRangeYielders, Accessible accessible)
     {
         lock (IndexLock)
@@ -365,6 +381,13 @@ internal static class FarmYielderOptimizer
             _accessible = accessible;
             _buildingTerrainRange = inRangeYielders.GetComponent<BuildingTerrainRange>();
             SubscribeEvents();
+        }
+
+        // Forces the next search to rebuild the distance index (re-running
+        // FindTerrainPath), because reachability depends on the navmesh.
+        public void MarkDistanceDirty()
+        {
+            _distanceDirty = true;
         }
 
         public YielderSearchResult Find(

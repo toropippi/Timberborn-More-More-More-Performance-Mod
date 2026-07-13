@@ -159,6 +159,25 @@ internal static class GatherWorkplaceOptimizer
             $"[T3MP] GatherWorkplaceOptimizer aggregate={aggregateId}, enabled={BenchmarkSettings.EnableGatherWorkplaceOptimizer}, attempts={attempts}, handled={handled}, handledRate={(double)handled / attempts:F3}, fallbacks={fallbacks}, avgCandidates={(double)candidateCount / attempts:F2}, avgReachable={(double)reachableCount / attempts:F2}, pathCalls={pathCalls}, indexBuilds={indexBuilds}, dirtyRebuilds={dirtyRebuilds}, readyQueries={readyQueries}, aliveQueries={aliveQueries}, presentQueries={presentQueries}, reservedSkips={reservedSkips}, staleClears={staleClears}, capacityRejects={capacityRejects}, empty={emptyResults}, noYielderInRange={noYielderResults}, entries={entries}");
     }
 
+    // Terrain-path reachability (start.FindTerrainPath) is cached per index and
+    // otherwise only recomputed when the spatial in-range yielder set or the
+    // start position changes - NOT when roads/paths change. A route change can
+    // make a fruiting resource newly reachable (or unreachable) without touching
+    // either, so without this the gatherer would keep ignoring it. Vanilla
+    // recomputes the path every Decide(); this restores that by forcing a full
+    // rebuild (which re-runs FindTerrainPath) on the next search after any
+    // regular-navmesh update. Called from the NavMeshUpdateNotifier hook.
+    public static void OnNavMeshUpdate()
+    {
+        lock (IndexLock)
+        {
+            foreach (var index in Indexes.Values)
+            {
+                index.MarkDistanceDirty();
+            }
+        }
+    }
+
     private static GatherIndex GetIndex(object gatherWorkplaceBehavior, InRangeYielders inRangeYielders)
     {
         var key = new IndexKey(gatherWorkplaceBehavior, inRangeYielders);
@@ -260,6 +279,13 @@ internal static class GatherWorkplaceOptimizer
         {
             _inRangeYielders = inRangeYielders;
             SubscribeEvents();
+        }
+
+        // Forces the next EnsureBuilt to re-run FindTerrainPath for every
+        // in-range yielder (reachability depends on the navmesh).
+        public void MarkDistanceDirty()
+        {
+            _distanceDirty = true;
         }
 
         public GatherStats Find(
