@@ -55,6 +55,30 @@ internal static class BenchmarkSettings
     public static readonly bool BenchAnimRequested =
         HasCommandLineFlag("-benchAnim");
 
+    // TEMP ATTRIBUTION (measurement only): records Unity render counters and
+    // A/B tests the active VertexAnimationUpdater renderers.
+    public static readonly bool BenchRenderStatsRequested =
+        HasCommandLineFlag("-benchRenderStats");
+
+    // TEMP RENDERING EXPERIMENT: replace the initially-visible Iron Teeth bot
+    // vertex renderers with exact-animation-time DrawMeshInstanced batches.
+    // The existing shader is reused without changing _AnimationTime semantics,
+    // so only renderers whose complete static material state and current
+    // animation time match are submitted together.
+    public static readonly bool BenchBotInstancingStaticTimeRequested =
+        HasCommandLineFlag("-benchBotInstancingStaticTime");
+
+    // GPU-instanced production-shape experiment: the bundled BotURP clone
+    // declares _AnimationTime as HybridPerInstance, allowing one draw per
+    // complete static render key without synchronizing animation phases.
+    public static readonly bool BenchBotInstancingPerInstanceRequested =
+        HasCommandLineFlag("-benchBotInstancingPerInstance");
+
+    public static readonly bool BenchBotInstancingRequested =
+        HasCommandLineFlag("-benchBotInstancing") ||
+        BenchBotInstancingStaticTimeRequested ||
+        BenchBotInstancingPerInstanceRequested;
+
     private static bool HasCommandLineFlag(string flag)
     {
         var arguments = System.Environment.GetCommandLineArgs();

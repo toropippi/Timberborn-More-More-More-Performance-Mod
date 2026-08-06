@@ -9,3 +9,16 @@ obj/
 testlogs/
 backups/
 *.log
+shaderbuild/Library/
+shaderbuild/Library.*-stale/
+shaderbuild/Logs/
+shaderbuild/Temp/
+shaderbuild/obj/
+shaderbuild/UserSettings/
+shaderbuild/Assets/OfficialShaders/
+shaderbuild/Assets/Generated/
+shaderbuild/shader-bundle-build.log
+shaderbuild/SmokeOutput*/
+shaderbuild/*.csproj
+shaderbuild/*.sln
+mod/AssetBundles/*.manifest

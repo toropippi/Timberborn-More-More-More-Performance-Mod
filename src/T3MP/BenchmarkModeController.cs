@@ -223,12 +223,14 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         // Flush the frame's deduplicated block-object model updates after all
         // game logic, before rendering (see TopologyUiOptimizer).
         TopologyUiOptimizer.FlushDeferredModelUpdates();
+        BotInstancingProbe.LateUpdate(_inGameScene);
     }
 
     private void Update()
     {
         var now = Time.realtimeSinceStartup;
         _inGameScene = SceneManager.GetActiveScene().buildIndex == 2;
+        RenderStatsProbe.Update(_inGameScene);
         ApplySmoothFramePacing();
         var elapsedSinceLastUpdate = now - _lastUpdateRealtime;
         var managedMemory = GC.GetTotalMemory(false);
