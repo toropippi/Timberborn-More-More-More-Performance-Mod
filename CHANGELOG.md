@@ -4,6 +4,31 @@ More performance. Then more. Then, because the name promised it, a little more.
 
 ---
 
+## v1.1.6 — "more typing, fewer surprises"
+
+**Hotkeys now respect text input, just like vanilla.**
+
+- **No accidental mode changes while typing in chat.** Shift+P and Shift+O now
+  use Timberborn's own input-blocked state before handling the mod's raw
+  keyboard shortcuts. Typing those letters in chat or another focused text
+  field no longer toggles turbo or smooth mode.
+- **Vanilla-consistent input behavior.** The mod follows the same
+  `InputBlocker` state that suppresses the base game's gameplay shortcuts, so
+  normal gameplay hotkeys still work immediately after text input closes.
+
+### 日本語
+
+**文字入力中のホットキー動作を、バニラと同じにしました。**
+
+- **チャット入力中にモードが誤作動しません。** Shift+P / Shift+O の判定前に、
+  Timberborn 本体が使う入力ブロック状態を確認するよう変更しました。チャットや
+  フォーカス中のテキスト欄で P / O を入力しても、ターボ／スムーズモードは
+  切り替わりません。
+- **入力欄を閉じれば通常どおり。** バニラのゲーム操作キーと同じ
+  `InputBlocker` に従うため、文字入力終了後は直ちにホットキーが再び使えます。
+
+---
+
 ## v1.1.5 — "more water, less work"
 
 **More water objects, less per-tick work. Same vanilla result.**
