@@ -336,6 +336,13 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     {
         // Shift+P toggles the render blackout + animation thinning.
         // Shift+O toggles the smooth mode (fps-priority timeScale governor).
+        // Match vanilla shortcut behavior: text inputs (including chat) block
+        // gameplay hotkeys through Timberborn.InputSystem.InputBlocker.
+        if (VanillaInputBlockerState.IsBlocked)
+        {
+            return;
+        }
+
         var keyboard = Keyboard.current;
         if (BenchmarkSettings.EnableRenderBlackoutToggleKey &&
             keyboard is not null &&

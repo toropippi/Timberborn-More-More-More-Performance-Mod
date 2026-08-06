@@ -141,6 +141,7 @@ internal static class BenchmarkProbe
             var patchedMenuBlackoutCancelMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableOptimizedRenderBlackout && BenchmarkSettings.EnableRenderBlackoutToggleKey
                 ? PatchOptionsMenuBlackoutCancel(harmony, harmonyMethodType, patchMethod)
                 : 0;
+            var patchedInputBlockerMethods = PatchInputBlockerTracking(harmony, harmonyMethodType, patchMethod);
             var patchedTopologyUiProbeMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiProbe(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTopologyUiScenarioMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiScenario(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTopologyUiOptimizerMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiOptimizers(harmony, harmonyMethodType, patchMethod) : 0;
@@ -175,7 +176,7 @@ internal static class BenchmarkProbe
             var patchedSoundListenerMethods = PatchSoundListenerStaticCameraOptimizer(harmony, harmonyMethodType, patchMethod);
             var patchedPathFollowerGuardMethods = PatchMovementNreGuard(harmony, harmonyType, harmonyMethodType, patchMethod);
 
-            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerNoAnimation={patchedPathFollowerNoAnimationMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, WaterObjectTickFastPath={patchedWaterObjectTickFastPathMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorThrottle={patchedAnimatorThrottleMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, PathFollowerGuard={patchedPathFollowerGuardMethods}, MenuBlackoutCancel={patchedMenuBlackoutCancelMethods}, TopoUiProbe={patchedTopologyUiProbeMethods}, TopoUiScenario={patchedTopologyUiScenarioMethods}, TopoUiOptimizer={patchedTopologyUiOptimizerMethods}");
+            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerNoAnimation={patchedPathFollowerNoAnimationMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, WaterObjectTickFastPath={patchedWaterObjectTickFastPathMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorThrottle={patchedAnimatorThrottleMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, PathFollowerGuard={patchedPathFollowerGuardMethods}, MenuBlackoutCancel={patchedMenuBlackoutCancelMethods}, InputBlocker={patchedInputBlockerMethods}, TopoUiProbe={patchedTopologyUiProbeMethods}, TopoUiScenario={patchedTopologyUiScenarioMethods}, TopoUiOptimizer={patchedTopologyUiOptimizerMethods}");
         }
         catch (Exception exception)
         {
@@ -2556,6 +2557,46 @@ internal static class BenchmarkProbe
         return TryPatch(harmonyInstance, patchMethod, targetMethod, Activator.CreateInstance(harmonyMethodType, prefix), null) ? 1 : 0;
     }
 
+    private static int PatchInputBlockerTracking(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        var inputBlockerType = FindType("Timberborn.InputSystem.InputBlocker") ??
+            TryLoadAssemblyAndFindType("Timberborn.InputSystem", "Timberborn.InputSystem.InputBlocker");
+        var refreshMethod = typeof(BenchmarkProbe).GetMethod(nameof(RefreshInputBlocker), BindingFlags.Static | BindingFlags.NonPublic);
+        var recordStateMethod = typeof(BenchmarkProbe).GetMethod(nameof(RecordInputBlockerState), BindingFlags.Static | BindingFlags.NonPublic);
+        if (inputBlockerType is null || refreshMethod is null || recordStateMethod is null)
+        {
+            Debug.LogWarning("[T3MP] InputBlocker tracking target was not found.");
+            return 0;
+        }
+
+        var refreshPostfix = Activator.CreateInstance(harmonyMethodType, refreshMethod);
+        var recordStatePostfix = Activator.CreateInstance(harmonyMethodType, recordStateMethod);
+        var stateChangeTargets = new MethodInfo?[]
+        {
+            inputBlockerType.GetMethod("Block", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic),
+            inputBlockerType.GetMethod("Unblock", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+        };
+
+        var patched = 0;
+        foreach (var target in stateChangeTargets)
+        {
+            if (target is not null && TryPatch(harmonyInstance, patchMethod, target, null, refreshPostfix))
+            {
+                patched++;
+            }
+        }
+
+        var isBlockedGetter = inputBlockerType
+            .GetProperty("IsBlocked", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?
+            .GetGetMethod(true);
+        if (isBlockedGetter is not null && TryPatch(harmonyInstance, patchMethod, isBlockedGetter, null, recordStatePostfix))
+        {
+            patched++;
+        }
+
+        return patched;
+    }
+
     // Stopwatch probes around the topology-UI hot paths identified in the
     // gear/path placement-lag investigation (see TopologyUiProbe).
     private static int PatchTopologyUiProbe(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
@@ -2863,6 +2904,16 @@ internal static class BenchmarkProbe
     private static void CancelRenderBlackoutOnOptionsMenu()
     {
         BenchmarkModeController.CancelRenderBlackoutForMenu();
+    }
+
+    private static void RefreshInputBlocker(object __instance)
+    {
+        VanillaInputBlockerState.Refresh(__instance);
+    }
+
+    private static void RecordInputBlockerState(bool __result)
+    {
+        VanillaInputBlockerState.Record(__result);
     }
 
     // ------------------------------------------------------------------
