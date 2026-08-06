@@ -18,6 +18,7 @@
     <Publicize Include="Timberborn.Navigation" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.BuildingsNavigation" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.BaseComponentSystem" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.TimbermeshAnimations" IncludeCompilerGeneratedMembers="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -203,6 +204,10 @@
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>$(TimberbornManagedDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AssetBundleModule">
+      <HintPath>$(TimberbornManagedDir)\UnityEngine.AssetBundleModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule">

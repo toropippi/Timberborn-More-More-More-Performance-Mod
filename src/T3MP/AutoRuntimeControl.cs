@@ -16,11 +16,20 @@ internal static class AutoRuntimeControl
     private static int _logCount;
     private static bool _optimizedUltraApplied;
     private static bool _manualUltraRequested;
+    private static bool _benchmarkNormalRequested;
+    private static bool _benchmarkNormalApplied;
 
     public static void RequestOptimizedUltraSpeed()
     {
         _manualUltraRequested = true;
         _optimizedUltraApplied = false;
+        _nextAttemptRealtime = 0f;
+    }
+
+    public static void RequestBenchmarkNormalSpeed()
+    {
+        _benchmarkNormalRequested = true;
+        _benchmarkNormalApplied = false;
         _nextAttemptRealtime = 0f;
     }
 
@@ -37,8 +46,9 @@ internal static class AutoRuntimeControl
         }
 
         var shouldApplyOptimizedUltra = optimizedUltraSpeed && _manualUltraRequested && !_optimizedUltraApplied;
+        var shouldApplyBenchmarkNormal = _benchmarkNormalRequested && !_benchmarkNormalApplied;
         var shouldApplyNormalResume = BenchmarkSettings.EnableAutoResumeGameSpeed && !optimizedUltraSpeed;
-        if ((!shouldApplyNormalResume && !shouldApplyOptimizedUltra) ||
+        if ((!shouldApplyNormalResume && !shouldApplyOptimizedUltra && !shouldApplyBenchmarkNormal) ||
             Time.realtimeSinceStartup < BenchmarkSettings.AutoResumeGameAfterSeconds ||
             (!_manualUltraRequested && Time.realtimeSinceStartup < _nextAttemptRealtime))
         {
@@ -51,9 +61,11 @@ internal static class AutoRuntimeControl
         try
         {
             _unlockSpeedMethod?.Invoke(speedManager, null);
-            var targetSpeed = optimizedUltraSpeed
+            var targetSpeed = shouldApplyOptimizedUltra
                 ? BenchmarkSettings.OptimizedUltraSpeed
-                : BenchmarkSettings.AutoResumeTargetSpeed;
+                : shouldApplyBenchmarkNormal
+                    ? 1f
+                    : BenchmarkSettings.AutoResumeTargetSpeed;
             if (_changeSpeedMethod is not null)
             {
                 _changeSpeedMethod.Invoke(speedManager, new object[] { targetSpeed });
@@ -65,13 +77,20 @@ internal static class AutoRuntimeControl
                 _manualUltraRequested = false;
             }
 
+            if (shouldApplyBenchmarkNormal)
+            {
+                _benchmarkNormalApplied = true;
+                _benchmarkNormalRequested = false;
+            }
+
             if (_logCount++ < 3)
             {
                 Debug.Log(string.Format(
                     CultureInfo.InvariantCulture,
-                    "[T3MP] Auto runtime control attempted SpeedManager resume. targetSpeed={0}, optimizedUltra={1}",
+                    "[T3MP] Auto runtime control attempted SpeedManager resume. targetSpeed={0}, optimizedUltra={1}, benchmarkNormal={2}",
                     targetSpeed,
-                    optimizedUltraSpeed));
+                    optimizedUltraSpeed,
+                    shouldApplyBenchmarkNormal));
             }
         }
         catch (Exception exception)

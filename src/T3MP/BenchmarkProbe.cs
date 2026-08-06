@@ -142,6 +142,9 @@ internal static class BenchmarkProbe
                 ? PatchOptionsMenuBlackoutCancel(harmony, harmonyMethodType, patchMethod)
                 : 0;
             var patchedInputBlockerMethods = PatchInputBlockerTracking(harmony, harmonyMethodType, patchMethod);
+            var patchedBotAnimationCaptureMethods = BenchmarkSettings.BenchBotInstancingRequested
+                ? PatchBotAnimationTimeCapture(harmony, harmonyMethodType, patchMethod)
+                : 0;
             var patchedTopologyUiProbeMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiProbe(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTopologyUiScenarioMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiScenario(harmony, harmonyMethodType, patchMethod) : 0;
             var patchedTopologyUiOptimizerMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchTopologyUiOptimizers(harmony, harmonyMethodType, patchMethod) : 0;
@@ -182,6 +185,38 @@ internal static class BenchmarkProbe
         {
             Debug.LogWarning($"[T3MP] Failed to install benchmark probe: {exception}");
         }
+    }
+
+    // Benchmark-only (-benchBotInstancing*): capture each replaced bot
+    // renderer's _AnimationTime into a managed slot at its source (the
+    // Timbermesh vertex-animation update) so the instanced draw loop reads a
+    // field instead of Material.GetFloat, and the game skips the equally
+    // native Material.SetFloat while the renderer is replaced anyway.
+    private static int PatchBotAnimationTimeCapture(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
+    {
+        var targetType = FindType("Timberborn.TimbermeshAnimations.VertexAnimationUpdater");
+        if (targetType is null)
+        {
+            Debug.LogWarning("[T3MP] BotInstancing animation-capture target type was not found.");
+            return 0;
+        }
+
+        var target = targetType.GetMethod(
+            "UpdateAnimation",
+            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+        var prefix = typeof(BotInstancingProbe).GetMethod(
+            "CaptureAnimationTimePrefix",
+            BindingFlags.Static | BindingFlags.NonPublic);
+        if (target is null || prefix is null)
+        {
+            Debug.LogWarning("[T3MP] BotInstancing animation-capture patch methods were not found.");
+            return 0;
+        }
+
+        var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, prefix);
+        patchMethod.Invoke(harmony, new object?[] { target, prefixHarmonyMethod, null, null, null });
+        BotInstancingProbe.AnimationCapturePatched = true;
+        return 1;
     }
 
     private static int PatchYielderFinder(object harmony, Type harmonyType, Type harmonyMethodType, MethodInfo patchMethod)

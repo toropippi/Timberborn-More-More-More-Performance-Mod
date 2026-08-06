@@ -20,9 +20,14 @@ param(
     [switch] $BenchDecide,
     [switch] $BenchSpawn,
     [switch] $BenchAnim,
+    [switch] $BenchRenderStats,
+    [switch] $BenchBotInstancing,
+    [switch] $BenchBotInstancingStaticTime,
+    [switch] $BenchBotInstancingPerInstance,
     [switch] $AutoResumeAfterLoad,
     [switch] $SkipAutoResumeAfterLoad,
     [switch] $ForceOptimizedAfterLoad,
+    [switch] $PressNormalAfterLoad,
     [switch] $PressUltraAfterLoad,
     [int] $AutoConfirmStartSeconds = 12,
     [int] $AutoConfirmIntervalSeconds = 5,
@@ -52,7 +57,7 @@ function Get-TimberbornProcesses {
     Get-Process | Where-Object { $_.ProcessName -like '*Timberborn*' }
 }
 
-if ($AutoConfirmMods -or $ForceOptimizedAfterLoad -or $PressUltraAfterLoad) {
+if ($AutoConfirmMods -or $ForceOptimizedAfterLoad -or $PressNormalAfterLoad -or $PressUltraAfterLoad) {
     Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -251,6 +256,26 @@ $arguments = if ($UseSteamLaunchOptions) {
         # set vs node transform write vs loop). Same caveat as -benchHotspot.
         $argList += '-benchAnim'
     }
+    if ($BenchRenderStats) {
+        # Attribution-only: Unity render counters plus a temporary A/B that
+        # disables active vertex-animation MeshRenderers.
+        $argList += '-benchRenderStats'
+    }
+    if ($BenchBotInstancing) {
+        # Rendering experiment: replace initially-visible Iron Teeth bot
+        # renderers with exact-animation-time DrawMeshInstanced batches.
+        $argList += '-benchBotInstancing'
+    }
+    if ($BenchBotInstancingStaticTime) {
+        # Theoretical lower-bound rendering experiment: collapse animation
+        # time within each static bot render key, yielding one draw per key.
+        $argList += '-benchBotInstancingStaticTime'
+    }
+    if ($BenchBotInstancingPerInstance) {
+        # Custom BotURP shader experiment: preserve each bot's animation time
+        # in an instance property while drawing once per static render key.
+        $argList += '-benchBotInstancingPerInstance'
+    }
     $argList -join ' '
 }
 
@@ -352,6 +377,12 @@ if ($ForceOptimizedAfterLoad -and (Get-TimberbornProcesses)) {
 if ($PressUltraAfterLoad -and (Get-TimberbornProcesses)) {
     if (Invoke-TimberbornKeyPress 0x34) {
         Write-Host "Ultra speed key 4 sent."
+    }
+}
+
+if ($PressNormalAfterLoad -and (Get-TimberbornProcesses)) {
+    if (Invoke-TimberbornKeyPress 0x31) {
+        Write-Host "Normal speed key 1 sent."
     }
 }
 
