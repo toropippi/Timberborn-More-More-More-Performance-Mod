@@ -5,6 +5,14 @@ param(
     [string] $SteamAppId = '1062090',
     [string] $SettlementName = 'n10c',
     [string] $SaveName = 'n10c',
+    # LaunchArgs = the game's own -settlementName/-saveName autoload.
+    # MenuLoad   = T3MPTestDriver loads the save from the main menu scene.
+    # NewGame    = T3MPTestDriver starts a new game (first built-in map unless
+    #              -MapName is given). MenuLoad/NewGame require the test driver
+    #              mod in Mods\T3MPTestDriver (verify_release.ps1 deploys it).
+    [ValidateSet('LaunchArgs', 'MenuLoad', 'NewGame')]
+    [string] $Scenario = 'LaunchArgs',
+    [string] $MapName = '',
     [string] $PlayerLog = (Join-Path $env:USERPROFILE 'AppData\LocalLow\Mechanistry\Timberborn\Player.log'),
     [string] $OutputDir = '',
     [int] $LoadTimeoutSeconds = 180,
@@ -202,12 +210,24 @@ function Quote-ProcessArgument([string] $Value) {
 $arguments = if ($UseSteamLaunchOptions) {
     ''
 } else {
-    $argList = @(
-        '-settlementName',
-        (Quote-ProcessArgument $SettlementName),
-        '-saveName',
-        (Quote-ProcessArgument $SaveName)
-    )
+    $argList = @(switch ($Scenario) {
+        'LaunchArgs' {
+            @('-settlementName', (Quote-ProcessArgument $SettlementName),
+              '-saveName', (Quote-ProcessArgument $SaveName))
+        }
+        'MenuLoad' {
+            @('-t3mpTestMenuLoad',
+              '-t3mpTestSettlement', (Quote-ProcessArgument $SettlementName),
+              '-t3mpTestSave', (Quote-ProcessArgument $SaveName))
+        }
+        'NewGame' {
+            $newGameArgs = @('-t3mpTestNewGame')
+            if (-not [string]::IsNullOrWhiteSpace($MapName)) {
+                $newGameArgs += @('-t3mpTestMap', (Quote-ProcessArgument $MapName))
+            }
+            $newGameArgs
+        }
+    })
     if ($SkipModManager) {
         # Opt-in for automated testing only. ModManagerScenePanel.ShouldSkipModManager:
         # '-skipModManager' loads enabled mods and starts the game without the
@@ -310,7 +330,9 @@ function Update-ProbeStateFromLines([string[]] $Lines) {
         $script:sawLoading = $true
     }
 
-    $loadTimeMatches = @($Lines | Where-Object { $_ -match 'Load time:' })
+    # Scene index 2 is the game scene; the main menu also logs a "Load time"
+    # (scene index 1) which must not end the wait in menu-driven scenarios.
+    $loadTimeMatches = @($Lines | Where-Object { $_ -match 'Load time:.*scene index: 2' })
     if ($loadTimeMatches.Count -gt 0) {
         $script:sawLoadTime = $true
         $script:lastLoadTimeLine = $loadTimeMatches[$loadTimeMatches.Count - 1]

@@ -1,0 +1,11 @@
+{
+  "Name": "T3MP Test Driver (dev only)",
+  "Version": "1.0.0",
+  "Id": "T3MPTestDriver",
+  "MinimumGameVersion": "1.0.13.1",
+  "Description": "Development-only scenario driver used by T3MP's release verification scripts. Deployed locally during automated testing, never uploaded to the Workshop. Does nothing unless launched with -t3mpTest* command line flags.",
+  "RequiredMods": [
+  ],
+  "OptionalMods": [
+  ]
+}
