@@ -39,13 +39,18 @@ internal static class HighSpeedModelLagSnap
             return;
         }
 
-        var animatedPathFollower = __instance._animatedPathFollower;
-        if (animatedPathFollower is null || animatedPathFollower.Stopped)
+        // Measure the true visual gap (model vs entity) rather than the
+        // animated-path position: in turbo (animation skip) mode the animator
+        // is stopped and the model parks where it was, which is exactly the
+        // state that must be detected - a Stopped guard would miss it and
+        // tube glows would stay parked during rendered turbo.
+        var characterModel = __instance._characterModel;
+        if (characterModel is null)
         {
             return;
         }
 
-        var lag = animatedPathFollower.CurrentPosition - __instance.Transform.position;
+        var lag = characterModel.Position - __instance.Transform.position;
         if (lag.sqrMagnitude <= SnapDistanceSqr)
         {
             return;
