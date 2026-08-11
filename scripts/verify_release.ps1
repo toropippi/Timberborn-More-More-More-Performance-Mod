@@ -170,6 +170,11 @@ try {
         )
         foreach ($scenario in $scenarios) {
             $scenarioArgs = $scenario.Args
+            $waitDeadline = (Get-Date).AddSeconds(30)
+            while ((Get-Process | Where-Object { $_.ProcessName -like '*Timberborn*' }) -and
+                   (Get-Date) -lt $waitDeadline) {
+                Start-Sleep -Seconds 2
+            }
             & (Join-Path $PSScriptRoot 'run_autoload_probe.ps1') `
                 -TimberbornExe $exe `
                 -SettlementName $version.Settlement -SaveName $version.Save `

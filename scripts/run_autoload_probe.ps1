@@ -422,7 +422,13 @@ if (Test-Path -LiteralPath $PlayerLog) {
 }
 
 if ($StopAfter) {
-    Get-TimberbornProcesses | Stop-Process -Force
+    $processesToStop = @(Get-TimberbornProcesses)
+    if ($processesToStop.Count -gt 0) {
+        $processesToStop | Stop-Process -Force
+        # Wait for teardown so a follow-up probe's already-running check does
+        # not trip over the dying process.
+        $processesToStop | Wait-Process -Timeout 30 -ErrorAction SilentlyContinue
+    }
 }
 
 $pids = (Get-TimberbornProcesses | Select-Object -ExpandProperty Id) -join ','
