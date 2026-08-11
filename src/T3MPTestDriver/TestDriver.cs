@@ -49,6 +49,23 @@ internal static class TestArguments
 
     public static string Faction => GetValue("-t3mpTestFaction") ?? "Folktails";
 
+    // Optional speed override for the game scene (e.g. 99 to reproduce
+    // high-speed visual issues). Also activates the game-scene driver on its
+    // own so a plain CLI autoload can be resumed at a chosen speed.
+    public static float? Speed
+    {
+        get
+        {
+            var raw = GetValue("-t3mpTestSpeed");
+            return raw != null &&
+                   float.TryParse(raw, System.Globalization.NumberStyles.Float,
+                       System.Globalization.CultureInfo.InvariantCulture, out var parsed) &&
+                   parsed > 0f
+                ? parsed
+                : null;
+        }
+    }
+
     public static string Describe()
     {
         if (MenuLoadRequested)
@@ -217,12 +234,13 @@ public sealed class GameTestDriver : IPostLoadableSingleton
 
     public void PostLoad()
     {
-        if (!TestArguments.AnyScenarioRequested)
+        if (!TestArguments.AnyScenarioRequested && TestArguments.Speed == null)
         {
             return;
         }
 
-        Debug.Log("[T3MPTEST] Game scene loaded OK. Unpausing (speed 1).");
-        _speedManager.ChangeSpeed(1f);
+        var speed = TestArguments.Speed ?? 1f;
+        Debug.Log("[T3MPTEST] Game scene loaded OK. Unpausing (speed " + speed + ").");
+        _speedManager.ChangeSpeed(speed);
     }
 }

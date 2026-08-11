@@ -24,6 +24,13 @@
 # reads Documents\Timberborn\Saves, v1.1 (experimental) reads
 # ExperimentalSaves, and a v1.1 save fails on v1.0 inside vanilla loading
 # code. Each version therefore verifies with its own save below.
+#
+# Save isolation: scenarios NEVER run against the user's real settlement.
+# The auto-ultra run triggers in-game autosaves, which would leave x99-speed
+# autosaves in the user's settlement (loading one starts at x99 with turbo
+# animation thinning - beavers look frozen mid-pipe). The source save is
+# copied into a disposable 't3mp-verify' settlement instead, and both it and
+# NewGame's 't3mp-test' settlement are deleted when the run ends.
 
 [CmdletBinding()]
 param(
@@ -44,6 +51,12 @@ $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $playerLog = Join-Path $env:USERPROFILE 'AppData\LocalLow\Mechanistry\Timberborn\Player.log'
 $modsPath = Join-Path $env:USERPROFILE 'Documents\Timberborn\Mods'
 $driverDeployPath = Join-Path $modsPath 'T3MPTestDriver'
+$saveRoots = @{
+    'v1.0' = Join-Path $env:USERPROFILE 'Documents\Timberborn\Saves'
+    'v1.1' = Join-Path $env:USERPROFILE 'Documents\Timberborn\ExperimentalSaves'
+}
+$stagedSettlement = 't3mp-verify'
+$newGameSettlement = 't3mp-test'
 $results = @()
 
 function Add-Result([string] $Check, [bool] $Passed, [string] $Detail) {
@@ -162,6 +175,17 @@ try {
         Copy-Item -LiteralPath (Join-Path $repoRoot 'testmod\manifest.json') -Destination $driverDeployPath -Force
         Copy-Item -LiteralPath (Join-Path $repoRoot 'src\T3MPTestDriver\bin\Release\netstandard2.1\T3MPTestDriver.dll') -Destination $driverDeployPath -Force
 
+        # Stage the save into the disposable settlement (see header).
+        $saveRoot = $saveRoots[$name]
+        $sourceSave = Join-Path $saveRoot ($version.Settlement + '\' + $version.Save + '.timber')
+        if (-not (Test-Path -LiteralPath $sourceSave)) {
+            Add-Result "$name save staging" $false "source save not found: $sourceSave"
+            continue
+        }
+        $stagePath = Join-Path $saveRoot $stagedSettlement
+        New-Item -ItemType Directory -Force -Path $stagePath | Out-Null
+        Copy-Item -LiteralPath $sourceSave -Destination (Join-Path $stagePath ($version.Save + '.timber')) -Force
+
         $exe = Join-Path $install 'Timberborn.exe'
         $scenarios = @(
             @{ Label = "$name E2E LaunchArgs"; Args = @{ Scenario = 'LaunchArgs'; BenchAutoUltra = $true } },
@@ -177,7 +201,7 @@ try {
             }
             & (Join-Path $PSScriptRoot 'run_autoload_probe.ps1') `
                 -TimberbornExe $exe `
-                -SettlementName $version.Settlement -SaveName $version.Save `
+                -SettlementName $stagedSettlement -SaveName $version.Save `
                 -SkipModManager -AutoConfirmMods `
                 -SecondsAfterLoad $SecondsAfterLoad -StopAfter `
                 @scenarioArgs
@@ -188,6 +212,16 @@ try {
     # The test driver is for verification runs only - never leave it installed.
     if (Test-Path -LiteralPath $driverDeployPath) {
         Remove-Item -LiteralPath $driverDeployPath -Recurse -Force
+    }
+    # Remove the disposable settlements (staged copies + NewGame output) so
+    # verification leaves the user's save list exactly as it found it.
+    foreach ($saveRoot in $saveRoots.Values) {
+        foreach ($settlement in @($stagedSettlement, $newGameSettlement)) {
+            $path = Join-Path $saveRoot $settlement
+            if (Test-Path -LiteralPath $path) {
+                Remove-Item -LiteralPath $path -Recurse -Force
+            }
+        }
     }
 }
 

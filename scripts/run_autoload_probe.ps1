@@ -13,6 +13,9 @@ param(
     [ValidateSet('LaunchArgs', 'MenuLoad', 'NewGame')]
     [string] $Scenario = 'LaunchArgs',
     [string] $MapName = '',
+    # >0 = T3MPTestDriver resumes the loaded game at this speed (e.g. 99 for
+    # high-speed visual repros). Requires the test driver mod.
+    [double] $TestSpeed = 0,
     [string] $PlayerLog = (Join-Path $env:USERPROFILE 'AppData\LocalLow\Mechanistry\Timberborn\Player.log'),
     [string] $OutputDir = '',
     [int] $LoadTimeoutSeconds = 180,
@@ -228,6 +231,9 @@ $arguments = if ($UseSteamLaunchOptions) {
             $newGameArgs
         }
     })
+    if ($TestSpeed -gt 0) {
+        $argList += @('-t3mpTestSpeed', $TestSpeed.ToString([System.Globalization.CultureInfo]::InvariantCulture))
+    }
     if ($SkipModManager) {
         # Opt-in for automated testing only. ModManagerScenePanel.ShouldSkipModManager:
         # '-skipModManager' loads enabled mods and starts the game without the
