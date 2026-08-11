@@ -1117,13 +1117,20 @@ internal static class BenchmarkProbe
 
         var movementAnimatorPrefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, movementAnimatorPrefix);
         var movementAnimatorFinalizerHarmonyMethod = Activator.CreateInstance(harmonyMethodType, movementAnimatorFinalizer);
+        // High-speed model lag snap rides the per-frame (parameterless) Update
+        // as a postfix; see HighSpeedModelLagSnap for the rationale.
+        var lagSnapPostfix = BenchmarkSettings.EnableHighSpeedModelLagSnap
+            ? typeof(HighSpeedModelLagSnap).GetMethod(nameof(HighSpeedModelLagSnap.AfterMovementAnimatorUpdate), BindingFlags.Static | BindingFlags.NonPublic)
+            : null;
+        var lagSnapPostfixHarmonyMethod = lagSnapPostfix is null ? null : Activator.CreateInstance(harmonyMethodType, lagSnapPostfix);
         foreach (var updateMethod in movementAnimatorType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
                      .Where(method =>
                          method.Name == "Update" &&
                          method.ReturnType == typeof(void) &&
                          !method.ContainsGenericParameters))
         {
-            patchMethod.Invoke(harmony, new object?[] { updateMethod, movementAnimatorPrefixHarmonyMethod, null, null, movementAnimatorFinalizerHarmonyMethod });
+            var postfixForOverload = updateMethod.GetParameters().Length == 0 ? lagSnapPostfixHarmonyMethod : null;
+            patchMethod.Invoke(harmony, new object?[] { updateMethod, movementAnimatorPrefixHarmonyMethod, postfixForOverload, null, movementAnimatorFinalizerHarmonyMethod });
             patched++;
         }
 

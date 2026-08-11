@@ -18,6 +18,19 @@ More performance. Then more. Then, because the name promised it, a little more.
 - **No gameplay or performance change.** The bundle was never used by any
   shipped feature — removing it changes nothing about how the mod runs.
 
+**Fixed: characters visually stuck inside tubes at very high speed.**
+
+- At the mod's uncapped speeds (far beyond vanilla's x3), the visual model
+  playback could no longer keep up with the simulation — especially at low
+  fps. The lagging model position drives tube visuals, so the tube travel
+  glow (with the character inside) stayed parked in the tube long after the
+  simulation had finished the transit, looking like beavers stuck in the
+  pipes. The mod now snaps a character's visual model forward whenever its
+  animation falls more than ~2 tiles behind its real position — the same
+  resync turbo mode already used, applied continuously. Vanilla-speed
+  visuals are unaffected (the lag threshold is never reached below high
+  fast-forward), and simulation results are unchanged as always.
+
 ### 日本語
 
 **ゲーム本体 v1.0 でのクラッシュを修正しました。**
@@ -30,6 +43,18 @@ More performance. Then more. Then, because the name promised it, a little more.
   除外しました（開発リポジトリ内のベンチマーク専用に移動）。
 - **ゲームプレイ・性能への影響はありません。** このバンドルは公開機能では
   一切使われていないため、除外しても動作は変わりません。
+
+**修正：超高倍速でビーバーがチューブ内に固着して見えるバグ。**
+
+- 本MODの上限解放速度（バニラ最大 x3 を大きく超える領域）では、見た目の
+  モデル再生がシミュレーションに追いつけなくなります（特に低fps時）。
+  チューブの通過表示は「モデルの位置」を参照するため、シミュレーション上は
+  とっくに通過済みでも、青い通過光（とその中のビーバー）がチューブ内に
+  残り続け、詰まっているように見えていました。修正後は、モデルの見た目が
+  実位置から約2マス以上遅れた時点で即座に実位置へスナップします
+  （ターボモードが以前から使っている再同期処理を常時適用する形）。
+  バニラ速度帯では遅延がしきい値に達しないため見た目への影響はなく、
+  シミュレーション結果も従来どおり完全に同一です。
 
 ---
 

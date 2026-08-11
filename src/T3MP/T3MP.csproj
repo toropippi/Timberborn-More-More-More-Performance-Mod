@@ -16,6 +16,7 @@
          need typed hot-loop access. -->
     <PackageReference Include="Krafs.Publicizer" Version="2.2.1" PrivateAssets="all" />
     <Publicize Include="Timberborn.Navigation" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.CharacterMovementSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.BuildingsNavigation" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.BaseComponentSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.TimbermeshAnimations" IncludeCompilerGeneratedMembers="false" />

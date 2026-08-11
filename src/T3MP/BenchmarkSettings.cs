@@ -429,6 +429,11 @@ internal static class BenchmarkSettings
     public static readonly bool EnableDefaultMechanicalAnimatorRegistryReplacement = false;
     public static readonly bool EnableDefaultMechanicalAnimatorUpdatePatch = false;
     public static readonly bool EnableMovementAnimatorThrottle = true;
+    // Snap a character's visual model to its entity when animation playback
+    // falls more than ~2 units behind (only reachable at the mod's uncapped
+    // speeds). Fixes tube travel glow + characters visually stuck in tubes
+    // at very high speed; inert at vanilla speeds. See HighSpeedModelLagSnap.
+    public static readonly bool EnableHighSpeedModelLagSnap = true;
     public static readonly bool EnableStatusIconPositionerThrottle = false;
     public static readonly bool EnableSoundListenerStaticCameraOptimizer = false;
     // Keep false: TubeVisitorUpdater drives stateful tube enter/exit each frame
