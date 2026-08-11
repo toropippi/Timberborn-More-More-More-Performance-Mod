@@ -32,12 +32,32 @@ internal static class HighSpeedModelLagSnap
     private const float SnapDistance = 2f;
     private const float SnapDistanceSqr = SnapDistance * SnapDistance;
 
+    // Fail-safe: this patch touches game internals that could change shape in
+    // another game version. If it ever throws, disable it permanently for the
+    // session (losing only the visual fix) instead of erroring every frame.
+    private static bool _disabled;
+
     internal static void AfterMovementAnimatorUpdate(MovementAnimator __instance)
     {
-        if (!BenchmarkSettings.EnableHighSpeedModelLagSnap)
+        if (_disabled || !BenchmarkSettings.EnableHighSpeedModelLagSnap)
         {
             return;
         }
+
+        try
+        {
+            SnapIfLagging(__instance);
+        }
+        catch (System.Exception exception)
+        {
+            _disabled = true;
+            UnityEngine.Debug.LogWarning(
+                "[T3MP] HighSpeedModelLagSnap disabled after an error (high-speed tube visuals may lag): " + exception);
+        }
+    }
+
+    private static void SnapIfLagging(MovementAnimator __instance)
+    {
 
         // Measure the true visual gap (model vs entity) rather than the
         // animated-path position: in turbo (animation skip) mode the animator
