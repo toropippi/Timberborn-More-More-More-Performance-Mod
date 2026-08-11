@@ -4,6 +4,35 @@ More performance. Then more. Then, because the name promised it, a little more.
 
 ---
 
+## v1.1.7 — "less baggage, more compatibility"
+
+**Fixed a crash on game version 1.0 caused by a stray benchmark file.**
+
+- **No more "Failed to load asset bundle t3mp-bot-instancing" crash.** v1.1.6
+  accidentally shipped a development-only asset bundle (part of an unreleased
+  GPU-instancing experiment) inside the mod package. The bundle was built with
+  the Unity version used by Timberborn 1.1, so on game v1.0 the game's own mod
+  loader failed to load it and crashed before reaching the main menu. The
+  bundle is no longer part of the released mod; it now lives only in the
+  development repository for local benchmarks.
+- **No gameplay or performance change.** The bundle was never used by any
+  shipped feature — removing it changes nothing about how the mod runs.
+
+### 日本語
+
+**ゲーム本体 v1.0 でのクラッシュを修正しました。**
+
+- **「Failed to load asset bundle t3mp-bot-instancing」クラッシュの修正。**
+  v1.1.6 に、未公開の GPU インスタンシング実験用の開発専用アセットバンドルが
+  誤って同梱されていました。このバンドルは Timberborn 1.1 の Unity で
+  ビルドされているため、v1.0 ではゲーム側のMODローダーが読み込みに失敗し、
+  メインメニューに到達する前にクラッシュしていました。バンドルを配布物から
+  除外しました（開発リポジトリ内のベンチマーク専用に移動）。
+- **ゲームプレイ・性能への影響はありません。** このバンドルは公開機能では
+  一切使われていないため、除外しても動作は変わりません。
+
+---
+
 ## v1.1.6 — "more typing, fewer surprises"
 
 **Hotkeys now respect text input, just like vanilla.**

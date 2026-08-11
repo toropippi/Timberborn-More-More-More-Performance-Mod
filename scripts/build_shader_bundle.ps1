@@ -8,7 +8,10 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $project = Join-Path $repoRoot 'shaderbuild'
 $generated = Join-Path $project 'Assets\OfficialShaders'
-$output = Join-Path $repoRoot 'mod\AssetBundles'
+# Benchmark-only output: this bundle must NEVER ship inside mod/ — Timberborn
+# eagerly loads every bundle under a mod's AssetBundles folder, and a bundle
+# built with 1.1's Unity hard-crashes the mod loader on game v1.0.
+$output = Join-Path $repoRoot 'benchmark\AssetBundles'
 $shaderZip = Join-Path $TimberbornInstall 'Timberborn_Data\StreamingAssets\Modding\Shaders.zip'
 
 # Keep shaderbuild/Packages/manifest.json aligned with Mechanistry's official

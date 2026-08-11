@@ -196,7 +196,7 @@ internal static class RenderStatsProbe
 
         var states = new List<RendererState>();
         var seen = new HashSet<MeshRenderer>();
-        foreach (var found in Object.FindObjectsByType(updaterType, FindObjectsInactive.Include))
+        foreach (var found in Object.FindObjectsByType(updaterType, FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (found is not Component component ||
                 component.gameObject.scene.buildIndex != 2 ||

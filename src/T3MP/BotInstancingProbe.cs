@@ -169,7 +169,7 @@ internal static class BotInstancingProbe
     private static void DiscoverCandidates()
     {
         var candidates = new List<Candidate>();
-        foreach (var renderer in Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include))
+        foreach (var renderer in Object.FindObjectsByType<MeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (renderer.gameObject.scene.buildIndex != 2 ||
                 !renderer.enabled ||

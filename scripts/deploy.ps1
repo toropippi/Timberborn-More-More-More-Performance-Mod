@@ -2,7 +2,12 @@
 param(
     [string] $Configuration = 'Release',
     [string] $ModsPath = (Join-Path $env:USERPROFILE 'Documents\Timberborn\Mods'),
-    [string] $ModFolderName = 'T3MP'
+    [string] $ModFolderName = 'T3MP',
+    # Benchmark-only: copies benchmark\AssetBundles into the deployed mod so
+    # BotInstancingProbe can load its shader bundle. Never use before a
+    # Workshop upload — the bundle only loads on the game version whose Unity
+    # built it and crashes the mod loader on any other version.
+    [switch] $IncludeBenchmarkBundles
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,6 +51,14 @@ if (Test-Path -LiteralPath $targetPath) {
 New-Item -ItemType Directory -Force -Path $targetPath | Out-Null
 Copy-Item -Path (Join-Path $modSourcePath '*') -Destination $targetPath -Recurse -Force
 Copy-Item -LiteralPath $builtDll -Destination (Join-Path $targetPath 'Code.dll') -Force
+if ($IncludeBenchmarkBundles) {
+    $benchmarkBundles = Join-Path $repoRoot.Path 'benchmark\AssetBundles'
+    if (-not (Test-Path -LiteralPath $benchmarkBundles)) {
+        throw "Benchmark AssetBundles folder was not found: $benchmarkBundles"
+    }
+    Copy-Item -LiteralPath $benchmarkBundles -Destination (Join-Path $targetPath 'AssetBundles') -Recurse -Force
+    Write-Warning 'Benchmark AssetBundles included - do NOT upload this build to the Workshop.'
+}
 if ($null -ne $workshopDataBackup) {
     [System.IO.File]::WriteAllBytes((Join-Path $targetPath 'workshop_data.json'), $workshopDataBackup)
 }
