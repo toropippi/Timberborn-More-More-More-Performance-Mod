@@ -2076,19 +2076,24 @@ internal static class BenchmarkProbe
         return patched;
     }
 
-    private static bool WaterObjectTickFastPathPrefix()
+    private static bool WaterObjectTickFastPathPrefix(
+        Timberborn.WaterObjects.WaterObjectService __instance)
     {
-        return WaterObjectTickFastPath.RunTick();
+        return WaterObjectTickFastPath.RunTick(__instance);
     }
 
-    private static void WaterObjectRegisterPostfix(Timberborn.WaterObjects.WaterObject waterObject)
+    private static void WaterObjectRegisterPostfix(
+        Timberborn.WaterObjects.WaterObjectService __instance,
+        Timberborn.WaterObjects.WaterObject waterObject)
     {
-        WaterObjectTickFastPath.OnRegister(waterObject);
+        WaterObjectTickFastPath.OnRegister(__instance, waterObject);
     }
 
-    private static void WaterObjectUnregisterPostfix(Timberborn.WaterObjects.WaterObject waterObject)
+    private static void WaterObjectUnregisterPostfix(
+        Timberborn.WaterObjects.WaterObjectService __instance,
+        Timberborn.WaterObjects.WaterObject waterObject)
     {
-        WaterObjectTickFastPath.OnUnregister(waterObject);
+        WaterObjectTickFastPath.OnUnregister(__instance, waterObject);
     }
 
     private static int PatchNavMeshUpdateInvalidation(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
