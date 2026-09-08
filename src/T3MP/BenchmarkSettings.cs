@@ -130,8 +130,6 @@ internal static class BenchmarkSettings
     public static readonly bool EnableFarmSafetyRefreshAudit = false;
     public static readonly bool EnableWalkerDistanceCache = false;
     public static readonly bool EnableWalkerMoverDelegateCacheOptimizer = true;
-    public static readonly bool EnablePathFollowerNoAnimationFastMove = true;
-    public static readonly bool EnablePathFollowerFastMoveStopAnimation = true;
     public static readonly bool EnablePathFollowerProfiler = false;
     public static readonly bool EnableAnimatedPathFollowerHorizontalOptimizer = false;
     public static readonly bool EnableCarryAmountCalculatorOptimizer = true;
@@ -361,13 +359,6 @@ internal static class BenchmarkSettings
     // per-tick simulation. Disclosed in the store description / README.
     public static readonly bool EnableGameSpeedThrottlerRemoval = true;
 
-    // Skip applying Timbermesh animation POSES for animators whose renderers
-    // are not visible to any camera (Renderer.isVisible includes shadow
-    // rendering, so this is visually lossless). Animation time and
-    // PlayingFinished keep advancing normally; a dirty flag re-applies the
-    // pose when the renderer becomes visible again.
-    public static readonly bool EnableInvisibleAnimatorPoseSkip = true;
-
     // Replace the reflective closure EventBus.RegisterMethod builds per
     // [OnEvent] handler (method.Invoke + new object[1] on EVERY delivery)
     // with a compiled delegate. Same handlers, same order, same exceptions;
@@ -416,7 +407,7 @@ internal static class BenchmarkSettings
     public static readonly bool EnableMainLoopTypeProfiler = false;
     public static readonly bool EnableMainLoopUpdateTypeProfiler = false;
     public static readonly bool EnableUnityMarkerProfiler = false;
-    public static readonly bool EnableAnimatorRegistryThrottle = true;
+    public static readonly bool EnableAnimatorRegistryThrottle = false;
     public static readonly bool EnableAnimatorRegistryDetailProfiler = false;
     public static readonly bool EnableMechanicalAnimationBatchProbe = false;
     public static readonly bool EnableMechanicalDirectRotationOptimizer = true;
@@ -428,12 +419,6 @@ internal static class BenchmarkSettings
     public static readonly bool EnableDefaultMechanicalAnimatorDetailProfiler = false;
     public static readonly bool EnableDefaultMechanicalAnimatorRegistryReplacement = false;
     public static readonly bool EnableDefaultMechanicalAnimatorUpdatePatch = false;
-    public static readonly bool EnableMovementAnimatorThrottle = true;
-    // Snap a character's visual model to its entity when animation playback
-    // falls more than ~2 units behind (only reachable at the mod's uncapped
-    // speeds). Fixes tube travel glow + characters visually stuck in tubes
-    // at very high speed; inert at vanilla speeds. See HighSpeedModelLagSnap.
-    public static readonly bool EnableHighSpeedModelLagSnap = true;
     public static readonly bool EnableStatusIconPositionerThrottle = false;
     public static readonly bool EnableSoundListenerStaticCameraOptimizer = false;
     // Keep false: TubeVisitorUpdater drives stateful tube enter/exit each frame
@@ -454,7 +439,7 @@ internal static class BenchmarkSettings
     public static readonly bool EnableHitchLogging = false;
     public static readonly bool EnableOptimizedRenderBlackout = true;
     // Peek-tick suppression (2026-07-05): keep tick-side blackout fast paths
-    // (exact fast move, cosmetic tick suppression) engaged for ticks carried
+    // (cosmetic tick suppression) engaged for ticks carried
     // by the render-peek frame. False restores the old behavior (those ticks
     // ran the full visual paths) - A/B ablation only. Keep true.
     public static readonly bool EnableBlackoutPeekTickSuppression = true;
@@ -462,7 +447,7 @@ internal static class BenchmarkSettings
     // RenderPeekIntervalFullTicks full ticks so the screen shows a fresh
     // snapshot of the colony. Frame-driven suppression paths key off
     // RenderBlackoutActive, so the peek frame runs the normal visual updates.
-    // Tick-driven suppressions (exact fast move, cosmetic component ticks) key
+    // Tick-driven suppressions (cosmetic component ticks) key
     // off BlackoutTickSuppressionActive instead and stay engaged for the ticks
     // the clamped peek frame carries (measured ~half of all blackout ticks).
     public static readonly bool EnableBlackoutRenderPeek = true;
@@ -476,7 +461,7 @@ internal static class BenchmarkSettings
     // discovered UIDocument that may not be the on-screen HUD; the IMGUI meter
     // is the reliable default.
     public static readonly bool EnableSpeedupOverlayGameUi = false;
-    // Shift+P toggles the render blackout + animation thinning. Disable to
+    // Shift+P toggles render blackout, keeping character animation live. Disable to
     // unbind it. The mod does not change game speed; speed is left to the base
     // game (and composes with any speed mod).
     public static readonly bool EnableRenderBlackoutToggleKey = true;
@@ -484,7 +469,6 @@ internal static class BenchmarkSettings
     // 1x speed (Configurations/TickTime.blueprint: TickIntervalInSeconds), so
     // realtime multiplier = simulation ticks per real second * this value.
     public const float GameTickIntervalSeconds = 0.6f;
-    public static readonly bool EnablePathFollowerNreGuard = true;
     public static readonly bool EnableSpeedManagerProbe = true;
     public static readonly bool EnableSpeedManagerLogging = false;
     public static readonly bool EnableTimeSpeedButtonGroupAutoResume = false;
@@ -522,7 +506,6 @@ internal static class BenchmarkSettings
     public const int MechanicalAnimationBatchProbeTopEntries = 10;
     public const int MechanicalDirectVisibilityRefreshFrames = 30;
     public const int DefaultMechanicalAnimatorThrottleFrames = 3;
-    public const int MovementAnimatorThrottleFrames = 2;
     public const int StatusIconPositionerThrottleFrames = 2;
     public const int SoundListenerStaticCameraIntervalFrames = 4;
     public const int TubeVisitorUpdaterThrottleFrames = 2;
@@ -545,22 +528,8 @@ internal static class BenchmarkSettings
     // Disabled by default. Fastest-speed benchmarks must use TimeSpeedButtonGroup
     // and confirm SpeedManager currentSpeed=7 in logs.
     public const float AutoResumeTargetSpeed = 7f;
-    // Smooth frame pacing v1: cap the game time the sim ticker consumes per
-    // rendered frame in visible high-speed play (measured fps 0.8 -> ~8).
-    // DEFAULT OFF: v1 breaks the frame-time == sim-time invariant, so
-    // per-frame systems (MovementAnimator) receive more game time than the
-    // sim advanced and character models can run ahead of their path and
-    // visibly "walk in place" (user-reported at x99; the sim state itself
-    // stays correct - verified with a stuck-walker probe). A v2 should govern
-    // Time.timeScale itself down to the achievable speed instead, which keeps
-    // every clock consistent by construction.
-    public static readonly bool EnableSmoothFramePacing = false;
-    public const float SmoothFramePacingMinTimeScale = 5f;
-    public const float SmoothFramePacingMaxDeltaTime = 0.05f;
-    // While smooth frame pacing is active, sample Timbermesh animations only
-    // every Nth rendered frame (1 = vanilla full rate). Movement stays
-    // per-frame smooth; only the skeletal pose rate drops.
-    public const int SmoothPacingAnimationFrameStride = 2;
+    // Frame pacing is governed only through SmoothTimeScaleGovernor so the
+    // simulation and character animation observe the same Unity clock.
     // Benchmark-only (-benchAutoUltra) requested speed. NOTE: the vanilla
     // GameSpeedThrottler rescales by population (~660 beavers on n10c =>
     // factor 0.4): requested 50 => effective 20.6 => ideal 34.33 ticks/s,

@@ -1,5 +1,12 @@
 # More More More Performance! (T3MP)
 
+Development candidate: Shift+P now skips rendering while character animations
+keep running. The historical performance figures below describe earlier
+releases; this rebuild has not completed release verification.
+
+開発版：Shift+Pは描画を省略し、キャラクターのアニメーション更新は継続します。
+以下の性能値は旧版の計測結果です。この再構成版のリリース検証は未完了です。
+
 **A performance mod: it makes the game itself run faster — not a speed
 multiplier.** It makes the simulation's heaviest CPU work much cheaper, so large
 late-game colonies and fast-forward actually keep up, while producing the

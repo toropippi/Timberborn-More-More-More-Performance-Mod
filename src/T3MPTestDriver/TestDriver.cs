@@ -35,6 +35,7 @@ public sealed class TestDriverModStarter : IModStarter
 
 internal static class TestArguments
 {
+    public static bool AnimationContinuityRequested => HasFlag("-t3mpTestAnimationContinuity");
     public static bool MenuLoadRequested => HasFlag("-t3mpTestMenuLoad");
 
     public static bool NewGameRequested => HasFlag("-t3mpTestNewGame");
@@ -226,14 +227,23 @@ public sealed class GameTestConfigurator : IConfigurator
 public sealed class GameTestDriver : IPostLoadableSingleton
 {
     private readonly SpeedManager _speedManager;
+    private readonly Timberborn.EntitySystem.EntityRegistry _entityRegistry;
 
-    public GameTestDriver(SpeedManager speedManager)
+    public GameTestDriver(SpeedManager speedManager, Timberborn.EntitySystem.EntityRegistry entityRegistry)
     {
         _speedManager = speedManager;
+        _entityRegistry = entityRegistry;
     }
 
     public void PostLoad()
     {
+        if (TestArguments.AnimationContinuityRequested)
+        {
+            new GameObject("T3MPTEST.AnimationContinuity")
+                .AddComponent<AnimationContinuityTestDriver>().Initialize(_speedManager, _entityRegistry);
+            return;
+        }
+
         if (!TestArguments.AnyScenarioRequested && TestArguments.Speed == null)
         {
             return;

@@ -10,6 +10,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="Timberborn.EntitySystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.EntitySystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.BaseComponentSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.BaseComponentSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.Common">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Bindito.Core">
       <HintPath>$(TimberbornManagedDir)\Bindito.Core.dll</HintPath>
       <Private>false</Private>

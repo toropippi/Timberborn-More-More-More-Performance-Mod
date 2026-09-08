@@ -41,12 +41,6 @@ internal static class BenchmarkProbe
     };
 
     private static int _installed;
-    private static int _pathFollowerNreGuardLogs;
-    private static int _characterRotatorNreGuardLogs;
-    private static int _movementAnimatorNreGuardLogs;
-    private static readonly object MovementAnimatorGuardLock = new object();
-    private static readonly HashSet<int> BadMovementAnimators = new HashSet<int>();
-    private static int[] BadMovementAnimatorSnapshot = Array.Empty<int>();
 
     [ThreadStatic]
     private static int _yielderFinderDepth;
@@ -89,7 +83,6 @@ internal static class BenchmarkProbe
                     : 0;
             var patchedWalkerMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchWalkerTravelTime(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedWalkerMoverMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchWalkerMoverDelegateCache(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
-            var patchedPathFollowerNoAnimationMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchPathFollowerNoAnimationFastMove(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedPathFollowerProfilerMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchPathFollowerProfiler(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedAnimatedPathFollowerHorizontalMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchAnimatedPathFollowerHorizontalOptimizer(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
             var patchedCarryAmountMethods = BenchmarkSettings.EnableRuntimeProbes ? PatchCarryAmountCalculatorOptimizer(harmony, harmonyType, harmonyMethodType, patchMethod) : 0;
@@ -126,17 +119,11 @@ internal static class BenchmarkProbe
             var patchedFlatDispatchHookMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableTickDispatchOptimizer && BenchmarkSettings.EnableFlatTickDispatch
                 ? PatchFlatTickDispatchHooks(harmony, harmonyMethodType, patchMethod)
                 : 0;
-            var patchedSmoothPacingMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableSmoothFramePacing
-                ? PatchSmoothFramePacing(harmony, harmonyMethodType, patchMethod)
-                : 0;
             var patchedEventBusFastDelegateMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableEventBusFastDelegates
                 ? PatchEventBusFastDelegates(harmony, harmonyMethodType, patchMethod)
                 : 0;
             var patchedThrottlerRemovalMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableGameSpeedThrottlerRemoval
                 ? PatchGameSpeedThrottlerRemoval(harmony, harmonyMethodType, patchMethod)
-                : 0;
-            var patchedInvisiblePoseSkipMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableInvisibleAnimatorPoseSkip
-                ? PatchInvisibleAnimatorPoseSkip(harmony, harmonyMethodType, patchMethod)
                 : 0;
             var patchedMenuBlackoutCancelMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableOptimizedRenderBlackout && BenchmarkSettings.EnableRenderBlackoutToggleKey
                 ? PatchOptionsMenuBlackoutCancel(harmony, harmonyMethodType, patchMethod)
@@ -170,16 +157,16 @@ internal static class BenchmarkProbe
             var patchedRangedEffectSubjectProfilerMethods = PatchRangedEffectSubjectProfiler(harmony, harmonyType, harmonyMethodType, patchMethod);
             var patchedRuntimeHotspotMethods = PatchRuntimeHotspotProfiler(harmony, harmonyType, harmonyMethodType, patchMethod);
             var patchedMainLoopProfilerMethods = PatchMainLoopProfiler(harmony, harmonyType, harmonyMethodType, patchMethod);
-            var patchedAnimatorThrottleMethods = PatchAnimatorRegistry(harmony, harmonyMethodType, patchMethod);
+            var patchedAnimatorProfilerMethods = PatchAnimatorRegistry(harmony, harmonyMethodType, patchMethod);
             var patchedDefaultMechanicalAnimatorMethods = PatchDefaultMechanicalAnimatorOptimizer(harmony, harmonyMethodType, patchMethod);
             var patchedVisualThrottleMethods = PatchVisualUpdateThrottles(harmony, harmonyMethodType, patchMethod);
             var patchedStatusAggregatorMethods = PatchStatusAggregatorThrottle(harmony, harmonyMethodType, patchMethod);
             var patchedTickVisualThrottleMethods = PatchTickVisualSingletonThrottles(harmony, harmonyMethodType, patchMethod);
             var patchedUnattendedVisualSuppressionMethods = PatchUnattendedVisualSuppression(harmony, harmonyMethodType, patchMethod);
             var patchedSoundListenerMethods = PatchSoundListenerStaticCameraOptimizer(harmony, harmonyMethodType, patchMethod);
-            var patchedPathFollowerGuardMethods = PatchMovementNreGuard(harmony, harmonyType, harmonyMethodType, patchMethod);
 
-            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerNoAnimation={patchedPathFollowerNoAnimationMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, WaterObjectTickFastPath={patchedWaterObjectTickFastPathMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorThrottle={patchedAnimatorThrottleMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, PathFollowerGuard={patchedPathFollowerGuardMethods}, MenuBlackoutCancel={patchedMenuBlackoutCancelMethods}, InputBlocker={patchedInputBlockerMethods}, TopoUiProbe={patchedTopologyUiProbeMethods}, TopoUiScenario={patchedTopologyUiScenarioMethods}, TopoUiOptimizer={patchedTopologyUiOptimizerMethods}");
+            Debug.Log($"[T3MP] Benchmark probe installed. YielderFinder={patchedYielderMethods}, HarvestStarter={patchedFarmMethods}, FarmHouseDirect={patchedFarmHouseMethods}, PlantingSpot={patchedPlantingSpotMethods}, Lumberjack={patchedLumberjackMethods}, Gather={patchedGatherMethods}, InRangeYielders={patchedInRangeMethods}, NavigationService={patchedNavigationMethods}, Walker={patchedWalkerMethods}, WalkerMover={patchedWalkerMoverMethods}, PathFollowerProfiler={patchedPathFollowerProfilerMethods}, AnimatedPathFollowerHorizontal={patchedAnimatedPathFollowerHorizontalMethods}, CarryAmount={patchedCarryAmountMethods}, LiftingCapacity={patchedLiftingCapacityMethods}, NeedBehavior={patchedNeedBehaviorMethods}, NeedManager={patchedNeedManagerMethods}, NeedManagerFastTick={patchedNeedManagerFastTickMethods}, BeaverDecisionFrequency={patchedBeaverDecisionMethods}, Reservable={patchedReservableMethods}, HaulCandidateOrder={patchedHaulCandidateMethods}, HaulNoAction={patchedHaulNoActionMethods}, WorkplaceNoAction={patchedWorkplaceNoActionMethods}, InventoryStock={patchedInventoryStockMethods}, InventoryNeedGood={patchedInventoryNeedGoodMethods}, InventoryCapacity={patchedInventoryCapacityMethods}, InventoryCapacityVectorProfiler={patchedInventoryCapacityVectorProfilerMethods}, FillInput={patchedFillInputMethods}, WaitInside={patchedWaitInsideMethods}, WorkerRootMetrics={patchedWorkerRootMetricsMethods}, WorkerWorkingSpeed={patchedWorkerWorkingSpeedMethods}, BehaviorManager={patchedBehaviorManagerMethods}, ExecutorTickProfiler={patchedExecutorTickProfilerMethods}, DistrictResourceCounter={patchedDistrictResourceCounterMethods}, WaterObjectService={patchedWaterObjectServiceMethods}, WaterObjectTickFastPath={patchedWaterObjectTickFastPathMethods}, ThreadSafeWaterMapTick={patchedThreadSafeWaterMapTickMethods}, ThreadSafeWaterFlow={patchedThreadSafeWaterFlowMethods}, RangedEffectSubjectThrottle={patchedRangedEffectSubjectThrottleMethods}, ContaminationApplierThrottle={patchedContaminationApplierThrottleMethods}, TickDispatch={patchedTickDispatchMethods}, EmptyInvFast={patchedEmptyInventoriesFastPathMethods}, NavMeshInvalidate={patchedNavMeshInvalidationMethods}, TickBuckets={patchedTickMethods}, FpsCounter={patchedFpsCounterMethods}, SpeedManager={patchedSpeedManagerMethods}, TimeSpeedButtonGroup={patchedTimeSpeedButtonMethods}, LoadProfiler={patchedLoadProfilerMethods}, LoadComponentProfiler={patchedLoadComponentProfilerMethods}, LoadSingletonProfiler={patchedLoadSingletonProfilerMethods}, LoadEventProfiler={patchedLoadEventProfilerMethods}, LoadHotspotProfiler={patchedLoadHotspotProfilerMethods}, MechanicalGraphLoadBatcher={patchedMechanicalGraphLoadBatcherMethods}, StutterDetail={patchedStutterDetailMethods}, RangedEffectSubjectProfiler={patchedRangedEffectSubjectProfilerMethods}, RuntimeHotspot={patchedRuntimeHotspotMethods}, MainLoopProfiler={patchedMainLoopProfilerMethods}, AnimatorProfiler={patchedAnimatorProfilerMethods}, DefaultMechanicalAnimator={patchedDefaultMechanicalAnimatorMethods}, VisualThrottle={patchedVisualThrottleMethods}, StatusAggregator={patchedStatusAggregatorMethods}, TickVisualThrottle={patchedTickVisualThrottleMethods}, UnattendedVisualSuppression={patchedUnattendedVisualSuppressionMethods}, SoundListener={patchedSoundListenerMethods}, MenuBlackoutCancel={patchedMenuBlackoutCancelMethods}, InputBlocker={patchedInputBlockerMethods}, TopoUiProbe={patchedTopologyUiProbeMethods}, TopoUiScenario={patchedTopologyUiScenarioMethods}, TopoUiOptimizer={patchedTopologyUiOptimizerMethods}");
+            Debug.Log("[T3MP] Character animation: vanilla movement, poses and clocks (including turbo).");
         }
         catch (Exception exception)
         {
@@ -630,35 +617,6 @@ internal static class BenchmarkProbe
         return TryPatch(harmony, patchMethod, targetMethod, prefixHarmonyMethod, null) ? 1 : 0;
     }
 
-    private static int PatchPathFollowerNoAnimationFastMove(object harmony, Type harmonyType, Type harmonyMethodType, MethodInfo patchMethod)
-    {
-        if (!BenchmarkSettings.EnablePathFollowerNoAnimationFastMove)
-        {
-            return 0;
-        }
-
-        var prefix = typeof(BenchmarkProbe).GetMethod(nameof(UsePathFollowerNoAnimationFastMove), BindingFlags.Static | BindingFlags.NonPublic);
-        if (prefix is null)
-        {
-            Debug.LogWarning("[T3MP] PathFollower no-animation fast move patch method was not found.");
-            return 0;
-        }
-
-        var targetMethod = typeof(PathFollower).GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-            .FirstOrDefault(method =>
-                method.Name == "MoveAlongPath" &&
-                method.ReturnType == typeof(void) &&
-                method.GetParameters().Length == 3 &&
-                !method.ContainsGenericParameters);
-        if (targetMethod is null)
-        {
-            Debug.LogWarning("[T3MP] PathFollower.MoveAlongPath method was not found.");
-            return 0;
-        }
-
-        var prefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, prefix);
-        return TryPatch(harmony, patchMethod, targetMethod, prefixHarmonyMethod, null) ? 1 : 0;
-    }
 
     private static int PatchCarryAmountCalculatorOptimizer(object harmony, Type harmonyType, Type harmonyMethodType, MethodInfo patchMethod)
     {
@@ -1047,95 +1005,6 @@ internal static class BenchmarkProbe
         return patched + 1;
     }
 
-    private static int PatchMovementNreGuard(object harmony, Type harmonyType, Type harmonyMethodType, MethodInfo patchMethod)
-    {
-        if (!BenchmarkSettings.EnablePathFollowerNreGuard)
-        {
-            return 0;
-        }
-
-        var patched = 0;
-        var targetType = FindType("Timberborn.CharacterMovementSystem.PathFollower");
-        var pathFollowerFinalizer = typeof(BenchmarkProbe).GetMethod(nameof(SuppressReachedLastPathCornerNre), BindingFlags.Static | BindingFlags.NonPublic);
-        if (targetType is null || pathFollowerFinalizer is null)
-        {
-            Debug.LogWarning("[T3MP] PathFollower NRE guard target was not found.");
-        }
-        else
-        {
-            var targetMethod = targetType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-                .FirstOrDefault(method =>
-                    method.Name == "ReachedLastPathCorner" &&
-                    method.ReturnType == typeof(bool) &&
-                    method.GetParameters().Length == 0 &&
-                    !method.ContainsGenericParameters);
-            if (targetMethod is null)
-            {
-                Debug.LogWarning("[T3MP] PathFollower.ReachedLastPathCorner() bool method was not found.");
-            }
-            else
-            {
-                var finalizerHarmonyMethod = Activator.CreateInstance(harmonyMethodType, pathFollowerFinalizer);
-                patchMethod.Invoke(harmony, new object?[] { targetMethod, null, null, null, finalizerHarmonyMethod });
-                patched++;
-            }
-        }
-
-        var rotatorType = FindType("Timberborn.CharacterMovementSystem.CharacterRotator");
-        var rotatorFinalizer = typeof(BenchmarkProbe).GetMethod(nameof(SuppressCharacterRotatorXRotationNre), BindingFlags.Static | BindingFlags.NonPublic);
-        if (rotatorType is null || rotatorFinalizer is null)
-        {
-            Debug.LogWarning("[T3MP] CharacterRotator NRE guard target was not found.");
-            return patched;
-        }
-
-        var xRotationMethod = rotatorType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-            .FirstOrDefault(method =>
-                method.Name == "GetXRotation" &&
-                method.ReturnType == typeof(float) &&
-                method.GetParameters().Length == 1 &&
-                method.GetParameters()[0].ParameterType == typeof(float) &&
-                !method.ContainsGenericParameters);
-        if (xRotationMethod is null)
-        {
-            Debug.LogWarning("[T3MP] CharacterRotator.GetXRotation(float) method was not found.");
-            return patched;
-        }
-
-        var rotatorFinalizerHarmonyMethod = Activator.CreateInstance(harmonyMethodType, rotatorFinalizer);
-        patchMethod.Invoke(harmony, new object?[] { xRotationMethod, null, null, null, rotatorFinalizerHarmonyMethod });
-        patched++;
-
-        var movementAnimatorType = FindType("Timberborn.CharacterMovementSystem.MovementAnimator");
-        var movementAnimatorPrefix = typeof(BenchmarkProbe).GetMethod(nameof(SkipBadMovementAnimatorUpdate), BindingFlags.Static | BindingFlags.NonPublic);
-        var movementAnimatorFinalizer = typeof(BenchmarkProbe).GetMethod(nameof(SuppressMovementAnimatorUpdateNre), BindingFlags.Static | BindingFlags.NonPublic);
-        if (movementAnimatorType is null || movementAnimatorPrefix is null || movementAnimatorFinalizer is null)
-        {
-            Debug.LogWarning("[T3MP] MovementAnimator NRE guard target was not found.");
-            return patched;
-        }
-
-        var movementAnimatorPrefixHarmonyMethod = Activator.CreateInstance(harmonyMethodType, movementAnimatorPrefix);
-        var movementAnimatorFinalizerHarmonyMethod = Activator.CreateInstance(harmonyMethodType, movementAnimatorFinalizer);
-        // High-speed model lag snap rides the per-frame (parameterless) Update
-        // as a postfix; see HighSpeedModelLagSnap for the rationale.
-        var lagSnapPostfix = BenchmarkSettings.EnableHighSpeedModelLagSnap
-            ? typeof(HighSpeedModelLagSnap).GetMethod(nameof(HighSpeedModelLagSnap.AfterMovementAnimatorUpdate), BindingFlags.Static | BindingFlags.NonPublic)
-            : null;
-        var lagSnapPostfixHarmonyMethod = lagSnapPostfix is null ? null : Activator.CreateInstance(harmonyMethodType, lagSnapPostfix);
-        foreach (var updateMethod in movementAnimatorType.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
-                     .Where(method =>
-                         method.Name == "Update" &&
-                         method.ReturnType == typeof(void) &&
-                         !method.ContainsGenericParameters))
-        {
-            var postfixForOverload = updateMethod.GetParameters().Length == 0 ? lagSnapPostfixHarmonyMethod : null;
-            patchMethod.Invoke(harmony, new object?[] { updateMethod, movementAnimatorPrefixHarmonyMethod, postfixForOverload, null, movementAnimatorFinalizerHarmonyMethod });
-            patched++;
-        }
-
-        return patched;
-    }
 
     private static int PatchAnimatedPathFollowerHorizontalOptimizer(object harmony, Type harmonyType, Type harmonyMethodType, MethodInfo patchMethod)
     {
@@ -2497,39 +2366,6 @@ internal static class BenchmarkProbe
     }
 
     // ------------------------------------------------------------------
-    // Smooth frame pacing: caps the game time the sim ticker consumes per
-    // rendered frame in visible high-speed play (see BenchmarkModeController
-    // for the rationale). Same drop-the-surplus semantics as the vanilla
-    // maximumDeltaTime clamp, scoped to the ticker only.
-    // ------------------------------------------------------------------
-    private static int PatchSmoothFramePacing(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
-    {
-        var targetMethod = typeof(Timberborn.TickSystem.Ticker).GetMethod("Update", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-        var prefix = typeof(BenchmarkProbe).GetMethod(nameof(ClampTickerDeltaForSmoothPacing), BindingFlags.Static | BindingFlags.NonPublic);
-        if (targetMethod is null || prefix is null)
-        {
-            Debug.LogWarning("[T3MP] Smooth frame pacing target was not found.");
-            return 0;
-        }
-
-        return TryPatch(harmonyInstance, patchMethod, targetMethod, Activator.CreateInstance(harmonyMethodType, prefix), null) ? 1 : 0;
-    }
-
-    private static void ClampTickerDeltaForSmoothPacing(ref float deltaTimeInSeconds)
-    {
-        if (!BenchmarkModeController.SmoothFramePacingActive)
-        {
-            return;
-        }
-
-        var cap = BenchmarkSettings.SmoothFramePacingMaxDeltaTime * Time.timeScale;
-        if (deltaTimeInSeconds > cap)
-        {
-            deltaTimeInSeconds = cap;
-        }
-    }
-
-    // ------------------------------------------------------------------
     // EventBus fast delegates: replace the reflective per-delivery closure
     // built by EventBus.RegisterMethod with a compiled delegate (see
     // EventBusFastDelegates for exactness notes).
@@ -2962,41 +2798,6 @@ internal static class BenchmarkProbe
     {
         VanillaInputBlockerState.Record(__result);
     }
-
-    // ------------------------------------------------------------------
-    // Invisible-animator pose skip (see InvisibleAnimatorPoseSkip).
-    // ------------------------------------------------------------------
-    private static int PatchInvisibleAnimatorPoseSkip(object harmonyInstance, Type harmonyMethodType, MethodInfo patchMethod)
-    {
-        var animatorType = FindType("Timberborn.TimbermeshAnimations.TimbermeshAnimator");
-        var poseMethod = animatorType?.GetMethod("UpdateAnimationUpdaters", BindingFlags.Instance | BindingFlags.NonPublic);
-        var updateMethod = animatorType?.GetMethod("UpdateAnimation", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
-        var posePrefix = typeof(BenchmarkProbe).GetMethod(nameof(MaybeApplyAnimatorPose), BindingFlags.Static | BindingFlags.NonPublic);
-        var updatePrefix = typeof(BenchmarkProbe).GetMethod(nameof(RepairFinishedAnimatorPose), BindingFlags.Static | BindingFlags.NonPublic);
-        var playingFinishedProperty = animatorType?.GetProperty("PlayingFinished", BindingFlags.Instance | BindingFlags.Public);
-        if (poseMethod is null || updateMethod is null || posePrefix is null || updatePrefix is null || playingFinishedProperty is null)
-        {
-            Debug.LogWarning("[T3MP] Invisible-animator pose skip targets were not found.");
-            return 0;
-        }
-
-        InvisibleAnimatorPoseSkip.Initialize(poseMethod, playingFinishedProperty);
-        var patched = 0;
-        patched += TryPatch(harmonyInstance, patchMethod, poseMethod, Activator.CreateInstance(harmonyMethodType, posePrefix), null) ? 1 : 0;
-        patched += TryPatch(harmonyInstance, patchMethod, updateMethod, Activator.CreateInstance(harmonyMethodType, updatePrefix), null) ? 1 : 0;
-        return patched;
-    }
-
-    private static bool MaybeApplyAnimatorPose(object __instance)
-    {
-        return InvisibleAnimatorPoseSkip.ShouldApplyPose((Component)__instance);
-    }
-
-    private static void RepairFinishedAnimatorPose(object __instance)
-    {
-        InvisibleAnimatorPoseSkip.RepairFinishedPose((Component)__instance);
-    }
-
 
     private static int PatchThreadSafeWaterMapTickThrottle(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
     {
@@ -3489,10 +3290,8 @@ internal static class BenchmarkProbe
 
     private static int PatchAnimatorRegistry(object harmony, Type harmonyMethodType, MethodInfo patchMethod)
     {
-        if ((!BenchmarkSettings.EnableAnimatorRegistryThrottle ||
-             BenchmarkSettings.AnimatorRegistryThrottleFrames <= 1) &&
-            !BenchmarkSettings.EnableAnimatorRegistryDetailProfiler &&
-            !BenchmarkSettings.EnableDefaultMechanicalAnimatorRegistryReplacement)
+        if (!BenchmarkSettings.EnableAnimatorRegistryDetailProfiler &&
+            !BenchmarkSettings.EnableMechanicalAnimationBatchProbe)
         {
             return 0;
         }
@@ -3502,7 +3301,7 @@ internal static class BenchmarkProbe
         var postfix = typeof(BenchmarkProbe).GetMethod(nameof(RecordAnimatorRegistryUpdateReturn), BindingFlags.Static | BindingFlags.NonPublic);
         if (targetType is null || prefix is null || postfix is null)
         {
-            Debug.LogWarning("[T3MP] AnimatorRegistry throttle target was not found.");
+            Debug.LogWarning("[T3MP] AnimatorRegistry profiler target was not found.");
             return 0;
         }
 
@@ -3519,97 +3318,17 @@ internal static class BenchmarkProbe
         return TryPatch(harmony, patchMethod, targetMethod, prefixHarmonyMethod, postfixHarmonyMethod) ? 1 : 0;
     }
 
-    private static bool MaybeRunAnimatorRegistryUpdate(object __instance, out AnimatorRegistryProfiler.CallState __state)
+    private static void MaybeRunAnimatorRegistryUpdate(object __instance, out AnimatorRegistryProfiler.CallState __state)
     {
+        // 計測フックは共通アニメーション更新を止めない。
+        // An observation-only prefix must never skip the shared animation update.
         __state = AnimatorRegistryProfiler.CallState.Inactive;
-        // Gate on the mod's Optimized mode, NOT on TryGetSampleMode (which is a
-        // measurement-only flag). Otherwise the animation thinning and
-        // MechanicalDirectRotation optimization only run during dev benchmark
-        // runs and are inert in the shipped build.
         var mode = BenchmarkModeController.CurrentMode;
-        if (mode != BenchmarkMode.Optimized)
-        {
-            return true;
-        }
-
-        if (mode == BenchmarkMode.Optimized &&
-            BenchmarkSettings.EnableUnattendedVisualSuppression &&
-            BenchmarkModeController.RenderBlackoutActive)
-        {
-            return false;
-        }
-
         MechanicalAnimationBatchProbe.MaybeSample(__instance, mode);
-
-        if (mode == BenchmarkMode.Optimized &&
-            !BenchmarkModeController.RenderBlackoutActive)
-        {
-            // Visible high-speed play (smooth frame pacing active): sample the
-            // Timbermesh animations only every Nth rendered frame. Movement
-            // stays per-frame smooth (MovementAnimator moves transforms); only
-            // the skeletal pose updates at a lower rate, which is imperceptible
-            // at the speeds where pacing engages. Normal speeds never reach
-            // here with pacing active, so regular play keeps full-rate
-            // animation.
-            if (BenchmarkModeController.SmoothFramePacingActive &&
-                BenchmarkSettings.SmoothPacingAnimationFrameStride > 1 &&
-                Time.frameCount % BenchmarkSettings.SmoothPacingAnimationFrameStride != 0)
-            {
-                return false;
-            }
-
-            if (BenchmarkSettings.EnableDetailedBenchmarkTiming)
-            {
-                AnimatorRegistryProfiler.Begin(__instance, mode, true, out __state);
-            }
-
-            return true;
-        }
-
-        if (mode == BenchmarkMode.Optimized &&
-            BenchmarkSettings.EnableMechanicalDirectRotationOptimizer)
-        {
-            if (BenchmarkSettings.EnableDetailedBenchmarkTiming)
-            {
-                AnimatorRegistryProfiler.Begin(__instance, mode, true, out __state);
-            }
-
-            if (MechanicalDirectRotationOptimizer.TryUpdateRegistry(__instance))
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        if (mode == BenchmarkMode.Optimized &&
-            BenchmarkSettings.EnableDefaultMechanicalAnimatorRegistryReplacement &&
-            BenchmarkSettings.EnableDefaultMechanicalAnimatorThrottle &&
-            BenchmarkSettings.DefaultMechanicalAnimatorThrottleFrames > 1)
-        {
-            if (BenchmarkSettings.EnableDetailedBenchmarkTiming)
-            {
-                AnimatorRegistryProfiler.Begin(__instance, mode, true, out __state);
-            }
-
-            if (DefaultMechanicalAnimatorOptimizer.TryUpdateRegistry(__instance))
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        var shouldRun = mode != BenchmarkMode.Optimized ||
-            !BenchmarkSettings.EnableAnimatorRegistryThrottle ||
-            BenchmarkSettings.AnimatorRegistryThrottleFrames <= 1 ||
-            Time.frameCount % BenchmarkSettings.AnimatorRegistryThrottleFrames == 0;
         if (BenchmarkSettings.EnableDetailedBenchmarkTiming)
         {
-            AnimatorRegistryProfiler.Begin(__instance, mode, shouldRun, out __state);
+            AnimatorRegistryProfiler.Begin(__instance, mode, true, out __state);
         }
-
-        return shouldRun;
     }
 
     private static void RecordAnimatorRegistryUpdateReturn(AnimatorRegistryProfiler.CallState __state)
@@ -3958,7 +3677,6 @@ internal static class BenchmarkProbe
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.DemolishingUI.DemolishableMarkerService", "UpdateSingleton", prefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.BlockObjectToolsUI.BlockObjectToolWarningPanel", "UpdateSingleton", prefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.UILayoutSystem.DebugUIScaleChanger", "UpdateSingleton", prefix);
-        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.TimeSystem.NonlinearAnimationManager", "UpdateSingleton", prefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WaterSystemRendering.WaterRenderer", "StartParallelTick", prefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.ModularShafts.ShaftSoundEmitter", "Update", prefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.SlotSystem.FixedSlotManager", "Update", prefix);
@@ -3969,14 +3687,15 @@ internal static class BenchmarkProbe
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.Terraforming.DrillHeadVisualizer", "Update", prefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.MechanicalSystem.MechanicalNodeTransformHeight", "Update", prefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.Buildings.FireIntensityController", "Update", prefix);
-        // Tick-driven cosmetic components (sounds, worker hiding, workplace
+        // Tick-driven cosmetic components (sounds, workplace
         // lights, particles) use the peek-agnostic gate: their effects are
         // invisible during the blackout AND during the one-frame peek, so the
         // dozens of ticks a clamped peek frame carries should not run them.
+        // Worker visibility and NonlinearAnimationManager must keep updating:
+        // they carry transitions that cannot be reconstructed by a render peek.
         // Frame-driven updaters above stay on RenderBlackoutActive so the peek
         // frame itself renders fresh.
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WorkshopsEffects.WorkshopSounds", "Tick", tickPrefix);
-        patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WorkshopsEffects.WorkshopWorkerHider", "Tick", tickPrefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.SleepSystem.SleepSoundEmitter", "Tick", tickPrefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WaterBuildings.WaterMoverParticleController", "Tick", tickPrefix);
         patched += PatchSingleNoArgumentVoidMethod(harmony, harmonyMethodType, patchMethod, "Timberborn.WorkSystemUI.WorkplaceIlluminator", "Tick", tickPrefix);
@@ -5128,18 +4847,6 @@ internal static class BenchmarkProbe
             ____tickService);
     }
 
-    private static bool UsePathFollowerNoAnimationFastMove(
-        PathFollower __instance,
-        float tickDeltaTime,
-        string animationName,
-        Func<float> movementSpeedProvider)
-    {
-        return !PathFollowerNoAnimationFastMove.TryMove(
-            __instance,
-            tickDeltaTime,
-            animationName,
-            movementSpeedProvider);
-    }
 
     private static bool UseCarryAmountCalculatorOptimizer(
         IGoodService ____goodService,
@@ -5377,105 +5084,9 @@ internal static class BenchmarkProbe
         SimulationProgressMetrics.RecordFullTick();
     }
 
-    private static Exception? SuppressReachedLastPathCornerNre(Exception? __exception, ref bool __result)
-    {
-        if (__exception is null)
-        {
-            return null;
-        }
 
-        if (__exception is NullReferenceException)
-        {
-            __result = false;
-            if (Interlocked.Increment(ref _pathFollowerNreGuardLogs) <= 3)
-            {
-                Debug.LogWarning("[T3MP] Suppressed PathFollower.ReachedLastPathCorner NullReferenceException during benchmark run.");
-            }
 
-            return null;
-        }
 
-        return __exception;
-    }
-
-    private static Exception? SuppressCharacterRotatorXRotationNre(Exception? __exception, ref float __result)
-    {
-        if (__exception is null)
-        {
-            return null;
-        }
-
-        if (__exception is NullReferenceException)
-        {
-            __result = 0f;
-            if (Interlocked.Increment(ref _characterRotatorNreGuardLogs) <= 3)
-            {
-                Debug.LogWarning("[T3MP] Suppressed CharacterRotator.GetXRotation NullReferenceException during benchmark run.");
-            }
-
-            return null;
-        }
-
-        return __exception;
-    }
-
-    private static bool SkipBadMovementAnimatorUpdate(object __instance)
-    {
-        if (BenchmarkSettings.EnableUnattendedVisualSuppression &&
-            BenchmarkModeController.RenderBlackoutActive)
-        {
-            return false;
-        }
-
-        if (BenchmarkSettings.EnableMovementAnimatorThrottle &&
-            BenchmarkSettings.MovementAnimatorThrottleFrames > 1 &&
-            BenchmarkModeController.RenderBlackoutActive &&
-            !ShouldRunStaggeredVisualUpdate(__instance, BenchmarkSettings.MovementAnimatorThrottleFrames))
-        {
-            return false;
-        }
-
-        var key = RuntimeHelpers.GetHashCode(__instance);
-        var snapshot = BadMovementAnimatorSnapshot;
-        for (var index = 0; index < snapshot.Length; index++)
-        {
-            if (snapshot[index] == key)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static Exception? SuppressMovementAnimatorUpdateNre(object __instance, Exception? __exception)
-    {
-        if (__exception is null)
-        {
-            return null;
-        }
-
-        if (__exception is NullReferenceException)
-        {
-            var key = RuntimeHelpers.GetHashCode(__instance);
-            lock (MovementAnimatorGuardLock)
-            {
-                if (BadMovementAnimators.Add(key))
-                {
-                    BadMovementAnimatorSnapshot = BadMovementAnimators.ToArray();
-                }
-            }
-
-            if (Interlocked.Increment(ref _movementAnimatorNreGuardLogs) <= 3)
-            {
-                Debug.LogWarning("[T3MP] Suppressed MovementAnimator.Update NullReferenceException during benchmark run; future updates for this animator will be skipped.");
-            }
-
-            return null;
-        }
-
-        return __exception;
-    }
 
     private static void RecordLoadStageCall(MethodBase __originalMethod, out LoadProfiler.LoadStageState __state)
     {

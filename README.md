@@ -1,12 +1,18 @@
 # More More More Performance! (T3MP)
 
+**Development rebuild:** character movement and animation now use the vanilla
+update path in every mode. Shift+P skips rendering while character updates keep
+running. The tables below describe earlier releases, including their removed
+animation-skip turbo; they are not performance claims for this rebuild. See
+[the rebuild record](docs/animation-rebuild.md) for retained optimizations and validation.
+
 A Timberborn performance mod — a **real, algorithmic speedup** of the CPU-bound
 simulation, **not** a speed multiplier. It applies
 **behavior-exact** optimizations to the heaviest hot paths (they change how fast
 the game computes, never what it computes), so high game speed and large
 late-game colonies actually keep up. It does not change game speed itself — pair
-it with any speed mod; Shift+P toggles an extra render blackout + animation
-thinning. Unattended runs produce the exact same colony you would get at normal
+it with any speed mod; Shift+P toggles an extra render blackout.
+Unattended runs produce the exact same colony you would get at normal
 speed.
 
 Mod Id / internal codename: `T3MP` (finalized — unchanged across releases).
@@ -38,10 +44,9 @@ effective x40.2, warmup day excluded):
 | v1.1 always-on (rendered) | 29.69 | **1.52x** | measured with experimental frame pacing on; ~33.5 in 20 s windows without it |
 | v1.1 + Shift+P blackout | 47.18 | **2.41x** | "up to"; depends on CPU and the population speed cap |
 
-(An experimental smooth-frame-pacing mode — ~8 fps rendered high-speed play
-instead of ~1 fps — exists behind `EnableSmoothFramePacing` but ships **off**:
-its v1 lets character models visually run ahead of the simulation at very high
-speed. See `docs/optimization-history.md`.) The full change-by-change record
+(The experimental ticker-only frame-pacing mode used in earlier experiments
+has been removed because it let character models run ahead of simulation.
+Shift+O retains the shared-clock time-scale governor.) The full change-by-change record
 with per-item measurements and leave-one-out instructions is in
 [`docs/optimization-history.md`](docs/optimization-history.md).
 
@@ -62,8 +67,8 @@ and every **negative result** so dead-end investigations are not repeated.
 - Optimizations turn on automatically as soon as a save loads — no
   action needed. The mod does not change game speed; use the game's speed
   controls or any speed mod.
-- **Shift+P**: toggle turbo rendering — a render blackout + animation thinning
-  for a large extra speedup, at any game speed. One frame is drawn every 100
+- **Shift+P**: toggle render blackout while character animation keeps running.
+  The performance benefit depends on rendering load. One frame is drawn every 100
   ticks so you can watch progress. Press Shift+P again to restore rendering.
 - A live speed meter is shown bottom-right whenever the mod is active (it keeps
   updating during a Shift+P blackout too). See below for how to read it.

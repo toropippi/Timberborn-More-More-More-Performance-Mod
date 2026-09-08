@@ -60,7 +60,6 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     private bool _originalSoftParticles;
     private int _lastRenderPolicyFrame = -1000;
     private bool _renderPolicyApplied;
-    private bool _blackoutWasActive;
     private bool _autoForceOptimizedApplied;
     private bool _autoMaxFrameRateApplied;
     private bool _fpsPriorityAutoStarted;
@@ -70,35 +69,8 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     // drawing on the main menu / loading screens after leaving a game.
     private bool _inGameScene;
 
-    // Vanilla ships Time.maximumDeltaTime = 0.6 s: one rendered frame may
-    // swallow up to 0.6 real-seconds x timeScale of simulation, so at high
-    // effective speed the frame rate collapses to ~1 fps while the sim
-    // monopolizes the main thread. Smooth frame pacing caps the game time the
-    // SIM TICKER consumes per rendered frame while the game runs fast in
-    // VISIBLE mode (a Harmony prefix clamps Ticker.Update's deltaTime — the
-    // same drop-the-surplus semantics as the vanilla maximumDeltaTime clamp,
-    // which cannot itself be lowered because Unity refuses values below
-    // fixedDeltaTime). Tick logic is untouched; the achieved speed remains
-    // honestly visible on the rSPD meter. Normal play (x1-3) never reaches
-    // the threshold and is unaffected.
-    private static bool _smoothFramePacingActive;
-
-    public static bool SmoothFramePacingActive => _smoothFramePacingActive;
-
-    private void ApplySmoothFramePacing()
-    {
-        var shouldApply = BenchmarkSettings.EnableSmoothFramePacing &&
-            _inGameScene &&
-            _currentMode == BenchmarkMode.Optimized &&
-            !RenderBlackoutActive &&
-            Time.timeScale >= BenchmarkSettings.SmoothFramePacingMinTimeScale;
-        if (shouldApply != _smoothFramePacingActive)
-        {
-            _smoothFramePacingActive = shouldApply;
-            Debug.Log($"[T3MP] Smooth frame pacing {(shouldApply ? "ON" : "OFF")}: capSeconds={BenchmarkSettings.SmoothFramePacingMaxDeltaTime:F3} timeScale={Time.timeScale:F1}");
-        }
-    }
-
+    // ターボ中も移動とアニメーションの時計を維持し、復帰時の補正を不要にする。
+    // Keep vanilla character clocks during turbo so exiting needs no resync.
     public static void Install()
     {
         if (_instance is not null)
@@ -130,7 +102,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     /// frame-time-clamp limited (maximumDeltaTime 0.6s x timeScale), so that
     /// single visible frame can carry dozens of ticks; measured on n10c about
     /// half of all blackout ticks executed inside peek frames and paid the
-    /// full vanilla visual cost (animated MoveAlongPath, cosmetic ticks).
+    /// full vanilla cosmetic tick cost. Character movement always runs.
     /// Tick-driven suppressions key off this so they stay engaged for those
     /// ticks; frame-driven visual updaters keep keying off
     /// RenderBlackoutActive so the peek frame itself still renders fresh
@@ -184,7 +156,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
             _instance.ApplyFrameRatePolicy();
         }
 
-        Debug.Log("[T3MP] Turbo rendering (blackout + animation thinning) OFF (options menu opened).");
+        Debug.Log("[T3MP] Turbo rendering (render blackout) OFF (options menu opened).");
     }
 
     private void Awake()
@@ -215,7 +187,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
             CultureInfo.InvariantCulture,
             "[T3MP] Controller installed. build={0}",
             BenchmarkSettings.OptimizedImplementationName));
-        Debug.Log("[T3MP] Optimizations auto-enable after load. Shift+P toggles render blackout + animation thinning. Shift+O toggles smooth mode (fps-priority). Game speed is otherwise left to the base game.");
+        Debug.Log("[T3MP] Optimizations auto-enable after load. Shift+P toggles render blackout. Shift+O toggles smooth mode (fps-priority). Game speed is otherwise left to the base game.");
     }
 
     private void LateUpdate()
@@ -231,7 +203,6 @@ internal sealed class BenchmarkModeController : MonoBehaviour
         var now = Time.realtimeSinceStartup;
         _inGameScene = SceneManager.GetActiveScene().buildIndex == 2;
         RenderStatsProbe.Update(_inGameScene);
-        ApplySmoothFramePacing();
         var elapsedSinceLastUpdate = now - _lastUpdateRealtime;
         var managedMemory = GC.GetTotalMemory(false);
         var gc0 = GC.CollectionCount(0);
@@ -336,7 +307,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
 
     private void HandleHotkeys(float now)
     {
-        // Shift+P toggles the render blackout + animation thinning.
+        // Shift+P toggles the render blackout.
         // Shift+O toggles the smooth mode (fps-priority timeScale governor).
         // Match vanilla shortcut behavior: text inputs (including chat) block
         // gameplay hotkeys through Timberborn.InputSystem.InputBlocker.
@@ -357,7 +328,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
             ApplyFrameRatePolicy();
             Debug.Log(string.Format(
                 CultureInfo.InvariantCulture,
-                "[T3MP] Turbo rendering (blackout + animation thinning) {0}.",
+                "[T3MP] Turbo rendering (render blackout) {0}.",
                 _renderBlackoutRequested ? "ON" : "OFF"));
         }
 
@@ -733,7 +704,7 @@ internal sealed class BenchmarkModeController : MonoBehaviour
                 fontSize = 12,
                 fontStyle = FontStyle.Bold
             };
-            const string hint = "(Animation skip mode [Shift+P])";
+            const string hint = "(Render skip mode [Shift+P])";
             _blackoutHintStyle.normal.textColor = new Color(0f, 0f, 0f, 0.65f);
             GUI.Label(new Rect(hintRect.x + 1f, hintRect.y + 1f, hintRect.width, hintRect.height), hint, _blackoutHintStyle);
             _blackoutHintStyle.normal.textColor = new Color(1f, 0.85f, 0.4f, 0.95f);
@@ -812,17 +783,10 @@ internal sealed class BenchmarkModeController : MonoBehaviour
     {
         if (!RenderBlackoutActive)
         {
-            if (_blackoutWasActive)
-            {
-                _blackoutWasActive = false;
-                PathFollowerNoAnimationFastMove.ResyncAfterBlackout();
-            }
-
             RestoreRenderPolicy();
             return;
         }
 
-        _blackoutWasActive = true;
         if (SceneManager.GetActiveScene().buildIndex == 2)
         {
             if (!_renderPolicyApplied)

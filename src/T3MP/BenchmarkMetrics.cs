@@ -244,7 +244,6 @@ internal static class BenchmarkMetrics
         NeedBehaviorTravelOptimizer.LogAndReset(aggregateId);
         NeedActionFlowFieldProbe.LogAndReset(aggregateId);
         WalkerMoverDelegateCacheOptimizer.LogAndReset(aggregateId);
-        PathFollowerNoAnimationFastMove.LogAndReset(aggregateId);
         PathFollowerProfiler.LogAndReset(aggregateId);
         AnimatedPathFollowerHorizontalOptimizer.LogAndReset(aggregateId);
         CarryAmountCalculatorOptimizer.LogAndReset(aggregateId);
@@ -309,7 +308,6 @@ internal static class BenchmarkMetrics
         SoundListenerStaticCameraOptimizer.Reset();
         FarmHouseBehaviorDirectOptimizer.Reset();
         WalkerMoverDelegateCacheOptimizer.Reset();
-        PathFollowerNoAnimationFastMove.Reset();
         PathFollowerProfiler.Reset();
         AnimatedPathFollowerHorizontalOptimizer.Reset();
         CarryAmountCalculatorOptimizer.Reset();
