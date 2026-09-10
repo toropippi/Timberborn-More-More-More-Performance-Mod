@@ -16,8 +16,9 @@ the simulation produces the same colony as vanilla, tick for tick.
   called through typed delegates instead of reflection, entity ticks walk their
   component arrays by index, and water texture uploads whose bytes did not
   change are not re-sent to the GPU (about 90% of uploads on a large map).
-  Measured throughput gain on a large colony is about 5%, within run-to-run
-  noise. **Do not expect the old 1.5x.**
+  Measured gain depends on the save: about 1.28x on one large colony (game
+  1.0.13.1 and 1.1.2.0 alike), about 1.06x on another. **Do not expect a
+  fixed 1.5x.**
 
 ## What is gone (and why)
 
@@ -50,8 +51,8 @@ tick単位でバニラと同じ集落になります。
 - **本編ループの軽量化。** 結果を変えない3点：イベントハンドラをリフレクション
   でなく型付きdelegateで呼ぶ、エンティティのtickで部品配列を添字で走査する、
   byteが変わらない水テクスチャをGPUへ再送しない（大規模マップで約90%）。
-  大規模集落での本編速度向上は約5%で計測ノイズの範囲内です。**旧版の1.5倍は
-  期待しないでください。**
+  効き方はセーブ次第で、ある大規模集落では約1.28倍（ゲーム1.0.13.1でも1.1.2.0でも）、
+  別の集落では約1.06倍でした。**固定の1.5倍は期待しないでください。**
 
 ## 撤去したもの（理由）
 

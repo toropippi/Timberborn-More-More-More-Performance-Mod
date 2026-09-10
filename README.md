@@ -20,21 +20,32 @@ reports traced back to them. The mod now has two parts:
 | index tick traversal | `TickableEntity.Tick` | index loop over the component array; an alive entity with no enabled tickable component returns before the native `activeInHierarchy` read |
 | water upload de-duplication | `DataTextureArray<T>.UpdateTextureArrays` | a GPU upload whose bytes equal the last bytes sent to that texture layer is skipped (native memcmp, D3D11 only) |
 
-Measured on Steam 1.1.2.4, n10c copy, speed button x50 (effective x20.6),
-150 s per run after load, 20 s windows with the first dropped
-(`scripts/run_runtime_ab.ps1`, `testlogs/runtime-ab-*.json`):
+Measured with `scripts/run_runtime_ab.ps1` (speed button x50 = effective x20.6,
+150 s per run after load, 20 s windows with the first dropped; results in
+`testlogs/runtime-ab-*.json`):
 
-| arm | ticks/s |
-| --- | ---: |
-| runtime patches off (`-t3mpTestRuntimeBaseline`) | 12.64 |
-| all three on | 13.39 |
-| water only | 13.27 |
-| tick only | 13.37 |
-| events only | 13.19 |
+| game | save | arm | ticks/s | vs runtime off |
+| --- | --- | --- | ---: | ---: |
+| 1.0.13.1 (Steam) | m7b | runtime patches off (2 runs) | 17.53 / 16.77 | 1.00 |
+| 1.0.13.1 (Steam) | m7b | all three on (2 runs) | 21.90 / 22.03 | **1.28** |
+| 1.0.13.1 (Steam) | m7b | tick traversal only | 22.71 | 1.32 |
+| 1.0.13.1 (Steam) | m7b | water only | 16.44 | 0.96 |
+| 1.0.13.1 (Steam) | m7b | events only | 16.51 | 0.96 |
+| 1.1.2.0 (snapshot) | m7b | runtime patches off (2 runs) | 15.85 / 17.64 | 1.00 |
+| 1.1.2.0 (snapshot) | m7b | all three on (2 runs) | 21.54 / 21.44 | **1.28** |
+| 1.1.2.4 (Steam) | n10c | runtime patches off | 12.64 | 1.00 |
+| 1.1.2.4 (Steam) | n10c | all three on | 13.39 | 1.06 |
 
-That is about 1.06x and within run-to-run noise. **The 1.5x of earlier releases
-came from the removed caches and is not claimed for v1.2.** About 91% of water
-texture uploads were byte-identical and skipped.
+For reference, the Harmony-free T4MP prototype (DLL rewrite, game 1.0.13.1
+only) on the same m7b save: vanilla 17.83 / 16.99 vs T4MP 28.33 / 27.15 ticks/s
+(**1.59x**). The difference to 1.28x is T4MP's `UnityEngine.Object.op_Implicit`
+rewrite and its sparse bucket index, neither of which a Workshop mod can apply.
+
+The gain therefore depends on the save, not on the game version: the tick
+traversal shortcut pays off when many entities have all tickable components
+disabled (m7b), and barely at all on n10c. Water upload de-duplication skips
+about 90% of uploads but does not change the tick rate. **No fixed speedup
+figure is claimed.**
 
 Mod Id: `T3MP`. Requires the Harmony mod. Game 1.0.13.1 and 1.1.2.x, Windows.
 

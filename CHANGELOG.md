@@ -27,14 +27,16 @@ More performance. Then more. Then, because the name promised it, a little more.
   - `DataTextureArray<T>.UpdateTextureArrays`: a GPU upload whose bytes equal
     the bytes last submitted to that texture layer is skipped (native
     memcmp). Direct3D11 only; the simulation and data arrays are untouched.
-- **Measured (Steam 1.1.2.4, n10c copy, 28,202 entities, speed button x50 =
-  effective x20.6, 150 s per run after load, 20 s windows, first window
-  dropped):** runtime patches off 12.64 ticks/s, all on 13.39 ticks/s
-  (**1.06x**); water only 13.27, tick only 13.37, events only 13.19. The
-  differences are within run-to-run noise (an earlier ABBA with a managed byte
-  compare gave 11.73 vs 9.98, which is why the compare is native now). About
-  91% of water texture uploads were identical and skipped. **The old 1.5x is
-  not reproduced by these exact-only changes; v1.2 makes no such claim.**
+- **Measured** (`scripts/run_runtime_ab.ps1`, x50 = effective x20.6, 150 s,
+  20 s windows, first dropped). m7b save: game 1.0.13.1 runtime off 17.53/16.77
+  vs on 21.90/22.03 ticks/s (**1.28x**); game 1.1.2.0 off 15.85/17.64 vs on
+  21.54/21.44 (**1.28x**); on 1.0 the tick traversal alone gives 22.71, water
+  alone 16.44, events alone 16.51. n10c save on 1.1.2.4: off 12.64 vs on 13.39
+  (1.06x, within noise). The gain depends on the save (how many entities have
+  every tickable component disabled), not on the game version. The Harmony-free
+  T4MP prototype measures 1.59x on m7b/1.0.13.1 (17.4 vs 27.7); the remainder is
+  its Unity `op_Implicit` rewrite and sparse bucket index, which a Workshop mod
+  cannot apply. **No fixed speedup figure is claimed.**
 - **Save loading kept.** The load optimizations (event routing, construction
   plans, prepared visuals, navigation and terrain load paths) are unchanged:
   about 29 s instead of about 65 s scene load on the same 1.1.2.4 save
@@ -65,13 +67,14 @@ More performance. Then more. Then, because the name promised it, a little more.
   - `DataTextureArray<T>.UpdateTextureArrays`: 前回そのテクスチャ層へ送った
     byteと一致するGPU転送を省く（ネイティブmemcmp）。Direct3D11限定。
     シミュレーションとデータ配列には触れない。
-- **実測（Steam 1.1.2.4、n10c複製、28,202エンティティ、速度ボタンx50＝実効
-  x20.6、ロード後150秒、20秒窓、最初の窓は除外）:** ランタイムパッチ無効
-  12.64 ticks/s、全有効 13.39 ticks/s（**1.06倍**）。水のみ13.27、tickのみ
-  13.37、イベントのみ13.19。差はいずれも試行間ノイズの範囲です（マネージド
-  byte比較だった初回ABBAでは11.73対9.98で逆に遅く、比較をネイティブに変更）。
-  水テクスチャ転送の約91%が一致として省略されました。**結果を変えない変更だけ
-  では旧版の1.5倍は再現しません。v1.2はその主張をしません。**
+- **実測**（`scripts/run_runtime_ab.ps1`、x50＝実効x20.6、150秒、20秒窓、最初の窓は
+  除外）。m7bセーブ：ゲーム1.0.13.1でランタイム無効 17.53/16.77 → 有効 21.90/22.03
+  ticks/s（**1.28倍**）、ゲーム1.1.2.0で 15.85/17.64 → 21.54/21.44（**1.28倍**）。
+  1.0でtick走査のみ 22.71、水のみ 16.44、イベントのみ 16.51。n10cセーブ（1.1.2.4）
+  は 12.64 → 13.39（1.06倍、ノイズ内）。効き方はゲーム版ではなくセーブ（全部品が
+  無効なエンティティの多さ）で決まります。Harmony不使用のT4MP試作はm7b/1.0.13.1で
+  1.59倍（17.4 → 27.7）。差分はUnityの `op_Implicit` 書き換えと疎なバケット索引で、
+  Workshop MODでは適用できません。**固定の倍率は主張しません。**
 - **ロード高速化は継続。** ロード側の最適化（イベント経路、生成プラン、
   モデル事前準備、経路網・地形のロード経路）は変更なし。同一の1.1.2.4セーブで
   シーンロード約65秒→約29秒（`docs/load-steam-1124-2026-09-10.md`）。
