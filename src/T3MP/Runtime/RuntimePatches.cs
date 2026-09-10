@@ -35,6 +35,7 @@ internal static class RuntimePatches
             if (ModSettings.EnableEventBusFastDelegates) EventBusFastDelegates.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableTickEntityFast) TickEntityFast.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableWaterTextureUpload) WaterTextureUpload.Install(harmonyType, harmonyMethodType, patch);
+            if (ModSettings.EnableTickFrontier) TickFrontier.Install(harmonyType, harmonyMethodType, patch);
         }
         catch (Exception exception)
         {
@@ -45,7 +46,7 @@ internal static class RuntimePatches
     // Shared helper for the three feature installers: creates a Harmony
     // instance per owner and reports/unpatches on failure.
     internal static bool TryInstall(string owner, Type harmonyType, Type harmonyMethodType, MethodInfo patch,
-        Action<Func<MethodBase, string?, string?, string?, object?>> body, Type hooks)
+        Action<Func<MethodBase, string?, string?, string?, string?, object?>> body, Type hooks)
     {
         object? harmony = null;
         try
@@ -62,8 +63,8 @@ internal static class RuntimePatches
                 if (transpiler) harmonyMethodType.GetField("priority", All)!.SetValue(hook, 0);
                 return hook;
             }
-            body((target, prefix, postfix, transpiler) =>
-                patch.Invoke(harmony, new[] { (object)target, Hook(prefix, false), Hook(postfix, false), Hook(transpiler, true), null }));
+            body((target, prefix, postfix, transpiler, finalizer) =>
+                patch.Invoke(harmony, new[] { (object)target, Hook(prefix, false), Hook(postfix, false), Hook(transpiler, true), Hook(finalizer, false) }));
             return true;
         }
         catch (Exception exception)
@@ -80,12 +81,17 @@ internal static class RuntimePatches
     // and bypass patches on helpers the replacement no longer calls. Harmony
     // 2.4.1 exposes the patch lists as public fields; later versions may use
     // properties, so both are accepted.
-    internal static bool ForeignPatched(Type harmonyType, MethodBase method, string owner, bool transpilersOnly)
+    internal static bool ForeignPatched(Type harmonyType, MethodBase method, string owner, bool transpilersOnly) =>
+        ForeignPatched(harmonyType, method, new[] { owner }, transpilersOnly);
+
+    internal static bool ForeignPatched(Type harmonyType, MethodBase method, string[] owners, bool transpilersOnly)
     {
         var info = harmonyType.GetMethod("GetPatchInfo", All)!.Invoke(null, new object[] { method });
         if (info == null) return false;
+        // Inner patches rewrite call sites inside the body, so they count as
+        // body-changing patches together with transpilers.
         var names = transpilersOnly
-            ? new[] { "Transpilers" }
+            ? new[] { "Transpilers", "InnerPrefixes", "InnerPostfixes" }
             : new[] { "Prefixes", "Postfixes", "Transpilers", "Finalizers", "InnerPrefixes", "InnerPostfixes" };
         foreach (var name in names)
         {
@@ -95,7 +101,7 @@ internal static class RuntimePatches
             {
                 var patchOwner = patch.GetType().GetField("owner", All)?.GetValue(patch) as string
                                  ?? patch.GetType().GetProperty("owner", All)?.GetValue(patch) as string;
-                if (patchOwner != owner) return true;
+                if (Array.IndexOf(owners, patchOwner) < 0) return true;
             }
         }
         return false;

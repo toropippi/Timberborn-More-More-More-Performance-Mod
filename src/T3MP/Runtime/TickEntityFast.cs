@@ -23,12 +23,12 @@ internal static class TickEntityFast
     internal static bool Installed { get; private set; }
 
     // Raw-IL SHA256 of the reviewed vanilla bodies: 1.0.13.1 and 1.1.2.0/1.1.2.4.
-    private static readonly string[] ReviewedTick =
+    internal static readonly string[] ReviewedTick =
     {
         "1505E4964C1B5B1243D4E48190FCC49617B6A34362A012A60937B1AF26130C34",
         "9DC6FCDBD41B512C73522FBD1AE22893ADA21277BB8E56621F44D34DB159E2CA"
     };
-    private static readonly string[] ReviewedLoop =
+    internal static readonly string[] ReviewedLoop =
     {
         "F7D063689233726D8BB0CE335466978A40CC9B86E088D99721D5A18216119180",
         "ADF101E3EEB721D1535EC28BAC0105EB26853DB0617C8998EA65F4808BC6F5CB"
@@ -71,7 +71,7 @@ internal static class TickEntityFast
                 throw new InvalidOperationException("another mod patches TickableEntity");
             _shape = RuntimePatches.OriginalShape(harmonyType, tick);
             _tick = (Action<MeteredTickableComponent>)Delegate.CreateDelegate(typeof(Action<MeteredTickableComponent>), call);
-            apply(tick, null, null, nameof(Rewrite));
+            apply(tick, null, null, nameof(Rewrite), null);
         }, typeof(TickEntityFast));
         if (Installed) Debug.Log("[T3MP] Tick traversal installed (component call=" + call.Name + ").");
     }

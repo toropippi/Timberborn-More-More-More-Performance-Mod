@@ -27,14 +27,23 @@ $results = @()
 
 foreach ($arm in $Order.ToCharArray()) {
     # A = runtime baseline, B = all runtime patches, T = tick traversal only,
-    # W = water upload only, E = event delegates only.
+    # W = water upload only, E = event delegates only, N = all but frontier, F = frontier only.
     $extra = switch ($arm) {
         'A' { @('-t3mpTestRuntimeBaseline') }
         'T' { @('-t3mpTestNoEvents', '-t3mpTestNoWater') }
         'W' { @('-t3mpTestNoEvents', '-t3mpTestNoTick') }
         'E' { @('-t3mpTestNoTick', '-t3mpTestNoWater') }
+        'N' { @('-t3mpTestNoFrontier') }
+        'F' { @('-t3mpTestNoEvents', '-t3mpTestNoWater', '-t3mpTestNoTick') }
         default { @() }
     }
+    # A previous run's game process may still be shutting down.
+    $deadline = (Get-Date).AddSeconds(90)
+    while ((Get-Process | Where-Object { $_.ProcessName -like '*Timberborn*' }) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
+    # Steam can relaunch the game under a new PID after the probe stopped its own; this
+    # script only ever runs on staged copies, so a leftover game is the previous arm's.
+    Get-Process | Where-Object { $_.ProcessName -like '*Timberborn*' } | ForEach-Object { Write-Host "Stopping leftover Timberborn pid $($_.Id)"; Stop-Process -Id $_.Id -Force }
+    Start-Sleep -Seconds 5
     $before = Get-ChildItem -LiteralPath $logDir -Filter 'autoload-*.log' | Where-Object { $_.Name -notlike 'autoload-previous-*' } | Select-Object -ExpandProperty FullName
     Write-Host "=== arm $arm args: $($extra -join ' ')"
     & $probe -TimberbornExe $TimberbornExe -SettlementName $Settlement -SaveName $Save -Scenario LaunchArgs -TestSpeed $Speed `
@@ -46,7 +55,7 @@ foreach ($arm in $Order.ToCharArray()) {
     $rates = @($lines | ForEach-Object { if ($_ -match '\[T3MPTEST\] Simulation rate ([0-9.]+) ticks/s window=(\d+)') { [double] $Matches[1] } })
     $used = @($rates | Select-Object -Skip $WarmupWindows)
     $mean = if ($used.Count -gt 0) { ($used | Measure-Object -Average).Average } else { 0 }
-    $installed = @($lines | Where-Object { $_ -match '\[T3MP\] (Tick traversal installed|Water upload de-duplication installed|EventBus fast delegates installed|Runtime patches skipped)|\[T3MPTEST\] water ' } | Select-Object -Last 4) -join ' | '
+    $installed = @($lines | Where-Object { $_ -match '\[T3MP\] (Tick traversal installed|Water upload de-duplication installed|EventBus fast delegates installed|Runtime patches skipped)|\[T3MPTEST\] (water|frontier) ' } | Select-Object -Last 5) -join ' | '
     $failures = @($lines | Where-Object { $_ -match 'Failed to patch|First uncaught exception|\[T3MP\] .*(disabled|unavailable|vanilla retained)' })
     $results += [PSCustomObject]@{
         Arm = [string] $arm; Log = $log.Name; Windows = $used.Count; MeanTicksPerSecond = [math]::Round($mean, 3)

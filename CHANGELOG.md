@@ -27,16 +27,24 @@ More performance. Then more. Then, because the name promised it, a little more.
   - `DataTextureArray<T>.UpdateTextureArrays`: a GPU upload whose bytes equal
     the bytes last submitted to that texture layer is skipped (native
     memcmp). Direct3D11 only; the simulation and data arrays are untouched.
+  - `TickableEntityBucket.TickAll` (Frontier, ported from the Harmony-free
+    T4MP prototype): each entity carries a count of its enabled tickable
+    components, maintained by hooks on `BaseComponent.EnableComponent` /
+    `DisableComponent` (the only writers of `Enabled`) and marked on
+    `ComponentCache.OnDestroy` / re-`Initialize`. The bucket sweep jumps to the
+    next entity that still needs a visit; an alive entity with no enabled
+    tickable component is exactly the case where vanilla only reads
+    `activeInHierarchy` and runs an empty loop. Unknown or untracked state is
+    always visited; the vanilla `SortedList` remains the authority. Four Codex
+    review passes; the last found no defect.
 - **Measured** (`scripts/run_runtime_ab.ps1`, x50 = effective x20.6, 150 s,
-  20 s windows, first dropped). m7b save: game 1.0.13.1 runtime off 17.53/16.77
-  vs on 21.90/22.03 ticks/s (**1.28x**); game 1.1.2.0 off 15.85/17.64 vs on
-  21.54/21.44 (**1.28x**); on 1.0 the tick traversal alone gives 22.71, water
-  alone 16.44, events alone 16.51. n10c save on 1.1.2.4: off 12.64 vs on 13.39
-  (1.06x, within noise). The gain depends on the save (how many entities have
-  every tickable component disabled), not on the game version. The Harmony-free
-  T4MP prototype measures 1.59x on m7b/1.0.13.1 (17.4 vs 27.7); the remainder is
-  its Unity `op_Implicit` rewrite and sparse bucket index, which a Workshop mod
-  cannot apply. **No fixed speedup figure is claimed.**
+  20 s windows, first dropped). m7b save, game 1.0.13.1: vanilla 17.83/16.99,
+  v1.2 without Frontier 21.98/22.50, **v1.2 27.66/26.57 ticks/s (1.56x)**; the
+  Harmony-free T4MP prototype 28.33/27.15 (1.59x). n10c save, game 1.1.2.0:
+  without Frontier 13.89/13.55, **v1.2 16.86/15.27**, against 12.64 with the
+  runtime patches off on 1.1.2.4 (**about 1.27x**). The Frontier skips about
+  90% of entity visits on both saves; the gain depends on the save, not on the
+  game version. **No fixed speedup figure is claimed.**
 - **Save loading kept.** The load optimizations (event routing, construction
   plans, prepared visuals, navigation and terrain load paths) are unchanged:
   about 29 s instead of about 65 s scene load on the same 1.1.2.4 save
@@ -67,14 +75,21 @@ More performance. Then more. Then, because the name promised it, a little more.
   - `DataTextureArray<T>.UpdateTextureArrays`: 前回そのテクスチャ層へ送った
     byteと一致するGPU転送を省く（ネイティブmemcmp）。Direct3D11限定。
     シミュレーションとデータ配列には触れない。
+  - `TickableEntityBucket.TickAll`（Frontier。Harmony不使用のT4MP試作からの移植）：
+    各エンティティが「有効なtick部品の数」を持ち、`Enabled` の唯一の書き手である
+    `BaseComponent.EnableComponent`／`DisableComponent` のフックで更新、
+    `ComponentCache.OnDestroy`／再`Initialize` で印を付ける。バケット走査は
+    次に訪問が必要なエンティティへ飛ぶ。有効なtick部品が1つもない生存エンティティは、
+    バニラが `activeInHierarchy` を読んで空ループを回すだけの場合そのもの。
+    不明・未追跡の状態は必ず訪問し、バニラの `SortedList` が主で索引は従。
+    Codexレビュー4回、最終回は指摘なし。
 - **実測**（`scripts/run_runtime_ab.ps1`、x50＝実効x20.6、150秒、20秒窓、最初の窓は
-  除外）。m7bセーブ：ゲーム1.0.13.1でランタイム無効 17.53/16.77 → 有効 21.90/22.03
-  ticks/s（**1.28倍**）、ゲーム1.1.2.0で 15.85/17.64 → 21.54/21.44（**1.28倍**）。
-  1.0でtick走査のみ 22.71、水のみ 16.44、イベントのみ 16.51。n10cセーブ（1.1.2.4）
-  は 12.64 → 13.39（1.06倍、ノイズ内）。効き方はゲーム版ではなくセーブ（全部品が
-  無効なエンティティの多さ）で決まります。Harmony不使用のT4MP試作はm7b/1.0.13.1で
-  1.59倍（17.4 → 27.7）。差分はUnityの `op_Implicit` 書き換えと疎なバケット索引で、
-  Workshop MODでは適用できません。**固定の倍率は主張しません。**
+  除外）。m7bセーブ、ゲーム1.0.13.1：バニラ 17.83/16.99、Frontierなしのv1.2
+  21.98/22.50、**v1.2 27.66/26.57 ticks/s（1.56倍）**、Harmony不使用のT4MP試作
+  28.33/27.15（1.59倍）。n10cセーブ、ゲーム1.1.2.0：Frontierなし 13.89/13.55、
+  **v1.2 16.86/15.27**、1.1.2.4でランタイム無効の12.64に対して**約1.27倍**。
+  Frontierはどちらのセーブでもエンティティ訪問の約90%を省きますが、効き方は
+  セーブで決まり、ゲーム版では決まりません。**固定の倍率は主張しません。**
 - **ロード高速化は継続。** ロード側の最適化（イベント経路、生成プラン、
   モデル事前準備、経路網・地形のロード経路）は変更なし。同一の1.1.2.4セーブで
   シーンロード約65秒→約29秒（`docs/load-steam-1124-2026-09-10.md`）。

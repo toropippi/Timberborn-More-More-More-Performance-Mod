@@ -49,7 +49,7 @@ internal static class EventBusFastDelegates
             return;
         }
         Installed = RuntimePatches.TryInstall(Owner, harmonyType, harmonyMethodType, patch,
-            apply => apply(register, nameof(Prefix), null, null), typeof(EventBusFastDelegates));
+            apply => apply(register, nameof(Prefix), null, null, null), typeof(EventBusFastDelegates));
         if (Installed) Debug.Log("[T3MP] EventBus fast delegates installed.");
     }
 

@@ -147,9 +147,13 @@ internal static class LoadEventRouter
             // it neither alters delivery nor touches the subscription registry.
             // The typed-delegate registration prefix is this mod's own reviewed
             // RegisterMethod replacement (same registry call, same order).
+            // The tick frontier only observes EnableComponent/DisableComponent and
+            // ComponentCache.OnDestroy (counts, no change to Enabled or lookups).
             if (owners.Any(owner => owner != Owner &&
                 !(owner == "t3mp.load.progress" && method.DeclaringType == typeof(EventBus) && method.Name == "PostLoad") &&
-                !(owner == "t3mp.runtime.events" && method.DeclaringType == typeof(EventBus) && method.Name == "RegisterMethod")))
+                !(owner == "t3mp.runtime.events" && method.DeclaringType == typeof(EventBus) && method.Name == "RegisterMethod") &&
+                !(owner == "t3mp.runtime.frontier" && (method.DeclaringType == typeof(BaseComponent) && method.Name is "EnableComponent" or "DisableComponent" ||
+                                                        method.DeclaringType == typeof(ComponentCache) && method.Name is "OnDestroy" or "Initialize"))))
                 return false;
         }
         return true;

@@ -15,6 +15,7 @@ internal static class ModSettings
     public static readonly bool EnableEventBusFastDelegates = !HasCommandLineFlag("-t3mpTestNoEvents");
     public static readonly bool EnableTickEntityFast = !HasCommandLineFlag("-t3mpTestNoTick");
     public static readonly bool EnableWaterTextureUpload = !HasCommandLineFlag("-t3mpTestNoWater");
+    public static readonly bool EnableTickFrontier = !HasCommandLineFlag("-t3mpTestNoFrontier");
 
     // Load patches (Loading/, Shared/).
     public static readonly bool EnableLoadEventRouting = true;

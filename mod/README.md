@@ -12,13 +12,14 @@ the simulation produces the same colony as vanilla, tick for tick.
   initialization, event delivery and navigation graph building during load are
   done with fewer repeated lookups; every step verifies the game build it was
   reviewed on and otherwise stays vanilla.
-- **A lighter simulation loop.** Three small, exact changes: event handlers are
+- **A lighter simulation loop.** Four exact changes: event handlers are
   called through typed delegates instead of reflection, entity ticks walk their
-  component arrays by index, and water texture uploads whose bytes did not
-  change are not re-sent to the GPU (about 90% of uploads on a large map).
-  Measured gain depends on the save: about 1.28x on one large colony (game
-  1.0.13.1 and 1.1.2.0 alike), about 1.06x on another. **Do not expect a
-  fixed 1.5x.**
+  component arrays by index, the tick sweep skips entities whose tickable
+  components are all disabled (vanilla would only read a flag and run an empty
+  loop for them; about 90% of visits on large colonies), and water texture
+  uploads whose bytes did not change are not re-sent to the GPU. Measured gain
+  depends on the save: about 1.56x on one large colony, about 1.27x on another
+  (same on game 1.0 and 1.1). **Do not expect a fixed figure.**
 
 ## What is gone (and why)
 
@@ -48,11 +49,12 @@ tick単位でバニラと同じ集落になります。
   約65秒→約29秒（ゲーム1.1.2.4、ゲーム自身の `Load time` 行で計測）。
   ロード中のエンティティ生成・初期化・イベント配信・経路網構築の重複処理を
   減らします。各処理は審査済みのゲームビルドかを確認し、違えばバニラのままです。
-- **本編ループの軽量化。** 結果を変えない3点：イベントハンドラをリフレクション
+- **本編ループの軽量化。** 結果を変えない4点：イベントハンドラをリフレクション
   でなく型付きdelegateで呼ぶ、エンティティのtickで部品配列を添字で走査する、
-  byteが変わらない水テクスチャをGPUへ再送しない（大規模マップで約90%）。
-  効き方はセーブ次第で、ある大規模集落では約1.28倍（ゲーム1.0.13.1でも1.1.2.0でも）、
-  別の集落では約1.06倍でした。**固定の1.5倍は期待しないでください。**
+  tick部品がすべて無効なエンティティ（バニラはフラグを読んで空ループを回すだけ。
+  大規模集落で訪問の約90%）をtick走査で飛ばす、byteが変わらない水テクスチャを
+  GPUへ再送しない。効き方はセーブ次第で、ある大規模集落では約1.56倍、別の集落では
+  約1.27倍でした（ゲーム1.0でも1.1でも同じ）。**固定の倍率は期待しないでください。**
 
 ## 撤去したもの（理由）
 

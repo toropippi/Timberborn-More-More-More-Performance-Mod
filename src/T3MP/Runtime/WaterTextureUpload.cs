@@ -60,7 +60,7 @@ internal static class WaterTextureUpload
                     throw new InvalidOperationException("another mod transpiles UpdateTextureArrays<" + type.Name + ">");
                 Shapes[type] = RuntimePatches.OriginalShape(harmonyType, method);
                 Targets.Add(method);
-                apply(method, null, null, rewrite);
+                apply(method, null, null, rewrite, null);
             }
         }, typeof(WaterTextureUpload));
         _harmonyType = harmonyType;

@@ -301,6 +301,13 @@ public sealed class SimulationRateLogger : MonoBehaviour
                 Debug.Log("[T3MPTEST] water calls=" + water.GetField("Calls", all)!.GetValue(null) + " uploaded=" + water.GetField("Uploaded", all)!.GetValue(null) +
                           " identical=" + water.GetField("Reused", all)!.GetValue(null));
             }
+            var frontier = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.TickFrontier")).FirstOrDefault(t => t != null);
+            if (frontier != null)
+            {
+                const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+                Debug.Log("[T3MPTEST] frontier sweeps=" + frontier.GetField("Sweeps", all)!.GetValue(null) + " visited=" + frontier.GetField("Visited", all)!.GetValue(null) +
+                          " skipped=" + frontier.GetField("Skipped", all)!.GetValue(null));
+            }
         }
         catch (Exception) { /* diagnostics only */ }
         _windowStart = now;

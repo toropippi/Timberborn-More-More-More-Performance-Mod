@@ -12,6 +12,17 @@ var targets = new (string Assembly, string Type, string Method)[]
     ("Timberborn.TickSystem", "Timberborn.TickSystem.MeteredTickableComponent", "Tick"),
     ("Timberborn.WaterSystemRendering", "Timberborn.WaterSystemRendering.DataTextureArray`1", "UpdateTextureArrays"),
     ("Timberborn.SingletonSystem", "Timberborn.SingletonSystem.EventBus", "RegisterMethod"),
+    ("Timberborn.TickSystem", "Timberborn.TickSystem.TickableEntityBucket", "TickAll"),
+    ("Timberborn.TickSystem", "Timberborn.TickSystem.TickableEntityBucket", "Add"),
+    ("Timberborn.TickSystem", "Timberborn.TickSystem.TickableEntityBucket", "Remove"),
+    ("Timberborn.TickSystem", "Timberborn.TickSystem.TickableEntity", ".ctor"),
+    ("Timberborn.BaseComponentSystem", "Timberborn.BaseComponentSystem.BaseComponent", "EnableComponent"),
+    ("Timberborn.BaseComponentSystem", "Timberborn.BaseComponentSystem.BaseComponent", "DisableComponent"),
+    ("Timberborn.BaseComponentSystem", "Timberborn.BaseComponentSystem.BaseComponent", "set_Enabled"),
+    ("Timberborn.BaseComponentSystem", "Timberborn.BaseComponentSystem.ComponentCache", "OnDestroy"),
+    ("Timberborn.BaseComponentSystem", "Timberborn.BaseComponentSystem.ComponentCache", "Initialize"),
+    ("Timberborn.BaseComponentSystem", "Timberborn.BaseComponentSystem.BaseComponent", "get_Enabled"),
+    ("Timberborn.TickSystem", "Timberborn.TickSystem.MeteredTickableComponent", "get_Enabled"),
 };
 foreach (var managed in args)
 {
@@ -24,8 +35,10 @@ foreach (var managed in args)
         {
             var assembly = context.LoadFromAssemblyPath(Path.Combine(managed, assemblyName + ".dll"));
             var type = assembly.GetType(typeName, true)!;
-            var method = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
-                .FirstOrDefault(m => m.Name == methodName);
+            MethodBase? method = methodName == ".ctor"
+                ? type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault()
+                : type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+                    .FirstOrDefault(m => m.Name == methodName);
             if (method == null) { Console.WriteLine($"{typeName}.{methodName}: (absent)"); continue; }
             var il = method.GetMethodBody()!.GetILAsByteArray()!;
             var clauses = method.GetMethodBody()!.ExceptionHandlingClauses.Count;

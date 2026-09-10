@@ -18,34 +18,32 @@ reports traced back to them. The mod now has two parts:
 | --- | --- | --- |
 | typed event delivery | `EventBus.RegisterMethod` | compiled `Action<T>` instead of `MethodInfo.Invoke` + `object[]` per delivery |
 | index tick traversal | `TickableEntity.Tick` | index loop over the component array; an alive entity with no enabled tickable component returns before the native `activeInHierarchy` read |
+| sparse bucket traversal (Frontier) | `TickableEntityBucket.TickAll`, `BaseComponent.Enable/DisableComponent`, `ComponentCache.OnDestroy/Initialize` | a per-bucket index of entities that still need a visit (enabled tickable components counted through the only two writers of `Enabled`; destroyed or untracked state = visit); the vanilla `SortedList` stays the authority, the index only supplies the next index to visit |
 | water upload de-duplication | `DataTextureArray<T>.UpdateTextureArrays` | a GPU upload whose bytes equal the last bytes sent to that texture layer is skipped (native memcmp, D3D11 only) |
 
 Measured with `scripts/run_runtime_ab.ps1` (speed button x50 = effective x20.6,
 150 s per run after load, 20 s windows with the first dropped; results in
 `testlogs/runtime-ab-*.json`):
 
-| game | save | arm | ticks/s | vs runtime off |
+| game | save | arm | ticks/s | vs vanilla |
 | --- | --- | --- | ---: | ---: |
-| 1.0.13.1 (Steam) | m7b | runtime patches off (2 runs) | 17.53 / 16.77 | 1.00 |
-| 1.0.13.1 (Steam) | m7b | all three on (2 runs) | 21.90 / 22.03 | **1.28** |
-| 1.0.13.1 (Steam) | m7b | tick traversal only | 22.71 | 1.32 |
-| 1.0.13.1 (Steam) | m7b | water only | 16.44 | 0.96 |
-| 1.0.13.1 (Steam) | m7b | events only | 16.51 | 0.96 |
-| 1.1.2.0 (snapshot) | m7b | runtime patches off (2 runs) | 15.85 / 17.64 | 1.00 |
-| 1.1.2.0 (snapshot) | m7b | all three on (2 runs) | 21.54 / 21.44 | **1.28** |
+| 1.0.13.1 (Steam) | m7b | vanilla, no mod (2 runs) | 17.83 / 16.99 | 1.00 |
+| 1.0.13.1 (Steam) | m7b | v1.2 without Frontier (2 runs) | 21.98 / 22.50 | 1.28 |
+| 1.0.13.1 (Steam) | m7b | **v1.2 (2 runs)** | 27.66 / 26.57 | **1.56** |
+| 1.0.13.1 (snapshot) | m7b | T4MP prototype (DLL rewrite, 2 runs) | 28.33 / 27.15 | 1.59 |
+| 1.1.2.0 (snapshot) | n10c | v1.2 without Frontier (2 runs) | 13.89 / 13.55 | |
+| 1.1.2.0 (snapshot) | n10c | **v1.2 (2 runs)** | 16.86 / 15.27 | |
 | 1.1.2.4 (Steam) | n10c | runtime patches off | 12.64 | 1.00 |
-| 1.1.2.4 (Steam) | n10c | all three on | 13.39 | 1.06 |
+| 1.1.2.4 (Steam) | n10c | v1.2 without Frontier | 13.39 | 1.06 |
 
-For reference, the Harmony-free T4MP prototype (DLL rewrite, game 1.0.13.1
-only) on the same m7b save: vanilla 17.83 / 16.99 vs T4MP 28.33 / 27.15 ticks/s
-(**1.59x**). The difference to 1.28x is T4MP's `UnityEngine.Object.op_Implicit`
-rewrite and its sparse bucket index, neither of which a Workshop mod can apply.
-
-The gain therefore depends on the save, not on the game version: the tick
-traversal shortcut pays off when many entities have all tickable components
-disabled (m7b), and barely at all on n10c. Water upload de-duplication skips
-about 90% of uploads but does not change the tick rate. **No fixed speedup
-figure is claimed.**
+On n10c the full v1.2 runtime is about **1.27x** the runtime-off baseline
+(16.1 vs 12.64 ticks/s). The Frontier skips about 90% of entity visits on both
+saves, but what remains on n10c is heavier per entity, so the gain is smaller.
+The gain therefore depends on the save, not the game version. Water upload
+de-duplication skips about 90% of uploads but does not change the tick rate.
+**No fixed speedup figure is claimed.** The Harmony-free T4MP prototype's extra
+3% on m7b is its `UnityEngine.Object.op_Implicit` rewrite, which a Workshop
+mod cannot apply.
 
 Mod Id: `T3MP`. Requires the Harmony mod. Game 1.0.13.1 and 1.1.2.x, Windows.
 
