@@ -26,8 +26,9 @@ internal static class LoadProfiler
     {
         var name = $"{originalMethod.DeclaringType?.FullName}.{originalMethod.Name}";
         Interlocked.Increment(ref _activeDepth);
+        var previousStage = _currentStage;
         _currentStage = name;
-        return new LoadStageState(true, name, Stopwatch.GetTimestamp());
+        return new LoadStageState(true, name, Stopwatch.GetTimestamp(), previousStage);
     }
 
     public static void EndStage(LoadStageState state)
@@ -40,7 +41,7 @@ internal static class LoadProfiler
         var elapsedMilliseconds = ToMilliseconds(Stopwatch.GetTimestamp() - state.StartTimestamp);
         if (elapsedMilliseconds < BenchmarkSettings.LoadSlowCallThresholdMilliseconds)
         {
-            _currentStage = null;
+            _currentStage = state.PreviousStage;
             Interlocked.Decrement(ref _activeDepth);
             return;
         }
@@ -60,7 +61,7 @@ internal static class LoadProfiler
             LogComponentStatsAndReset(ShortStageName(state.Name));
         }
 
-        _currentStage = null;
+        _currentStage = state.PreviousStage;
         Interlocked.Decrement(ref _activeDepth);
     }
 
@@ -270,16 +271,18 @@ internal static class LoadProfiler
 
     public readonly struct LoadStageState
     {
-        public LoadStageState(bool active, string name, long startTimestamp)
+        public LoadStageState(bool active, string name, long startTimestamp, string? previousStage)
         {
             Active = active;
             Name = name;
             StartTimestamp = startTimestamp;
+            PreviousStage = previousStage;
         }
 
         public bool Active { get; }
         public string Name { get; }
         public long StartTimestamp { get; }
+        public string? PreviousStage { get; }
     }
 
     public readonly struct LoadComponentCallState

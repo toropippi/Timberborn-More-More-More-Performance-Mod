@@ -366,6 +366,14 @@ internal static class BenchmarkSettings
     // ~26k posts x ~680 handlers).
     public static readonly bool EnableEventBusFastDelegates = true;
 
+    // Preserve early-event order while omitting known no-op TubeTracker runs
+    // for non-tube entities. Active only inside EventBus.PostLoad.
+    public static readonly bool EnableLoadEventRouting = true;
+    // Prepare a hidden static icon prototype once per load, avoiding initial
+    // renderer/collider activation on every clone. Final status stays native.
+    public static readonly bool EnablePreparedStatusIcons =
+        !HasCommandLineFlag("-t3mpTestStatusIconBaseline");
+
     // Mirror GameObject.activeInHierarchy into a dense bitmask via an
     // ActiveInHierarchySentinel MonoBehaviour on each tickable entity (Unity's
     // synchronous OnEnable/OnDisable callbacks keep the bit exact at visit

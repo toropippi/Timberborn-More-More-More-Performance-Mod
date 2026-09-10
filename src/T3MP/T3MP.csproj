@@ -20,11 +20,40 @@
     <Publicize Include="Timberborn.BuildingsNavigation" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.BaseComponentSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.TimbermeshAnimations" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.SingletonSystem" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.BlockObstacles" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="Timberborn.BlockObstacles">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.BlockObstacles.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Publicize Include="Bindito.Core" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.TubeSystem" IncludeCompilerGeneratedMembers="false" />
   </ItemGroup>
 
   <ItemGroup>
+    <Reference Include="Timberborn.TerrainSystemRendering"><HintPath>$(TimberbornManagedDir)\Timberborn.TerrainSystemRendering.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.TerrainSystem"><HintPath>$(TimberbornManagedDir)\Timberborn.TerrainSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.MapStateSystem"><HintPath>$(TimberbornManagedDir)\Timberborn.MapStateSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.MapIndexSystem"><HintPath>$(TimberbornManagedDir)\Timberborn.MapIndexSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.PrefabOptimization"><HintPath>$(TimberbornManagedDir)\Timberborn.PrefabOptimization.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.TextureOperations"><HintPath>$(TimberbornManagedDir)\Timberborn.TextureOperations.dll</HintPath><Private>false</Private></Reference>
+    <Publicize Include="Timberborn.TerrainSystemRendering" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.TerrainSystem" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.PrefabOptimization" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="Bindito.Core">
+      <HintPath>$(TimberbornManagedDir)\Bindito.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="System.Collections.Immutable">
       <HintPath>$(TimberbornManagedDir)\System.Collections.Immutable.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.SingletonSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.SingletonSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.TubeSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.TubeSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Timberborn.BaseComponentSystem">
@@ -232,4 +261,19 @@
       <Private>false</Private>
     </Reference>
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/PreparedStatusIcons.cs" Link="Loading/PreparedStatusIcons.cs" />
+    <Compile Include="../Shared/PreparedEntityVisuals.cs" Link="Loading/PreparedEntityVisuals.cs" />
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(TimberbornManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/LoadCompatibility.cs" Link="Loading/LoadCompatibility.cs" />
+    <Compile Include="../Shared/TransputLoadRouting.cs" Link="Loading/TransputLoadRouting.cs" />
+    <Compile Include="../Shared/LoadPatchBridge.cs" Link="Loading/LoadPatchBridge.cs" />
+  </ItemGroup>
+  <ItemGroup><Compile Include="../Shared/DeferredGoodStackModels.cs" Link="Loading/DeferredGoodStackModels.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../Shared/NavigationShapePlans.cs" Link="Loading/NavigationShapePlans.cs" /></ItemGroup>
 </Project>

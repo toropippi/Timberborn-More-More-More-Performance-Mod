@@ -30,11 +30,14 @@ public sealed class TestDriverModStarter : IModStarter
     public void StartMod(IModEnvironment modEnvironment)
     {
         Debug.Log("[T3MPTEST] Test driver loaded. " + TestArguments.Describe());
+        if (TestArguments.LoadRoutingRequested) LoadRoutingTestDriver.Configure();
     }
 }
 
 internal static class TestArguments
 {
+    public static bool LoadRoutingRequested => HasFlag("-t3mpTestLoadRouting");
+    public static bool HarmonyCostRequested => HasFlag("-t3mpTestHarmonyCost");
     public static bool AnimationContinuityRequested => HasFlag("-t3mpTestAnimationContinuity");
     public static bool MenuLoadRequested => HasFlag("-t3mpTestMenuLoad");
 
@@ -47,6 +50,8 @@ internal static class TestArguments
     public static string? Save => GetValue("-t3mpTestSave");
 
     public static string? Map => GetValue("-t3mpTestMap");
+
+    public static string NewSettlement => GetValue("-t3mpTestNewSettlement") ?? "t3mp-test";
 
     public static string Faction => GetValue("-t3mpTestFaction") ?? "Folktails";
 
@@ -211,7 +216,7 @@ public sealed class MainMenuTestDriver : IUpdatableSingleton
 
         Debug.Log("[T3MPTEST] NewGame: starting map=" + mapName + " faction=" + TestArguments.Faction);
         _gameSceneLoader.StartNewGameInstantly(
-            TestArguments.Faction, MapFileReference.FromResource(mapName), "t3mp-test");
+            TestArguments.Faction, MapFileReference.FromResource(mapName), TestArguments.NewSettlement);
     }
 }
 
@@ -226,17 +231,32 @@ public sealed class GameTestConfigurator : IConfigurator
 
 public sealed class GameTestDriver : IPostLoadableSingleton
 {
+    private readonly IContainer _container;
     private readonly SpeedManager _speedManager;
     private readonly Timberborn.EntitySystem.EntityRegistry _entityRegistry;
 
-    public GameTestDriver(SpeedManager speedManager, Timberborn.EntitySystem.EntityRegistry entityRegistry)
+    public GameTestDriver(SpeedManager speedManager, Timberborn.EntitySystem.EntityRegistry entityRegistry, IContainer container)
     {
+        _container = container;
         _speedManager = speedManager;
         _entityRegistry = entityRegistry;
     }
 
     public void PostLoad()
     {
+        if (TestArguments.LoadRoutingRequested)
+        {
+            _speedManager.ChangeSpeed(0f);
+            new GameObject("T3MPTEST.LoadRouting").AddComponent<LoadRoutingTestDriver>().Initialize(_entityRegistry, _speedManager, _container);
+            return;
+        }
+        if (TestArguments.HarmonyCostRequested)
+        {
+            new GameObject("T3MPTEST.HarmonyCost")
+                .AddComponent<HarmonyCostTestDriver>().Initialize(_speedManager);
+            return;
+        }
+
         if (TestArguments.AnimationContinuityRequested)
         {
             new GameObject("T3MPTEST.AnimationContinuity")

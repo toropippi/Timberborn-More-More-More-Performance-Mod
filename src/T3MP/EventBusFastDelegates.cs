@@ -50,6 +50,9 @@ internal static class EventBusFastDelegates
 
         // Replicate the vanilla validations verbatim so invalid subscribers
         // fail with the exact same exceptions.
+        if (EventRegistrationPlans.Enabled && busInstance.GetType() == typeof(Timberborn.SingletonSystem.EventBus))
+            return EventRegistrationPlans.TryRegister((Timberborn.SingletonSystem.EventBus)busInstance, subscriber, method);
+
         if (method.ReturnType != typeof(void))
         {
             throw new ArgumentException($"Can't register {method} of {subscriber.GetType()}. " + "Listening methods must return void.");
@@ -83,6 +86,7 @@ internal static class EventBusFastDelegates
 
         try
         {
+            LoadEventRouter.RememberHandler(wrapper, subscriber, method);
             var registry = _subscriptionsField!.GetValue(busInstance);
             _registryAddMethod!.Invoke(registry, new[] { (object)parameterType, subscriber, wrapper });
         }

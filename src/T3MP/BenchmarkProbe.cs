@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -122,6 +122,21 @@ internal static class BenchmarkProbe
             var patchedEventBusFastDelegateMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableEventBusFastDelegates
                 ? PatchEventBusFastDelegates(harmony, harmonyMethodType, patchMethod)
                 : 0;
+            LoadEventRouter.Install(harmonyType, harmonyMethodType, patchMethod);
+            if (BenchmarkSettings.EnablePreparedStatusIcons)
+                Loading.PreparedStatusIcons.Install("t3mp.load.status-icons");
+            Loading.PreparedEntityVisuals.Install("t3mp.load.entity-visuals");
+            Loading.TransputLoadRouting.Install("t3mp.load.transput-routing", production: true);
+            Loading.NavigationShapePlans.Install("t3mp.load.navigation-shapes", production: true);
+            Loading.DeferredGoodStackModels.Install("t3mp.load.good-stack-models", production: true);
+            Loading.LoadGcBudget.Install();
+            Loading.ConstructionPlans.Install();
+            Loading.ComponentConstructionPlans.Install();
+            Loading.InitialNavigationLoad.Install();
+            Loading.BlockLoadRouting.Install();
+            Loading.EmptyFlowFieldLoad.Install();
+            Loading.TerrainSurfaceLoad.Install();
+            Loading.AtlasPixelsLoad.Install();
             var patchedThrottlerRemovalMethods = BenchmarkSettings.EnableRuntimeProbes && BenchmarkSettings.EnableGameSpeedThrottlerRemoval
                 ? PatchGameSpeedThrottlerRemoval(harmony, harmonyMethodType, patchMethod)
                 : 0;

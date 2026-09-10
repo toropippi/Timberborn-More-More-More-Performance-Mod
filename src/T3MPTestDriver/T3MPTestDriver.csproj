@@ -10,6 +10,75 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="Timberborn.TemplateSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.TemplateSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.Goods">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.Goods.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(TimberbornManagedDir)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Publicize Include="Timberborn.SingletonSystem" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="Timberborn.BlockObstacles">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.BlockObstacles.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Publicize Include="Timberborn.BlockObstacles" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>$(TimberbornManagedDir)\System.Collections.Immutable.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.PlantingUI">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.PlantingUI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.Planting">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.Planting.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Publicize Include="Timberborn.PlantingUI" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="Timberborn.BlueprintSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.BlueprintSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.BlockObjectTools">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.BlockObjectTools.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.BlockSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.BlockSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.Coordinates">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.Coordinates.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.MechanicalSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.MechanicalSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <PackageReference Include="Krafs.Publicizer" Version="2.2.1" PrivateAssets="all" />
+    <Publicize Include="Timberborn.Navigation" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.PrefabOptimization" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="Timberborn.PrefabOptimization">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.PrefabOptimization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Publicize Include="Bindito.Core" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Bindito.Unity" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.BaseComponentSystem" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="Bindito.Unity">
+      <HintPath>$(TimberbornManagedDir)\Bindito.Unity.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.Navigation">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.Navigation.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.EntitySystem">
       <HintPath>$(TimberbornManagedDir)\Timberborn.EntitySystem.dll</HintPath>
       <Private>false</Private>
@@ -54,5 +123,25 @@
       <HintPath>$(TimberbornManagedDir)\UnityEngine.CoreModule.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule">
+      <HintPath>$(TimberbornManagedDir)\UnityEngine.JSONSerializeModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.PhysicsModule">
+      <HintPath>$(TimberbornManagedDir)\UnityEngine.PhysicsModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/PreparedStatusIcons.cs" Link="Loading/PreparedStatusIcons.cs" />
+    <Compile Include="../Shared/PreparedEntityVisuals.cs" Link="Loading/PreparedEntityVisuals.cs" />
+    <Compile Include="../Shared/LoadPatchBridge.cs" Link="Loading/LoadPatchBridge.cs" />
+    <Compile Include="../Shared/PreparedCarriedItems.cs" Link="Loading/PreparedCarriedItems.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/LoadCompatibility.cs" Link="Loading/LoadCompatibility.cs" />
+    <Compile Include="../Shared/TransputLoadRouting.cs" Link="Loading/TransputLoadRouting.cs" />
+  </ItemGroup>
+  <ItemGroup><Compile Include="../Shared/DeferredGoodStackModels.cs" Link="Loading/DeferredGoodStackModels.cs" /></ItemGroup>
+  <ItemGroup><Compile Include="../Shared/NavigationShapePlans.cs" Link="Loading/NavigationShapePlans.cs" /></ItemGroup>
 </Project>

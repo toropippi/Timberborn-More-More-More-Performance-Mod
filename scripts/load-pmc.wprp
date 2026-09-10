@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WindowsPerformanceRecorder Version="1.0">
+  <Profiles>
+    <SystemCollector Id="LoadCollector" Name="T3MP Load Counters">
+      <BufferSize Value="1024"/><Buffers Value="128"/>
+    </SystemCollector>
+    <SystemProvider Id="LoadProvider">
+      <Keywords>
+        <Keyword Value="Loader"/><Keyword Value="ProcessThread"/>
+        <Keyword Value="CSwitch"/><Keyword Value="SampledProfile"/>
+      </Keywords>
+      <Stacks><Stack Value="SampledProfile"/></Stacks>
+    </SystemProvider>
+    <HardwareCounter Id="LoadCounters" Strict="true">
+      <Counters>
+        <Counter Value="TotalCycles"/><Counter Value="InstructionRetired"/>
+        <Counter Value="CacheMisses"/><Counter Value="BranchMispredictions"/>
+      </Counters>
+      <Events><Event Value="CSwitch"/></Events>
+    </HardwareCounter>
+    <Profile Id="LoadPMC.Verbose.File" Name="LoadPMC" LoggingMode="File" DetailLevel="Verbose" Description="Load CPU sampling and hardware counters">
+      <Collectors><SystemCollectorId Value="LoadCollector">
+        <SystemProviderId Value="LoadProvider"/><HardwareCounterId Value="LoadCounters"/>
+      </SystemCollectorId></Collectors>
+    </Profile>
+  </Profiles>
+</WindowsPerformanceRecorder>
