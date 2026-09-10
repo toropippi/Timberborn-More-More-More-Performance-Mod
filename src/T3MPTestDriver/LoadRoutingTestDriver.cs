@@ -48,7 +48,7 @@ public sealed class LoadRoutingTestDriver : MonoBehaviour
                     "-t3mpTestServiceWorkProfile", "-t3mpTestConstructionProfile", "-t3mpTestEntityCreationProfile", "-t3mpTestInitializationProfile", "-t3mpTestLoadEventProfile" };
                 foreach (var argument in args.Where(a => a.StartsWith("-t3mpTest", StringComparison.Ordinal)))
                     if (!allowed.Contains(argument)) throw new Exception("Non-profiling flag in profile-only run: " + argument);
-                var actual = Find("T3MP.BenchmarkSettings").Module.ModuleVersionId;
+                var actual = Find("T3MP.ModSettings").Module.ModuleVersionId;
                 if (index < 0 || index + 1 >= args.Length || actual.ToString() != args[index + 1])
                     throw new Exception("Unexpected loaded mod MVID");
                 Log("CONFIG profileOnly=True experimentsInstalled=False modMvid=" + actual);
@@ -65,10 +65,8 @@ public sealed class LoadRoutingTestDriver : MonoBehaviour
             // A native baseline on an unreviewed game build deliberately has
             // no router. Candidate runs must still prove it was installed.
             if (!Baseline && !(bool)Installed.GetValue(null)!) throw new Exception("Router failed to install");
-            var settings = Find("T3MP.BenchmarkSettings");
-            foreach (var flag in new[] { "EnableLoadComponentProfiler", "EnableLoadSingletonProfiler", "EnableLoadEventProfiler",
-                         "EnableBenchmarkMeasurement", "EnableHotOptimizerMetrics", "BenchSpawnRequested" })
-                if ((bool)settings.GetField(flag, All)!.GetValue(null)!) throw new Exception("Timing probe enabled: " + flag);
+            // v1.2 ships no timing probes; the settings type must simply exist.
+            Find("T3MP.ModSettings");
             if (Baseline) Installed.SetValue(null, false);
             Log("CONFIG baseline=" + Baseline + " modMvid=" + Router.Module.ModuleVersionId);
             ServiceWorkProbe.Install();
@@ -127,7 +125,7 @@ public sealed class LoadRoutingTestDriver : MonoBehaviour
         {
             if (Time.realtimeSinceStartup < _smokeUntil) return;
             _done = true;
-            var ticks = (long)Find("T3MP.BenchmarkModeController").GetField("_overlayFullTicks", All)!.GetValue(null)! - _smokeStartTicks;
+            var ticks = FullTickCounter.FullTicks - _smokeStartTicks;
             NavigationPackedSource.Report();
             Log(ticks > 0 ? "SMOKE PASS ticks=" + ticks : "ERROR simulation did not advance");
             LazyGoodStackExperiment.Report("smoke-end");
@@ -224,7 +222,7 @@ public sealed class LoadRoutingTestDriver : MonoBehaviour
             }
             if (Environment.GetCommandLineArgs().Contains("-t3mpTestLoadSmoke"))
             {
-                _smokeStartTicks = (long)Find("T3MP.BenchmarkModeController").GetField("_overlayFullTicks", All)!.GetValue(null)!;
+                _smokeStartTicks = FullTickCounter.FullTicks;
                 _speed.ChangeSpeed(3f);
                 _smokeUntil = Time.realtimeSinceStartup + 12f;
                 _done = false;

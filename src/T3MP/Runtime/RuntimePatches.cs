@@ -1,0 +1,194 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Reflection.Emit;
+using T3MP.Loading;
+using Debug = UnityEngine.Debug;
+
+namespace T3MP.Runtime;
+
+// Runtime (simulation) patches. Each patch is behavior-exact: it changes how a
+// vanilla method reaches its result, never the result, the order or the
+// exceptions. No simulation state is cached across ticks and nothing is keyed
+// on frames. Each feature owns a separate Harmony id so a failed install can
+// remove only its own hooks.
+internal static class RuntimePatches
+{
+    internal const BindingFlags All = LoadPatchBridge.All;
+    private static bool _installed;
+
+    internal static void Install()
+    {
+        if (_installed) return;
+        _installed = true;
+        if (!ModSettings.EnableRuntimePatches)
+        {
+            Debug.Log("[T3MP] Runtime patches skipped (-t3mpTestRuntimeBaseline).");
+            return;
+        }
+        try
+        {
+            var harmonyType = LoadPatchBridge.Find("HarmonyLib.Harmony");
+            var harmonyMethodType = LoadPatchBridge.Find("HarmonyLib.HarmonyMethod");
+            var patch = harmonyType.GetMethods().Single(m => m.Name == "Patch" && m.GetParameters().Length == 5);
+            if (ModSettings.EnableEventBusFastDelegates) EventBusFastDelegates.Install(harmonyType, harmonyMethodType, patch);
+            if (ModSettings.EnableTickEntityFast) TickEntityFast.Install(harmonyType, harmonyMethodType, patch);
+            if (ModSettings.EnableWaterTextureUpload) WaterTextureUpload.Install(harmonyType, harmonyMethodType, patch);
+        }
+        catch (Exception exception)
+        {
+            Debug.LogWarning("[T3MP] Runtime patches unavailable: " + exception.GetBaseException().Message);
+        }
+    }
+
+    // Shared helper for the three feature installers: creates a Harmony
+    // instance per owner and reports/unpatches on failure.
+    internal static bool TryInstall(string owner, Type harmonyType, Type harmonyMethodType, MethodInfo patch,
+        Action<Func<MethodBase, string?, string?, string?, object?>> body, Type hooks)
+    {
+        object? harmony = null;
+        try
+        {
+            harmony = Activator.CreateInstance(harmonyType, owner)!;
+            object? Hook(string? name, bool transpiler)
+            {
+                if (name == null) return null;
+                var method = hooks.GetMethod(name, All) ?? throw new MissingMethodException(hooks.FullName, name);
+                if (transpiler) method = LoadPatchBridge.Create(owner + "." + name, method);
+                var hook = Activator.CreateInstance(harmonyMethodType, method)!;
+                // Body replacements run last in the transpiler chain (Priority.Last)
+                // so another mod's transpiler output reaches the shape check.
+                if (transpiler) harmonyMethodType.GetField("priority", All)!.SetValue(hook, 0);
+                return hook;
+            }
+            body((target, prefix, postfix, transpiler) =>
+                patch.Invoke(harmony, new[] { (object)target, Hook(prefix, false), Hook(postfix, false), Hook(transpiler, true), null }));
+            return true;
+        }
+        catch (Exception exception)
+        {
+            try { if (harmony != null) harmonyType.GetMethod("UnpatchAll", All)!.Invoke(harmony, new object[] { owner }); }
+            catch (Exception cleanup) { Debug.LogError("[T3MP] " + owner + " disabled but hook removal failed; partially patched state: " + cleanup); }
+            Debug.LogWarning("[T3MP] " + owner + " disabled: " + exception.GetBaseException().Message);
+            return false;
+        }
+    }
+
+    // Harmony bookkeeping: true when another owner already patched the method.
+    // Checked before a body replacement, which would hide an earlier transpiler
+    // and bypass patches on helpers the replacement no longer calls. Harmony
+    // 2.4.1 exposes the patch lists as public fields; later versions may use
+    // properties, so both are accepted.
+    internal static bool ForeignPatched(Type harmonyType, MethodBase method, string owner, bool transpilersOnly)
+    {
+        var info = harmonyType.GetMethod("GetPatchInfo", All)!.Invoke(null, new object[] { method });
+        if (info == null) return false;
+        var names = transpilersOnly
+            ? new[] { "Transpilers" }
+            : new[] { "Prefixes", "Postfixes", "Transpilers", "Finalizers", "InnerPrefixes", "InnerPostfixes" };
+        foreach (var name in names)
+        {
+            var value = info.GetType().GetField(name, All)?.GetValue(info) ?? info.GetType().GetProperty(name, All)?.GetValue(info);
+            if (value is not System.Collections.IEnumerable patches) continue;
+            foreach (var patch in patches)
+            {
+                var patchOwner = patch.GetType().GetField("owner", All)?.GetValue(patch) as string
+                                 ?? patch.GetType().GetProperty("owner", All)?.GetValue(patch) as string;
+                if (patchOwner != owner) return true;
+            }
+        }
+        return false;
+    }
+
+    internal static void Unpatch(Type harmonyType, string owner)
+    {
+        var harmony = Activator.CreateInstance(harmonyType, owner)!;
+        harmonyType.GetMethod("UnpatchAll", All)!.Invoke(harmony, new object[] { owner });
+    }
+
+    // Shape of the vanilla instruction stream as Harmony parses it, taken from
+    // PatchProcessor.GetOriginalInstructions at install time. A transpiler that
+    // later receives a different stream (another mod's transpiler ran first)
+    // must pass it through unchanged instead of replacing it.
+    internal sealed class Shape
+    {
+        internal string[] Instructions = Array.Empty<string>();
+    }
+
+    internal static Shape OriginalShape(Type harmonyType, MethodBase method)
+    {
+        var processor = harmonyType.Assembly.GetType("HarmonyLib.PatchProcessor")!;
+        // Harmony 2.4.1 also has an (MethodBase, out ILGenerator) overload; take the plain one.
+        var get = processor.GetMethods(All).Single(m => m.Name == "GetOriginalInstructions" && m.GetParameters().Length == 2 &&
+            m.GetParameters()[0].ParameterType == typeof(MethodBase) && m.GetParameters()[1].ParameterType == typeof(ILGenerator));
+        var instructions = (System.Collections.IEnumerable)get.Invoke(null, new object?[] { method, null })!;
+        return DescribeShape(instructions);
+    }
+
+    // Every instruction: opcode plus a stable rendering of its operand (member
+    // identity with signature, constants, strings, label index). Two parses of
+    // the same vanilla body render identically; any edited opcode, operand,
+    // constant or branch target renders differently.
+    internal static Shape DescribeShape(System.Collections.IEnumerable instructions)
+    {
+        var rows = new List<string>();
+        foreach (var instruction in instructions)
+        {
+            var type = instruction.GetType();
+            var opcode = type.GetField("opcode", All)!.GetValue(instruction)!.ToString();
+            var operand = type.GetField("operand", All)?.GetValue(instruction);
+            rows.Add(opcode + " " + Render(operand));
+        }
+        return new Shape { Instructions = rows.ToArray() };
+    }
+
+    private static string Render(object? operand)
+    {
+        switch (operand)
+        {
+            case null: return "";
+            case MethodBase method:
+                return method.DeclaringType?.FullName + "::" + method.Name + "(" +
+                       string.Join(",", method.GetParameters().Select(p => p.ParameterType.FullName)) + ")" +
+                       (method is MethodInfo info ? ":" + info.ReturnType.FullName : "");
+            case FieldInfo field: return field.DeclaringType?.FullName + "::" + field.Name + ":" + field.FieldType.FullName;
+            case Type t: return "type:" + t.FullName;
+            case Label label: return "label:" + label.GetHashCode();
+            case LocalBuilder local: return "local:" + local.LocalIndex + ":" + local.LocalType?.FullName;
+            case string text: return "string:" + text;
+            case System.Collections.IEnumerable many when operand is not string:
+                return "[" + string.Join(",", many.Cast<object?>().Select(Render)) + "]";
+            default: return operand.GetType().FullName + ":" + Convert.ToString(operand, System.Globalization.CultureInfo.InvariantCulture);
+        }
+    }
+
+    internal static bool SameShape(Shape expected, Shape actual) => expected.Instructions.SequenceEqual(actual.Instructions);
+
+    internal static string Sha256(byte[] bytes)
+    {
+        using var sha = System.Security.Cryptography.SHA256.Create();
+        return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "");
+    }
+
+    // Reviewed raw-IL fingerprint (scripts/IlFingerprint): any other body keeps vanilla.
+    internal static bool ReviewedBody(MethodBase method, params string[] hashes)
+    {
+        var il = method.GetMethodBody()?.GetILAsByteArray();
+        return il != null && Array.IndexOf(hashes, Sha256(il)) >= 0;
+    }
+
+    // Transpiler body: replace the whole original body with a call to a static
+    // method that takes the original arguments in order, then return.
+    internal static IEnumerable<T> CallAndReturn<T>(MethodInfo target, int argumentCount)
+    {
+        var loads = new[] { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3 };
+        if (argumentCount > loads.Length) throw new ArgumentOutOfRangeException(nameof(argumentCount));
+        for (var i = 0; i < argumentCount; i++) yield return Instruction<T>(loads[i], null);
+        yield return Instruction<T>(OpCodes.Call, target);
+        yield return Instruction<T>(OpCodes.Ret, null);
+    }
+
+    private static T Instruction<T>(OpCode opcode, object? operand) =>
+        (T)Activator.CreateInstance(typeof(T), opcode, operand)!;
+}

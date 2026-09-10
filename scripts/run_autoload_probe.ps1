@@ -43,6 +43,8 @@ param(
     [int] $AutoConfirmStartSeconds = 12,
     [int] $AutoConfirmIntervalSeconds = 5,
     [int] $AutoConfirmMaxClicks = 10,
+    # Extra raw game command line arguments (e.g. '-t3mpTestRuntimeBaseline').
+    [string[]] $ExtraGameArgs = @(),
     [switch] $StopAfter
 )
 
@@ -233,6 +235,9 @@ $arguments = if ($UseSteamLaunchOptions) {
     })
     if ($TestSpeed -gt 0) {
         $argList += @('-t3mpTestSpeed', $TestSpeed.ToString([System.Globalization.CultureInfo]::InvariantCulture))
+    }
+    if ($ExtraGameArgs.Count -gt 0) {
+        $argList += $ExtraGameArgs
     }
     if ($SkipModManager) {
         # Opt-in for automated testing only. ModManagerScenePanel.ShouldSkipModManager:

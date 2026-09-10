@@ -4,6 +4,84 @@ More performance. Then more. Then, because the name promised it, a little more.
 
 ---
 
+## v1.2.0 — "less, exactly"
+
+**Rebuilt from scratch. Every 1.0–1.1.7 runtime optimization is removed.**
+
+- **Why.** The bugs reported for 1.1.x (beavers stuck in tubes, models jumping,
+  water and flood visuals lingering, conflicts with stairs / vertical-navmesh
+  mods) all traced to the old runtime systems: frame-keyed caches that spanned
+  dozens of simulation ticks, static caches that outlived the world, render
+  suppression while the simulation kept running, the population speed-throttle
+  removal, model snapping, and whole-method replacements that hid other mods'
+  patches. Rather than patch symptoms again, v1.2 deletes all of it.
+- **What remains at runtime (all behavior-exact, reviewed on 1.0.13.1 and
+  1.1.2.0/1.1.2.4, each guarded by a raw-IL fingerprint of the vanilla method
+  and by a foreign-patch check; on mismatch it stays vanilla):**
+  - `EventBus.RegisterMethod`: typed delegates instead of `MethodInfo.Invoke`
+    per delivery. Same handlers, order and exception wrapping.
+  - `TickableEntity.Tick`: index traversal of the component array; an alive
+    entity whose tickable components are all disabled returns before the
+    native `activeInHierarchy` read that vanilla would follow with an empty
+    loop. Every `Enabled` flag is read live at the visit; nothing is cached.
+  - `DataTextureArray<T>.UpdateTextureArrays`: a GPU upload whose bytes equal
+    the bytes last submitted to that texture layer is skipped (native
+    memcmp). Direct3D11 only; the simulation and data arrays are untouched.
+- **Measured (Steam 1.1.2.4, n10c copy, 28,202 entities, speed button x50 =
+  effective x20.6, 150 s per run after load, 20 s windows, first window
+  dropped):** runtime patches off 12.64 ticks/s, all on 13.39 ticks/s
+  (**1.06x**); water only 13.27, tick only 13.37, events only 13.19. The
+  differences are within run-to-run noise (an earlier ABBA with a managed byte
+  compare gave 11.73 vs 9.98, which is why the compare is native now). About
+  91% of water texture uploads were identical and skipped. **The old 1.5x is
+  not reproduced by these exact-only changes; v1.2 makes no such claim.**
+- **Save loading kept.** The load optimizations (event routing, construction
+  plans, prepared visuals, navigation and terrain load paths) are unchanged:
+  about 29 s instead of about 65 s scene load on the same 1.1.2.4 save
+  (`docs/load-steam-1124-2026-09-10.md`).
+- **Removed features:** Shift+P turbo, Shift+O smooth mode, the bottom-right
+  speed meter, hidden speed-throttle removal, all probes and profilers.
+- **Test-only flags** (never needed in play): `-t3mpTestRuntimeBaseline`,
+  `-t3mpTestNoEvents`, `-t3mpTestNoTick`, `-t3mpTestNoWater`.
+
+### 日本語
+
+**ゼロから作り直し。1.0〜1.1.7の本編最適化はすべて撤去しました。**
+
+- **理由。** 1.1.x系で報告された不具合（チューブ内の固着、モデルの跳躍、水・
+  浸水表示の残留、階段・立体ナビ系MODとの競合）は、旧ランタイムの仕組み——
+  数十tick分をまたぐフレーム基準キャッシュ、ワールドより長生きする静的キャッシュ、
+  シミュレーションを進めたままの描画停止、人口スロットラーの撤廃、モデルの
+  スナップ、他MODのパッチを隠すメソッド丸ごと差し替え——に行き着きました。
+  症状の上書きを重ねる代わりに、v1.2は全部削除します。
+- **残したもの（すべて結果を変えない変更。1.0.13.1と1.1.2.0/1.1.2.4で審査し、
+  バニラ側メソッドの生IL指紋と他MODパッチの検出で守り、不一致ならバニラのまま）:**
+  - `EventBus.RegisterMethod`: 配信ごとの `MethodInfo.Invoke` を型付き
+    delegateに。ハンドラ・順序・例外の包み方は同じ。
+  - `TickableEntity.Tick`: 部品配列を添字で走査。有効な部品が1つもない生存
+    エンティティは、バニラなら空ループの前に行うネイティブの
+    `activeInHierarchy` 読み取りを省いて戻る。`Enabled` は毎回その場で読み、
+    キャッシュしない。
+  - `DataTextureArray<T>.UpdateTextureArrays`: 前回そのテクスチャ層へ送った
+    byteと一致するGPU転送を省く（ネイティブmemcmp）。Direct3D11限定。
+    シミュレーションとデータ配列には触れない。
+- **実測（Steam 1.1.2.4、n10c複製、28,202エンティティ、速度ボタンx50＝実効
+  x20.6、ロード後150秒、20秒窓、最初の窓は除外）:** ランタイムパッチ無効
+  12.64 ticks/s、全有効 13.39 ticks/s（**1.06倍**）。水のみ13.27、tickのみ
+  13.37、イベントのみ13.19。差はいずれも試行間ノイズの範囲です（マネージド
+  byte比較だった初回ABBAでは11.73対9.98で逆に遅く、比較をネイティブに変更）。
+  水テクスチャ転送の約91%が一致として省略されました。**結果を変えない変更だけ
+  では旧版の1.5倍は再現しません。v1.2はその主張をしません。**
+- **ロード高速化は継続。** ロード側の最適化（イベント経路、生成プラン、
+  モデル事前準備、経路網・地形のロード経路）は変更なし。同一の1.1.2.4セーブで
+  シーンロード約65秒→約29秒（`docs/load-steam-1124-2026-09-10.md`）。
+- **撤去した機能:** Shift+Pターボ、Shift+Oスムーズモード、右下の速度メーター、
+  速度スロットラー撤廃、各種プローブとプロファイラ。
+- **テスト専用フラグ**（通常プレイでは不要）: `-t3mpTestRuntimeBaseline`、
+  `-t3mpTestNoEvents`、`-t3mpTestNoTick`、`-t3mpTestNoWater`。
+
+---
+
 ## v1.1.7 — "less baggage, more compatibility"
 
 **Fixed a crash on game version 1.0 caused by a stray benchmark file.**

@@ -89,8 +89,8 @@ internal static class LoadEventRouter
 
     internal static void Install(Type harmonyType, Type harmonyMethodType, MethodInfo patchMethod)
     {
-        if (!BenchmarkSettings.EnableRuntimeProbes || !BenchmarkSettings.EnableEventBusFastDelegates ||
-            !BenchmarkSettings.EnableLoadEventRouting) return;
+        if (!ModSettings.EnableEventBusFastDelegates ||
+            !ModSettings.EnableLoadEventRouting) return;
         _harmonyType = harmonyType;
         object? harmony = null;
         try
@@ -145,8 +145,11 @@ internal static class LoadEventRouter
             var owners = (IEnumerable<string>)info.GetType().GetProperty("Owners", All)!.GetValue(info)!;
             // The progress prefix/finalizer only observes the enclosing load;
             // it neither alters delivery nor touches the subscription registry.
-            if (owners.Any(owner => owner != Owner && owner != "local.gpupathinginvestigation.benchmarkprobe" &&
-                !(owner == "t3mp.load.progress" && method.DeclaringType == typeof(EventBus) && method.Name == "PostLoad")))
+            // The typed-delegate registration prefix is this mod's own reviewed
+            // RegisterMethod replacement (same registry call, same order).
+            if (owners.Any(owner => owner != Owner &&
+                !(owner == "t3mp.load.progress" && method.DeclaringType == typeof(EventBus) && method.Name == "PostLoad") &&
+                !(owner == "t3mp.runtime.events" && method.DeclaringType == typeof(EventBus) && method.Name == "RegisterMethod")))
                 return false;
         }
         return true;
@@ -175,7 +178,7 @@ internal static class LoadEventRouter
     {
         _session = __state.Previous;
         var elapsed = (Stopwatch.GetTimestamp() - __state.Started) * 1000.0 / Stopwatch.Frequency;
-        if (__state.Started != 0 && elapsed >= BenchmarkSettings.LoadSlowCallThresholdMilliseconds)
+        if (__state.Started != 0 && elapsed >= ModSettings.LoadSlowCallThresholdMilliseconds)
             Debug.Log(string.Format(CultureInfo.InvariantCulture,
                 "[T3MP] LoadStage SingletonSystem.EventBus.PostLoad ms={0:F2}, frame={1}", elapsed, UnityEngine.Time.frameCount));
         if (__state.Current is { } session)

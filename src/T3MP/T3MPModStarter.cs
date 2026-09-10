@@ -8,16 +8,9 @@ public sealed class T3MPModStarter : IModStarter
     public void StartMod(IModEnvironment modEnvironment)
     {
         Loading.LoadProgress.ObserveCompatibility();
-        Debug.Log($"[T3MP] Loaded. ModPath={modEnvironment.ModPath}");
-        BotInstancingProbe.Configure(modEnvironment.ModPath);
-        if (BenchmarkSettings.EnableBenchmark)
-        {
-            BenchmarkProbe.TryInstall();
-            if (BenchmarkSettings.EnableBenchmarkController)
-            {
-                BenchmarkModeController.Install();
-            }
-        }
+        Debug.Log($"[T3MP] Loaded. Version={ModSettings.Version} ModPath={modEnvironment.ModPath}");
+        Runtime.RuntimePatches.Install();
+        Loading.LoadPatches.Install();
         Loading.LoadProgress.Install();
     }
 }

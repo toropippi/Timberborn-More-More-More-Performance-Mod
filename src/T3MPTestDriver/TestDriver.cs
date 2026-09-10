@@ -30,6 +30,7 @@ public sealed class TestDriverModStarter : IModStarter
     public void StartMod(IModEnvironment modEnvironment)
     {
         Debug.Log("[T3MPTEST] Test driver loaded. " + TestArguments.Describe());
+        FullTickCounter.Install();
         if (TestArguments.LoadRoutingRequested) LoadRoutingTestDriver.Configure();
     }
 }
@@ -37,8 +38,6 @@ public sealed class TestDriverModStarter : IModStarter
 internal static class TestArguments
 {
     public static bool LoadRoutingRequested => HasFlag("-t3mpTestLoadRouting");
-    public static bool HarmonyCostRequested => HasFlag("-t3mpTestHarmonyCost");
-    public static bool AnimationContinuityRequested => HasFlag("-t3mpTestAnimationContinuity");
     public static bool MenuLoadRequested => HasFlag("-t3mpTestMenuLoad");
 
     public static bool NewGameRequested => HasFlag("-t3mpTestNewGame");
@@ -250,20 +249,6 @@ public sealed class GameTestDriver : IPostLoadableSingleton
             new GameObject("T3MPTEST.LoadRouting").AddComponent<LoadRoutingTestDriver>().Initialize(_entityRegistry, _speedManager, _container);
             return;
         }
-        if (TestArguments.HarmonyCostRequested)
-        {
-            new GameObject("T3MPTEST.HarmonyCost")
-                .AddComponent<HarmonyCostTestDriver>().Initialize(_speedManager);
-            return;
-        }
-
-        if (TestArguments.AnimationContinuityRequested)
-        {
-            new GameObject("T3MPTEST.AnimationContinuity")
-                .AddComponent<AnimationContinuityTestDriver>().Initialize(_speedManager, _entityRegistry);
-            return;
-        }
-
         if (!TestArguments.AnyScenarioRequested && TestArguments.Speed == null)
         {
             return;
@@ -272,5 +257,53 @@ public sealed class GameTestDriver : IPostLoadableSingleton
         var speed = TestArguments.Speed ?? 1f;
         Debug.Log("[T3MPTEST] Game scene loaded OK. Unpausing (speed " + speed + ").");
         _speedManager.ChangeSpeed(speed);
+        if (TestArguments.Speed != null)
+        {
+            new GameObject("T3MPTEST.SimulationRate").AddComponent<SimulationRateLogger>();
+        }
+    }
+}
+
+// Logs full ticks per second in fixed real-time windows so A/B runs of the
+// same save can be compared from Player.log. Test driver only.
+public sealed class SimulationRateLogger : MonoBehaviour
+{
+    private const float WindowSeconds = 20f;
+    private float _windowStart;
+    private long _windowTicks;
+    private float _totalStart;
+    private long _totalTicks;
+    private int _windows;
+
+    private void Start()
+    {
+        _windowStart = _totalStart = Time.realtimeSinceStartup;
+        _windowTicks = _totalTicks = FullTickCounter.FullTicks;
+    }
+
+    private void Update()
+    {
+        var now = Time.realtimeSinceStartup;
+        if (now - _windowStart < WindowSeconds) return;
+        var ticks = FullTickCounter.FullTicks;
+        var rate = (ticks - _windowTicks) / (now - _windowStart);
+        var total = (ticks - _totalTicks) / (now - _totalStart);
+        _windows++;
+        Debug.Log(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "[T3MPTEST] Simulation rate {0:F2} ticks/s window={1} ticks={2} timeScale={3:F2} cumulative={4:F2} ticks/s",
+            rate, _windows, ticks - _windowTicks, Time.timeScale, total));
+        try
+        {
+            var water = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.WaterTextureUpload")).FirstOrDefault(t => t != null);
+            if (water != null)
+            {
+                const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+                Debug.Log("[T3MPTEST] water calls=" + water.GetField("Calls", all)!.GetValue(null) + " uploaded=" + water.GetField("Uploaded", all)!.GetValue(null) +
+                          " identical=" + water.GetField("Reused", all)!.GetValue(null));
+            }
+        }
+        catch (Exception) { /* diagnostics only */ }
+        _windowStart = now;
+        _windowTicks = ticks;
     }
 }

@@ -98,7 +98,7 @@ function Test-PlayerLog([string] $Label) {
     if (-not $failureDetail -and $loadTime.Count -eq 0) { $failureDetail = 'game scene never finished loading' }
 
     $simRates = @($log | ForEach-Object {
-        if ($_ -match '\[T3MP\] Simulation rate ([0-9.]+) ticks/s') { [double] $Matches[1] } })
+        if ($_ -match '\[T3MP(?:TEST)?\] Simulation rate ([0-9.]+) ticks/s') { [double] $Matches[1] } })
     $maxRate = if ($simRates.Count -gt 0) { ($simRates | Measure-Object -Maximum).Maximum } else { 0 }
     if (-not $failureDetail -and $maxRate -le 0) { $failureDetail = 'simulation never advanced (0 ticks/s)' }
 
@@ -188,7 +188,7 @@ try {
 
         $exe = Join-Path $install 'Timberborn.exe'
         $scenarios = @(
-            @{ Label = "$name E2E LaunchArgs"; Args = @{ Scenario = 'LaunchArgs'; BenchAutoUltra = $true } },
+            @{ Label = "$name E2E LaunchArgs"; Args = @{ Scenario = 'LaunchArgs' } },
             @{ Label = "$name E2E MenuLoad"; Args = @{ Scenario = 'MenuLoad' } },
             @{ Label = "$name E2E NewGame"; Args = @{ Scenario = 'NewGame'; MapName = $NewGameMap } }
         )
@@ -203,7 +203,7 @@ try {
                 -TimberbornExe $exe `
                 -SettlementName $stagedSettlement -SaveName $version.Save `
                 -SkipModManager -AutoConfirmMods `
-                -SecondsAfterLoad $SecondsAfterLoad -StopAfter `
+                -SecondsAfterLoad $SecondsAfterLoad -StopAfter -TestSpeed 3 `
                 @scenarioArgs
             Test-PlayerLog $scenario.Label
         }

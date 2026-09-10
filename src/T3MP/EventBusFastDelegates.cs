@@ -1,58 +1,74 @@
 using System;
 using System.Reflection;
+using T3MP.Loading;
 using Debug = UnityEngine.Debug;
 
-namespace T3MP;
+namespace T3MP.Runtime;
 
 /// <summary>
 /// Replaces the closure EventBus.RegisterMethod builds for every [OnEvent]
 /// handler. Vanilla registers
 ///     e => method.Invoke(subscriber, new object[1] { e })
-/// so EVERY event delivery pays a reflection invoke plus an object[]
-/// allocation - measured most painfully at load, where EntityInitializedEvent
-/// alone is ~26k posts x ~680 subscriber handlers (~17.7M reflective calls),
-/// and at runtime on every entity spawn/delete and need/state event.
-///
-/// This optimizer registers a compiled delegate instead:
+/// so every event delivery pays a reflection invoke plus an object[]
+/// allocation. This registers a compiled delegate instead:
 ///     Action&lt;T&gt; typed = Delegate.CreateDelegate(...);
-///     e => { try { typed((T)e); } catch (e2) { throw new TargetInvocationException(e2); } }
+///     e => { if (e is T a) { try { typed(a); } catch (x) { throw new TargetInvocationException(x); } } else method.Invoke(subscriber, new[] { e }); }
 /// Semantics are identical: same handler, same subscriber, same registration
 /// order (the same SubscriptionRegistry.Add call), same validation exceptions
-/// (replicated verbatim), and handler exceptions are wrapped in
-/// TargetInvocationException exactly like MethodInfo.Invoke would. The cast
-/// cannot fail because the EventBus routes events by exact runtime type.
-/// Any unexpected shape falls back to the vanilla registration path.
+/// (replicated verbatim), handler exceptions wrapped in TargetInvocationException
+/// exactly like MethodInfo.Invoke, and an argument of another type keeps the
+/// reflective call and its binder exception. Shapes CreateDelegate cannot bind
+/// fall back to the vanilla registration.
 /// </summary>
 internal static class EventBusFastDelegates
 {
+    private const string Owner = "t3mp.runtime.events";
     private static bool _initialized;
     private static bool _disabled;
     private static int _warnCount;
     private static FieldInfo? _subscriptionsField;
     private static MethodInfo? _registryAddMethod;
     private static MethodInfo? _createWrapperDefinition;
+    internal static bool Installed { get; private set; }
 
-    public static bool TryRegisterMethod(object busInstance, object subscriber, MethodInfo method)
+    internal static void Install(Type harmonyType, Type harmonyMethodType, MethodInfo patch)
     {
-        if (!BenchmarkSettings.EnableEventBusFastDelegates || _disabled)
+        if (Installed) return;
+        var bus = typeof(Timberborn.SingletonSystem.EventBus);
+        var register = bus.GetMethod("RegisterMethod", RuntimePatches.All | BindingFlags.DeclaredOnly, null,
+            new[] { typeof(object), typeof(MethodInfo) }, null);
+        if (register == null)
         {
-            return true;
+            Debug.LogWarning("[T3MP] EventBus fast delegates: RegisterMethod not found; vanilla retained.");
+            return;
         }
+        // Raw-IL SHA256 of the reviewed vanilla body (same on 1.0.13.1, 1.1.2.0 and 1.1.2.4).
+        if (!RuntimePatches.ReviewedBody(register, "0BAEB08D685FB927EE904C5842CCF2B9E107AED986A9DF3014B380F428BBA44C"))
+        {
+            Debug.LogWarning("[T3MP] EventBus fast delegates: RegisterMethod is not a reviewed build; vanilla retained.");
+            return;
+        }
+        Installed = RuntimePatches.TryInstall(Owner, harmonyType, harmonyMethodType, patch,
+            apply => apply(register, nameof(Prefix), null, null), typeof(EventBusFastDelegates));
+        if (Installed) Debug.Log("[T3MP] EventBus fast delegates installed.");
+    }
 
+    private static bool Prefix(object __instance, object subscriber, MethodInfo method) =>
+        TryRegisterMethod(__instance, subscriber, method);
+
+    // Returns true when the vanilla registration must run.
+    internal static bool TryRegisterMethod(object busInstance, object subscriber, MethodInfo method)
+    {
+        if (_disabled || subscriber is null || method is null) return true;
         if (!_initialized)
         {
-            Initialize(busInstance.GetType());
-            if (_disabled)
-            {
-                return true;
-            }
+            try { Initialize(busInstance.GetType()); }
+            catch (Exception exception) { Disable("EventBus inspection failed: " + exception.GetBaseException().Message); }
+            if (_disabled) return true;
         }
 
         // Replicate the vanilla validations verbatim so invalid subscribers
         // fail with the exact same exceptions.
-        if (EventRegistrationPlans.Enabled && busInstance.GetType() == typeof(Timberborn.SingletonSystem.EventBus))
-            return EventRegistrationPlans.TryRegister((Timberborn.SingletonSystem.EventBus)busInstance, subscriber, method);
-
         if (method.ReturnType != typeof(void))
         {
             throw new ArgumentException($"Can't register {method} of {subscriber.GetType()}. " + "Listening methods must return void.");
@@ -65,6 +81,11 @@ internal static class EventBusFastDelegates
         }
 
         var parameterType = parameters[0].ParameterType;
+        if (method.ContainsGenericParameters || method.IsStatic || parameterType.IsByRef || parameterType.IsPointer)
+        {
+            return true;
+        }
+
         Action<object> wrapper;
         try
         {
@@ -74,13 +95,10 @@ internal static class EventBusFastDelegates
         }
         catch (Exception exception)
         {
-            // Shapes CreateDelegate cannot bind fall back to the vanilla
-            // reflective registration for this one handler.
             if (_warnCount++ < 3)
             {
-                Debug.LogWarning($"[T3MP] EventBus fast delegate fallback for {subscriber.GetType().Name}.{method.Name}: {exception.GetType().Name}");
+                Debug.LogWarning($"[T3MP] EventBus fast delegate fallback for {subscriber.GetType().Name}.{method.Name}: {exception.GetBaseException().GetType().Name}");
             }
-
             return true;
         }
 
@@ -92,8 +110,9 @@ internal static class EventBusFastDelegates
         }
         catch (TargetInvocationException invocationException) when (invocationException.InnerException is not null)
         {
-            // SubscriptionRegistry.Add throws (duplicate subscriber) - rethrow
+            // SubscriptionRegistry.Add throws (duplicate subscriber): rethrow
             // the raw exception exactly like the vanilla direct call would.
+            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(invocationException.InnerException).Throw();
             throw invocationException.InnerException;
         }
 
@@ -103,38 +122,23 @@ internal static class EventBusFastDelegates
     public static Action<object> CreateWrapper<T>(object subscriber, MethodInfo method)
     {
         var typed = (Action<T>)Delegate.CreateDelegate(typeof(Action<T>), subscriber, method);
-        if (SpawnSplitProbe.Enabled)
+        return eventObject =>
         {
-            // TEMP ATTRIBUTION wrapper (-benchSpawn runs only): identical
-            // semantics plus a stopwatch pair around the handler body.
-            return eventObject =>
+            if (eventObject is T argument)
             {
-                var start = System.Diagnostics.Stopwatch.GetTimestamp();
                 try
                 {
-                    typed((T)eventObject);
+                    typed(argument);
                 }
                 catch (Exception exception)
                 {
+                    // MethodInfo.Invoke wraps handler exceptions; keep that shape.
                     throw new TargetInvocationException(exception);
                 }
-                finally
-                {
-                    SpawnSplitProbe.RecordHandler(method, System.Diagnostics.Stopwatch.GetTimestamp() - start);
-                }
-            };
-        }
-
-        return eventObject =>
-        {
-            try
-            {
-                typed((T)eventObject);
             }
-            catch (Exception exception)
+            else
             {
-                // MethodInfo.Invoke wraps handler exceptions; keep that shape.
-                throw new TargetInvocationException(exception);
+                method.Invoke(subscriber, new[] { eventObject });
             }
         };
     }

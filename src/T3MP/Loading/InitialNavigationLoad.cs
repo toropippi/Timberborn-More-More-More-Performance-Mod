@@ -116,18 +116,11 @@ internal static class InitialNavigationLoad
         // No source has been changed before every queue and target is checked.
         // Worker code only allocates/fills independent managed lists and value
         // structs. It invokes no Unity objects, game callbacks or native scratch.
-        try
-        {
-            if (_parallel) Parallel.For(0, sources.Length, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(sources.Length, Environment.ProcessorCount) },
-                i => Apply(prepared[i], sources[i], builders[i]));
-            else for (var i = 0; i < sources.Length; i++) Apply(prepared[i], sources[i], builders[i]);
-        }
-        finally
-        {
-            // Direct writes bypass this mod's reviewed Connect/Disconnect
-            // invalidator. Clear on the main thread before anyone reads graphs.
-            RoadReachabilityCache.OnNavMeshUpdate();
-        }
+        // v1.2: no runtime graph caches exist any more, so direct writes need no
+        // invalidation step here.
+        if (_parallel) Parallel.For(0, sources.Length, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(sources.Length, Environment.ProcessorCount) },
+            i => Apply(prepared[i], sources[i], builders[i]));
+        else for (var i = 0; i < sources.Length; i++) Apply(prepared[i], sources[i], builders[i]);
         foreach (var id in builders[0]._terrainNodeIds) builder.AddTerrainNode(id);
         foreach (var id in builders[instant ? 2 : 1]._roadNodeIds) builder.AddRoadNode(id);
         terrain.Clear(); road.Clear();

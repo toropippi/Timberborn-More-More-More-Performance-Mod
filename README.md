@@ -1,112 +1,51 @@
 # More More More Performance! (T3MP)
 
-**Development rebuild:** character movement and animation now use the vanilla
-update path in every mode. Shift+P skips rendering while character updates keep
-running. The tables below describe earlier releases, including their removed
-animation-skip turbo; they are not performance claims for this rebuild. See
-[the rebuild record](docs/animation-rebuild.md) for retained optimizations and validation.
+**v1.2 is a rebuild.** All 1.0–1.1.7 runtime optimizations were removed after the
+review in `docs/runtime-t3mp-t4mp-review-2026-09-10.md` and the Workshop bug
+reports traced back to them. The mod now has two parts:
 
-A Timberborn performance mod — a **real, algorithmic speedup** of the CPU-bound
-simulation, **not** a speed multiplier. It applies
-**behavior-exact** optimizations to the heaviest hot paths (they change how fast
-the game computes, never what it computes), so high game speed and large
-late-game colonies actually keep up. It does not change game speed itself — pair
-it with any speed mod; Shift+P toggles an extra render blackout.
-Unattended runs produce the exact same colony you would get at normal
-speed.
+1. **Save-load optimizations** (`src/T3MP/Loading`, `src/Shared`): about 29 s
+   instead of about 65 s scene load for a 28,202-entity save on game 1.1.2.4
+   (`docs/load-steam-1124-2026-09-10.md`). Every step checks the reviewed game
+   modules and foreign Harmony patches and otherwise stays native.
+2. **Runtime patches** (`src/T3MP/Runtime`), following the design of the
+   Harmony-free T4MP prototype: behavior-exact plumbing only, no simulation
+   state cached across ticks, nothing keyed on frames, nothing rendered less
+   often, and a raw-IL fingerprint of each patched vanilla method so a game
+   update silently falls back to vanilla.
 
-Mod Id / internal codename: `T3MP` (finalized — unchanged across releases).
-
-On the `n10c` test save, measured per full in-game day (day/night averaged) at
-ultra speed with all three conditions on the **same game days**:
-
-| condition | ticks/s | vs unmodded |
+| runtime patch | target | what changes |
 | --- | --- | --- |
-| unmodded (vanilla) | 17.95 | 1.00x |
-| always-on optimizations (rendered) | 26.72 | **1.49x** |
-| + Shift+P blackout | 31.24 | **1.74x** |
+| typed event delivery | `EventBus.RegisterMethod` | compiled `Action<T>` instead of `MethodInfo.Invoke` + `object[]` per delivery |
+| index tick traversal | `TickableEntity.Tick` | index loop over the component array; an alive entity with no enabled tickable component returns before the native `activeInHierarchy` read |
+| water upload de-duplication | `DataTextureArray<T>.UpdateTextureArrays` | a GPU upload whose bytes equal the last bytes sent to that texture layer is skipped (native memcmp, D3D11 only) |
 
-So the reliable everyday number is ~1.5x from the optimizations; Shift+P adds
-another ~17% but only when the sim is pushed past its compute ceiling (high
-speed / unattended fast-forward), not at normal game speeds. The exact factor
-depends on the save, the current colony load, and CPU. (An earlier heavier state
-measured ~2x when vanilla bottomed near 14 ticks/s; that is a peak, not the
-steady-state average.)
+Measured on Steam 1.1.2.4, n10c copy, speed button x50 (effective x20.6),
+150 s per run after load, 20 s windows with the first dropped
+(`scripts/run_runtime_ab.ps1`, `testlogs/runtime-ab-*.json`):
 
-**v1.1** adds a flat tick-dispatch rewrite, an activeInHierarchy mirror, and a
-Harmony-boxing fix that roughly halves the GC garbage rate (fewer multi-second
-GC freezes). Re-measured per full in-game day on matched game days (n10c,
-effective x40.2, warmup day excluded):
+| arm | ticks/s |
+| --- | ---: |
+| runtime patches off (`-t3mpTestRuntimeBaseline`) | 12.64 |
+| all three on | 13.39 |
+| water only | 13.27 |
+| tick only | 13.37 |
+| events only | 13.19 |
 
-| condition | ticks/s | vs unmodded | notes |
-| --- | --- | --- | --- |
-| unmodded (vanilla) | 19.58 | 1.00x | |
-| v1.1 always-on (rendered) | 29.69 | **1.52x** | measured with experimental frame pacing on; ~33.5 in 20 s windows without it |
-| v1.1 + Shift+P blackout | 47.18 | **2.41x** | "up to"; depends on CPU and the population speed cap |
+That is about 1.06x and within run-to-run noise. **The 1.5x of earlier releases
+came from the removed caches and is not claimed for v1.2.** About 91% of water
+texture uploads were byte-identical and skipped.
 
-(The experimental ticker-only frame-pacing mode used in earlier experiments
-has been removed because it let character models run ahead of simulation.
-Shift+O retains the shared-clock time-scale governor.) The full change-by-change record
-with per-item measurements and leave-one-out instructions is in
-[`docs/optimization-history.md`](docs/optimization-history.md).
-
-**Starting new optimization work?** Read
-[`docs/optimization-knowledge-base.md`](docs/optimization-knowledge-base.md)
-first — it consolidates the benchmark protocol, all hard rules, the tooling,
-and every **negative result** so dead-end investigations are not repeated.
+Mod Id: `T3MP`. Requires the Harmony mod. Game 1.0.13.1 and 1.1.2.x, Windows.
 
 ## Install
 
 1. Install the **Harmony** mod (required).
-2. Copy this mod folder into your Timberborn mods folder:
-   `Documents\Timberborn\Mods\`
+2. Copy this mod folder into `Documents\Timberborn\Mods\`.
 3. Enable it in the in-game Mod Manager and restart if prompted.
 
-## Controls
-
-- Optimizations turn on automatically as soon as a save loads — no
-  action needed. The mod does not change game speed; use the game's speed
-  controls or any speed mod.
-- **Shift+P**: toggle render blackout while character animation keeps running.
-  The performance benefit depends on rendering load. One frame is drawn every 100
-  ticks so you can watch progress. Press Shift+P again to restore rendering.
-- A live speed meter is shown bottom-right whenever the mod is active (it keeps
-  updating during a Shift+P blackout too). See below for how to read it.
-
-## Reading the bottom-right meter
-
-```
-rSPD/iSPD  x20.4 / x20.6
-UPS 34.0 ticks/s
-```
-
-- **iSPD** (*ideal speed*) — the multiple the game is **trying** to run at right
-  now (`Time.timeScale`), i.e. real-time × this. Note it is often **lower than the
-  speed you pressed**, because vanilla Timberborn throttles top speed by colony
-  size (see below) — e.g. pressing `x50` on a big colony may show `iSPD x20.6`.
-- **rSPD** (*real speed*) — the multiple the sim is **actually** achieving right
-  now (measured).
-- **UPS** — raw simulation updates (ticks) per second. `UPS = rSPD ÷ 0.6`.
-
-How to read it:
-
-| You see | Meaning |
-|---|---|
-| **rSPD ≈ iSPD** | The sim is keeping up with its target — the CPU has headroom at this speed. |
-| **rSPD < iSPD** | The machine can't keep up — CPU-bound; extra game-time is being dropped. |
-| **iSPD < the speed you set** | The game's population throttle is capping you (not this mod, not your CPU). |
-
-This mod's job is to push **rSPD** as close to **iSPD** as possible (and raise the
-ceiling of both) by making each tick cheaper — without changing the result.
-
-## What it does
-
-Adds behavior-exact optimizations to the hottest simulation paths: the
-per-entity tick dispatch, need/behavior candidate selection, a speed-normalized
-travel-distance cache invalidated on navmesh changes, and render/UI suppression
-during the Shift+P blackout. Nothing that alters the outcome (pathfinding
-results, reservations, inventories, water) is skipped or approximated, and the
-mod does not touch game speed.
+There are no controls. Optimizations apply on load; `Player.log` lists each one
+as installed or retained-vanilla.
 
 ---
 
@@ -178,16 +117,16 @@ dotnet build .\src\T3MP\T3MP.csproj -c Release
 `.\scripts\backup_mods.ps1` snapshots the mods folder first if you want a backup.
 On load the mod logs `[T3MP] Loaded.` to `Player.log`.
 
-## Benchmark harness (not part of the distributed mod)
+## Measuring throughput (not part of the distributed mod)
 
-The A/B measurement is off in the shipped build
-(`EnableBenchmarkMeasurement = false`). To measure throughput during
-development, set that flag to `true`, rebuild, and run:
+The test driver mod (`src/T3MPTestDriver`, deployed only during runs) counts
+full ticks and logs `[T3MPTEST] Simulation rate` every 20 s. Stage a copy of a
+save into a disposable settlement, then:
 
 ```powershell
-.\scripts\run_autoload_probe.ps1 -SkipModManager -BenchAutoUltra -SecondsAfterLoad 170 -StopAfter
-.\scripts\analyze_simprogress.ps1 -LogPath .\testlogs\autoload-<stamp>.log
+.\scripts\run_runtime_ab.ps1 -Settlement t3mp-ab -Save n10c -Order ABWTE -SecondsAfterLoad 150
 ```
 
-`-SkipModManager` skips the mod manager OK screen and `-BenchAutoUltra` makes
-the mod auto-apply ultra speed after load; both are opt-in test flags only.
+`A` = runtime patches off, `B` = all on, `W`/`T`/`E` = water/tick/events only.
+Results go to `testlogs/runtime-ab-<stamp>.json`. Never run the real settlement:
+autosaves at x50 would land in it.
