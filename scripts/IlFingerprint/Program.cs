@@ -23,6 +23,20 @@ var targets = new (string Assembly, string Type, string Method)[]
     ("Timberborn.BaseComponentSystem", "Timberborn.BaseComponentSystem.ComponentCache", "Initialize"),
     ("Timberborn.BaseComponentSystem", "Timberborn.BaseComponentSystem.BaseComponent", "get_Enabled"),
     ("Timberborn.TickSystem", "Timberborn.TickSystem.MeteredTickableComponent", "get_Enabled"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "MoveAlongPath"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "ReachedLastPathCorner"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "GetSpeedLimitIfCloseToTarget"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "GetMovementSpeed"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "GetRemainingDistance"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "GetTimeFromLastPathPoint"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "MoveInDirection"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "AddAnimatedPathCorner"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "AddSmoothingAnimatedPathCorner"),
+    ("Timberborn.CharacterMovementSystem", "Timberborn.CharacterMovementSystem.PathFollower", "NotifyAfterMovement"),
+    ("Timberborn.Navigation", "Timberborn.Navigation.NavigationService", "InStoppingProximity"),
+    ("Timberborn.WalkingSystem", "Timberborn.WalkingSystem.WalkerSpeedManager", "GetWalkerSpeedAtCurrentPosition"),
+    ("Timberborn.WalkingSystem", "Timberborn.WalkingSystem.WalkerSpeedManager", "GetWalkerBaseSpeed"),
+    ("Timberborn.WalkingSystem", "Timberborn.WalkingSystem.WalkerMover", "Move"),
 };
 foreach (var managed in args)
 {

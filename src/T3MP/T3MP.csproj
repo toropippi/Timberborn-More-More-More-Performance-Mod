@@ -29,6 +29,8 @@
     </Reference>
     <Publicize Include="Bindito.Core" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.TubeSystem" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.WalkingSystem" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.WaterSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.TickSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.WaterSystemRendering" IncludeCompilerGeneratedMembers="false" />
     <Reference Include="Timberborn.WaterSystemRendering">

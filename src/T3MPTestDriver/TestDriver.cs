@@ -31,6 +31,7 @@ public sealed class TestDriverModStarter : IModStarter
     {
         Debug.Log("[T3MPTEST] Test driver loaded. " + TestArguments.Describe());
         FullTickCounter.Install();
+        TickProfiler.Install();
         if (TestArguments.LoadRoutingRequested) LoadRoutingTestDriver.Configure();
     }
 }
@@ -261,6 +262,10 @@ public sealed class GameTestDriver : IPostLoadableSingleton
         {
             new GameObject("T3MPTEST.SimulationRate").AddComponent<SimulationRateLogger>();
         }
+        if (ModelGapMonitor.Requested)
+        {
+            new GameObject("T3MPTEST.ModelGap").AddComponent<ModelGapMonitor>().Initialize(_entityRegistry);
+        }
     }
 }
 
@@ -310,6 +315,7 @@ public sealed class SimulationRateLogger : MonoBehaviour
             }
         }
         catch (Exception) { /* diagnostics only */ }
+        TickProfiler.Report(now - _windowStart);
         _windowStart = now;
         _windowTicks = ticks;
     }

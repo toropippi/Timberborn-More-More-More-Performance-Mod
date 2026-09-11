@@ -138,18 +138,33 @@ internal static class RuntimePatches
     // constant or branch target renders differently.
     internal static Shape DescribeShape(System.Collections.IEnumerable instructions)
     {
+        // Labels are canonicalized to the ordinal of the instruction that carries
+        // them, so the rendering does not depend on how many labels a patch
+        // generator allocated before parsing the body.
+        var items = new List<object>();
+        foreach (var instruction in instructions) items.Add(instruction);
+        var labelPositions = new Dictionary<int, int>();
+        for (var index = 0; index < items.Count; index++)
+        {
+            if (items[index].GetType().GetField("labels", All)?.GetValue(items[index]) is System.Collections.IEnumerable labels)
+                foreach (var label in labels)
+                    if (label is Label l) labelPositions[l.GetHashCode()] = index;
+        }
+        string RenderLabel(Label label) => labelPositions.TryGetValue(label.GetHashCode(), out var at) ? "->" + at : "->?";
         var rows = new List<string>();
-        foreach (var instruction in instructions)
+        foreach (var instruction in items)
         {
             var type = instruction.GetType();
             var opcode = type.GetField("opcode", All)!.GetValue(instruction)!.ToString();
             var operand = type.GetField("operand", All)?.GetValue(instruction);
-            rows.Add(opcode + " " + Render(operand));
+            var labelCount = type.GetField("labels", All)?.GetValue(instruction) is System.Collections.ICollection carried ? carried.Count : 0;
+            var blocks = type.GetField("blocks", All)?.GetValue(instruction);
+            rows.Add(opcode + " " + Render(operand, RenderLabel) + " labels=" + labelCount + " " + Render(blocks, RenderLabel));
         }
         return new Shape { Instructions = rows.ToArray() };
     }
 
-    private static string Render(object? operand)
+    private static string Render(object? operand, Func<Label, string> renderLabel)
     {
         switch (operand)
         {
@@ -160,12 +175,18 @@ internal static class RuntimePatches
                        (method is MethodInfo info ? ":" + info.ReturnType.FullName : "");
             case FieldInfo field: return field.DeclaringType?.FullName + "::" + field.Name + ":" + field.FieldType.FullName;
             case Type t: return "type:" + t.FullName;
-            case Label label: return "label:" + label.GetHashCode();
+            case Label label: return renderLabel(label);
             case LocalBuilder local: return "local:" + local.LocalIndex + ":" + local.LocalType?.FullName;
             case string text: return "string:" + text;
+            case Enum enumeration: return enumeration.GetType().Name + ":" + enumeration;
             case System.Collections.IEnumerable many when operand is not string:
-                return "[" + string.Join(",", many.Cast<object?>().Select(Render)) + "]";
-            default: return operand.GetType().FullName + ":" + Convert.ToString(operand, System.Globalization.CultureInfo.InvariantCulture);
+                return "[" + string.Join(",", many.Cast<object?>().Select(item => Render(item, renderLabel))) + "]";
+            default:
+                // Harmony's ExceptionBlock carries its kind and catch type in fields.
+                var blockType = operand.GetType().GetField("blockType", All)?.GetValue(operand);
+                var catchType = operand.GetType().GetField("catchType", All)?.GetValue(operand) as Type;
+                if (blockType != null) return "block:" + blockType + ":" + catchType?.FullName;
+                return operand.GetType().FullName + ":" + Convert.ToString(operand, System.Globalization.CultureInfo.InvariantCulture);
         }
     }
 

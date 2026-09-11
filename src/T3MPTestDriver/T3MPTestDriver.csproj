@@ -23,6 +23,7 @@
       <Private>false</Private>
     </Reference>
     <Publicize Include="Timberborn.SingletonSystem" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.TickSystem" IncludeCompilerGeneratedMembers="false" />
     <Reference Include="Timberborn.BlockObstacles">
       <HintPath>$(TimberbornManagedDir)\Timberborn.BlockObstacles.dll</HintPath>
       <Private>false</Private>
@@ -59,6 +60,10 @@
     </Reference>
     <Reference Include="Timberborn.MechanicalSystem">
       <HintPath>$(TimberbornManagedDir)\Timberborn.MechanicalSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Timberborn.TickSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.TickSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <PackageReference Include="Krafs.Publicizer" Version="2.2.1" PrivateAssets="all" />
