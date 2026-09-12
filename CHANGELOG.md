@@ -37,6 +37,16 @@ More performance. Then more. Then, because the name promised it, a little more.
     `activeInHierarchy` and runs an empty loop. Unknown or untracked state is
     always visited; the vanilla `SortedList` remains the authority. Four Codex
     review passes; the last found no defect.
+- **Vanilla visual bug workaround:** `TubeVisitor.UpdateVisit()` now clears a
+  stale tube visit after building entry, fixing lingering tube illumination
+  while keeping the occupant hidden and simulation behavior unchanged.
+  Raw-IL and foreign-patch guards cover `UpdateVisit()`, `ExitTube(Tube, bool)`,
+  and `Tube.RemoveVisitor(TubeVisitor)`, with foreign patches rechecked at world
+  load. Destroyed visitors are skipped; repair exceptions are counted and
+  contained with a single warning per process.
+- **Probe safety:** tube and runtime A/B scripts only stop leftover Timberborn
+  processes whose command lines contain `-t3mpTest`; other sessions require
+  the user to close the game first.
 - **Measured** (`scripts/run_runtime_ab.ps1`, x50 = effective x20.6, 150 s,
   20 s windows, first dropped). m7b save, game 1.0.13.1: vanilla 17.83/16.99,
   v1.2 without Frontier 21.98/22.50, **v1.2 27.66/26.57 ticks/s (1.56x)**; the
@@ -52,7 +62,7 @@ More performance. Then more. Then, because the name promised it, a little more.
 - **Removed features:** Shift+P turbo, Shift+O smooth mode, the bottom-right
   speed meter, hidden speed-throttle removal, all probes and profilers.
 - **Test-only flags** (never needed in play): `-t3mpTestRuntimeBaseline`,
-  `-t3mpTestNoEvents`, `-t3mpTestNoTick`, `-t3mpTestNoWater`.
+  `-t3mpTestNoEvents`, `-t3mpTestNoTick`, `-t3mpTestNoWater`, `-t3mpTestNoTubeFix`.
 
 ### 日本語
 

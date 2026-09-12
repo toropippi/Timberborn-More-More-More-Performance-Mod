@@ -37,6 +37,9 @@ var targets = new (string Assembly, string Type, string Method)[]
     ("Timberborn.WalkingSystem", "Timberborn.WalkingSystem.WalkerSpeedManager", "GetWalkerSpeedAtCurrentPosition"),
     ("Timberborn.WalkingSystem", "Timberborn.WalkingSystem.WalkerSpeedManager", "GetWalkerBaseSpeed"),
     ("Timberborn.WalkingSystem", "Timberborn.WalkingSystem.WalkerMover", "Move"),
+    ("Timberborn.TubeSystem", "Timberborn.TubeSystem.TubeVisitor", "UpdateVisit"),
+    ("Timberborn.TubeSystem", "Timberborn.TubeSystem.TubeVisitor", "ExitTube"),
+    ("Timberborn.TubeSystem", "Timberborn.TubeSystem.Tube", "RemoveVisitor"),
 };
 foreach (var managed in args)
 {
@@ -52,7 +55,16 @@ foreach (var managed in args)
             MethodBase? method = methodName == ".ctor"
                 ? type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).FirstOrDefault()
                 : type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
-                    .FirstOrDefault(m => m.Name == methodName);
+                    .FirstOrDefault(m => m.Name == methodName &&
+                        ((typeName, methodName) switch
+                        {
+                            ("Timberborn.TubeSystem.TubeVisitor", "UpdateVisit") => m.GetParameters().Length == 0,
+                            ("Timberborn.TubeSystem.TubeVisitor", "ExitTube") => m.GetParameters()
+                                .Select(p => p.ParameterType.FullName).SequenceEqual(new[] { "Timberborn.TubeSystem.Tube", "System.Boolean" }),
+                            ("Timberborn.TubeSystem.Tube", "RemoveVisitor") => m.GetParameters()
+                                .Select(p => p.ParameterType.FullName).SequenceEqual(new[] { "Timberborn.TubeSystem.TubeVisitor" }),
+                            _ => true
+                        }));
             if (method == null) { Console.WriteLine($"{typeName}.{methodName}: (absent)"); continue; }
             var il = method.GetMethodBody()!.GetILAsByteArray()!;
             var clauses = method.GetMethodBody()!.ExceptionHandlingClauses.Count;

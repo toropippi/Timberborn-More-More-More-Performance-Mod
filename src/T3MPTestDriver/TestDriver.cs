@@ -244,6 +244,17 @@ public sealed class GameTestDriver : IPostLoadableSingleton
 
     public void PostLoad()
     {
+        // Start observers before scenario handling so the tube flag also works
+        // alone, without unpausing or changing the game speed.
+        if (ModelGapMonitor.Requested && !TestArguments.LoadRoutingRequested &&
+            (TestArguments.AnyScenarioRequested || TestArguments.Speed != null))
+        {
+            new GameObject("T3MPTEST.ModelGap").AddComponent<ModelGapMonitor>().Initialize(_entityRegistry);
+        }
+        if (TubeLightMonitor.Requested)
+        {
+            new GameObject("T3MPTEST.TubeLights").AddComponent<TubeLightMonitor>().Initialize(_entityRegistry, _container);
+        }
         if (TestArguments.LoadRoutingRequested)
         {
             _speedManager.ChangeSpeed(0f);
@@ -261,10 +272,6 @@ public sealed class GameTestDriver : IPostLoadableSingleton
         if (TestArguments.Speed != null)
         {
             new GameObject("T3MPTEST.SimulationRate").AddComponent<SimulationRateLogger>();
-        }
-        if (ModelGapMonitor.Requested)
-        {
-            new GameObject("T3MPTEST.ModelGap").AddComponent<ModelGapMonitor>().Initialize(_entityRegistry);
         }
     }
 }
@@ -312,6 +319,12 @@ public sealed class SimulationRateLogger : MonoBehaviour
                 const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
                 Debug.Log("[T3MPTEST] frontier sweeps=" + frontier.GetField("Sweeps", all)!.GetValue(null) + " visited=" + frontier.GetField("Visited", all)!.GetValue(null) +
                           " skipped=" + frontier.GetField("Skipped", all)!.GetValue(null));
+            }
+            var tube = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.TubeVisitFix")).FirstOrDefault(t => t != null);
+            if (tube != null)
+            {
+                const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+                Debug.Log("[T3MPTEST] tube repairs=" + tube.GetField("Repairs", all)!.GetValue(null));
             }
         }
         catch (Exception) { /* diagnostics only */ }

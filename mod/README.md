@@ -20,6 +20,10 @@ the simulation produces the same colony as vanilla, tick for tick.
   uploads whose bytes did not change are not re-sent to the GPU. Measured gain
   depends on the save: about 1.56x on one large colony, about 1.27x on another
   (same on game 1.0 and 1.1). **Do not expect a fixed figure.**
+- **Tube lights after building entry.** Works around a vanilla visual bug that
+  leaves a character registered in its last tube after entering a building.
+  Clears that stale visit so lighting reflects the remaining visitors, while
+  keeping the building occupant hidden and simulation behavior unchanged.
 
 ## What is gone (and why)
 
@@ -55,6 +59,10 @@ tick単位でバニラと同じ集落になります。
   大規模集落で訪問の約90%）をtick走査で飛ばす、byteが変わらない水テクスチャを
   GPUへ再送しない。効き方はセーブ次第で、ある大規模集落では約1.56倍、別の集落では
   約1.27倍でした（ゲーム1.0でも1.1でも同じ）。**固定の倍率は期待しないでください。**
+
+- **建物に入った後のチューブ照明。** 建物に入ったキャラクターが直前のチューブに
+  登録されたままになるバニラの表示バグを回避します。古い訪問登録を解除して照明を
+  残りの訪問者に合わせます。建物内のモデルは非表示のまま、シミュレーションは変わりません。
 
 ## 撤去したもの（理由）
 

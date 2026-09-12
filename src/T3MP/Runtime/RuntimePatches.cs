@@ -8,11 +8,10 @@ using Debug = UnityEngine.Debug;
 
 namespace T3MP.Runtime;
 
-// Runtime (simulation) patches. Each patch is behavior-exact: it changes how a
-// vanilla method reaches its result, never the result, the order or the
-// exceptions. No simulation state is cached across ticks and nothing is keyed
-// on frames. Each feature owns a separate Harmony id so a failed install can
-// remove only its own hooks.
+// Runtime patches: behavior-exact simulation plumbing and a visual tube-visit
+// bug workaround. No simulation state is cached across ticks and nothing is
+// keyed on frames. Each feature owns a separate Harmony id so a failed install
+// can remove only its own hooks.
 internal static class RuntimePatches
 {
     internal const BindingFlags All = LoadPatchBridge.All;
@@ -36,6 +35,7 @@ internal static class RuntimePatches
             if (ModSettings.EnableTickEntityFast) TickEntityFast.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableWaterTextureUpload) WaterTextureUpload.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableTickFrontier) TickFrontier.Install(harmonyType, harmonyMethodType, patch);
+            if (ModSettings.EnableTubeVisitFix) TubeVisitFix.Install(harmonyType, harmonyMethodType, patch);
         }
         catch (Exception exception)
         {
@@ -43,7 +43,7 @@ internal static class RuntimePatches
         }
     }
 
-    // Shared helper for the three feature installers: creates a Harmony
+    // Shared helper for the feature installers: creates a Harmony
     // instance per owner and reports/unpatches on failure.
     internal static bool TryInstall(string owner, Type harmonyType, Type harmonyMethodType, MethodInfo patch,
         Action<Func<MethodBase, string?, string?, string?, string?, object?>> body, Type hooks)

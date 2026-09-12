@@ -40,9 +40,17 @@ foreach ($arm in $Order.ToCharArray()) {
     # A previous run's game process may still be shutting down.
     $deadline = (Get-Date).AddSeconds(90)
     while ((Get-Process | Where-Object { $_.ProcessName -like '*Timberborn*' }) -and (Get-Date) -lt $deadline) { Start-Sleep -Seconds 2 }
-    # Steam can relaunch the game under a new PID after the probe stopped its own; this
-    # script only ever runs on staged copies, so a leftover game is the previous arm's.
-    Get-Process | Where-Object { $_.ProcessName -like '*Timberborn*' } | ForEach-Object { Write-Host "Stopping leftover Timberborn pid $($_.Id)"; Stop-Process -Id $_.Id -Force }
+    # Steam may relaunch a previous probe under a new PID; identify it by command line.
+    $remaining = @(Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*Timberborn*' })
+    foreach ($gameProcess in $remaining) {
+        if ($gameProcess.CommandLine -like '*-t3mpTest*') {
+            Write-Host "Stopping leftover Timberborn probe pid $($gameProcess.ProcessId)"
+            Stop-Process -Id $gameProcess.ProcessId -Force
+        }
+    }
+    if ($remaining | Where-Object { $_.CommandLine -notlike '*-t3mpTest*' }) {
+        throw 'Timberborn is running (not a probe session); close it first'
+    }
     Start-Sleep -Seconds 5
     $before = Get-ChildItem -LiteralPath $logDir -Filter 'autoload-*.log' | Where-Object { $_.Name -notlike 'autoload-previous-*' } | Select-Object -ExpandProperty FullName
     Write-Host "=== arm $arm args: $($extra -join ' ')"

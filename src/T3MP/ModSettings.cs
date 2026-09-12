@@ -8,14 +8,15 @@ internal static class ModSettings
 {
     public const string Version = "1.2.0";
 
-    // Runtime (simulation) patches: typed EventBus delegates, indexed tick
-    // traversal and de-duplicated water texture uploads. See Runtime/.
+    // Runtime patches: typed EventBus delegates, indexed tick traversal,
+    // de-duplicated water uploads and visual tube-visit repair. See Runtime/.
     public static readonly bool EnableRuntimePatches = !HasCommandLineFlag("-t3mpTestRuntimeBaseline");
     // Per-feature test switches (attribution runs only; omit in normal play).
     public static readonly bool EnableEventBusFastDelegates = !HasCommandLineFlag("-t3mpTestNoEvents");
     public static readonly bool EnableTickEntityFast = !HasCommandLineFlag("-t3mpTestNoTick");
     public static readonly bool EnableWaterTextureUpload = !HasCommandLineFlag("-t3mpTestNoWater");
     public static readonly bool EnableTickFrontier = !HasCommandLineFlag("-t3mpTestNoFrontier");
+    public static readonly bool EnableTubeVisitFix = !HasCommandLineFlag("-t3mpTestNoTubeFix");
 
     // Load patches (Loading/, Shared/).
     public static readonly bool EnableLoadEventRouting = true;

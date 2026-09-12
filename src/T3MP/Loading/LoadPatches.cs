@@ -28,6 +28,7 @@ internal static class LoadPatches
         Runtime.TickEntityFast.Revalidate();
         Runtime.WaterTextureUpload.Revalidate();
         Runtime.TickFrontier.Revalidate();
+        Runtime.TubeVisitFix.Revalidate();
     }
 
     internal static void Install()

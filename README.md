@@ -9,7 +9,8 @@ reports traced back to them. The mod now has two parts:
    (`docs/load-steam-1124-2026-09-10.md`). Every step checks the reviewed game
    modules and foreign Harmony patches and otherwise stays native.
 2. **Runtime patches** (`src/T3MP/Runtime`), following the design of the
-   Harmony-free T4MP prototype: behavior-exact plumbing only, no simulation
+   Harmony-free T4MP prototype: behavior-exact plumbing plus a vanilla visual
+   bug workaround for tube visits, no simulation
    state cached across ticks, nothing keyed on frames, nothing rendered less
    often, and a raw-IL fingerprint of each patched vanilla method so a game
    update silently falls back to vanilla.
@@ -20,6 +21,7 @@ reports traced back to them. The mod now has two parts:
 | index tick traversal | `TickableEntity.Tick` | index loop over the component array; an alive entity with no enabled tickable component returns before the native `activeInHierarchy` read |
 | sparse bucket traversal (Frontier) | `TickableEntityBucket.TickAll`, `BaseComponent.Enable/DisableComponent`, `ComponentCache.OnDestroy/Initialize` | a per-bucket index of entities that still need a visit (enabled tickable components counted through the only two writers of `Enabled`; destroyed or untracked state = visit); the vanilla `SortedList` stays the authority, the index only supplies the next index to visit |
 | water upload de-duplication | `DataTextureArray<T>.UpdateTextureArrays` | a GPU upload whose bytes equal the last bytes sent to that texture layer is skipped (native memcmp, D3D11 only) |
+| tube visit fix | `TubeVisitor.UpdateVisit()` | clears stale tube membership after building entry so tube lights reflect remaining visitors; the building occupant stays hidden and simulation behavior is unchanged |
 
 Measured with `scripts/run_runtime_ab.ps1` (speed button x50 = effective x20.6,
 150 s per run after load, 20 s windows with the first dropped; results in
@@ -126,6 +128,14 @@ dotnet build .\src\T3MP\T3MP.csproj -c Release
 `.\scripts\backup_mods.ps1` snapshots the mods folder first if you want a backup.
 On load the mod logs `[T3MP] Loaded.` to `Player.log`.
 
+Compute reviewed raw-IL hashes for both installed game versions with:
+
+```powershell
+dotnet run --project scripts/IlFingerprint -c Release -- "<USERPROFILE>\Documents\TimberbornVersions\Timberborn-1.0-build23107127\Timberborn_Data\Managed" "<USERPROFILE>\Documents\TimberbornVersions\Timberborn-1.1\Timberborn_Data\Managed"
+```
+
+The tube target explicitly selects the parameterless `UpdateVisit()` overload.
+
 ## Measuring throughput (not part of the distributed mod)
 
 The test driver mod (`src/T3MPTestDriver`, deployed only during runs) counts
@@ -139,3 +149,7 @@ save into a disposable settlement, then:
 `A` = runtime patches off, `B` = all on, `W`/`T`/`E` = water/tick/events only.
 Results go to `testlogs/runtime-ab-<stamp>.json`. Never run the real settlement:
 autosaves at x50 would land in it.
+
+The same summary logs cumulative `[T3MPTEST] tube repairs=...` alongside water
+and Frontier counters. `-t3mpTestNoTubeFix` disables only the tube workaround;
+`-t3mpTestRuntimeBaseline` disables all runtime patches.
