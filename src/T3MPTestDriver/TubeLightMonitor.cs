@@ -33,7 +33,8 @@ public sealed class TubeLightMonitor : MonoBehaviour
     private FieldInfo _beavers = null!, _bots = null!, _registryVisitors = null!;
     private FieldInfo _lastGrid = null!, _currentTube = null!, _enterer = null!, _model = null!;
     private FieldInfo _block = null!, _pathFollower = null!;
-    private FieldInfo _illuminatorToggle = null!, _toggleOn = null!, _illumOn = null!, _turnedOnToggles = null!, _disabledToggles = null!;
+    private FieldInfo _illuminatorToggle = null!, _toggleOn = null!, _illumOn = null!, _turnedOnToggles = null!;
+    private FieldInfo? _disabledToggles;
     private FieldInfo _renderers = null!, _currentModel = null!;
     private PropertyInfo _hasVisitor = null!, _coordinates = null!, _finished = null!;
     private PropertyInfo _inside = null!, _modelPosition = null!, _stopped = null!;
@@ -77,7 +78,13 @@ public sealed class TubeLightMonitor : MonoBehaviour
             _toggleOn = Field(_illuminatorToggle.FieldType, "_isOn");
             _illumOn = Field(illuminator, "_isOn");
             _turnedOnToggles = Field(illuminator, "_turnedOnToggles");
-            _disabledToggles = Field(illuminator, "_disabledToggles");
+            _disabledToggles = illuminator.GetField("_disabledToggles", All);
+            // The inspected 1.0.13.1 Illuminator only counts turned-on toggles.
+            // Treat absence as no disable mask only for that exact module.
+            if (_disabledToggles == null && illuminator.Module.ModuleVersionId != new Guid("2062aa82-6f59-4455-9ab3-e39ffbdac601"))
+                throw new MissingFieldException(illuminator.FullName, "_disabledToggles");
+            Debug.Log("[T3MPTEST] tubelight illuminationMode=" + (_disabledToggles == null ? "legacy-turn-on-count" : "disable-mask") +
+                      " module=" + illuminator.Module.ModuleVersionId);
             _renderers = Field(lightingRenderers, "_renderers");
             _currentModel = Field(tubeModel, "_currentModel");
             ResolveRendererValueGetter();
@@ -120,7 +127,16 @@ public sealed class TubeLightMonitor : MonoBehaviour
     private void LateUpdate()
     {
         var now = Time.realtimeSinceStartup;
-        if (!_ready || now < _next) return;
+        if (!_ready) return;
+        // A paused visitor is expected to remain in its tube. Break duration
+        // streaks even when the pause falls between samples; still report the
+        // raw visitor and renderer consistency observations while paused.
+        if (Time.timeScale == 0)
+        {
+            _previous.Clear();
+            _previousVisual.Clear();
+        }
+        if (now < _next) return;
         _next = now + IntervalSeconds;
         _sample++;
         _errors = 0;
@@ -321,7 +337,7 @@ public sealed class TubeLightMonitor : MonoBehaviour
             ToggleOn = (bool)_toggleOn.GetValue(toggle)!,
             IllumOn = (bool)_illumOn.GetValue(illuminator)!,
             TurnedOn = (int)_turnedOnToggles.GetValue(illuminator)!,
-            Disabled = (int)_disabledToggles.GetValue(illuminator)!,
+            Disabled = _disabledToggles == null ? 0 : (int)_disabledToggles.GetValue(illuminator)!,
             Cached = renderers.Count,
             CurrentModel = model == null ? "null" : OneLine(model.name)
         };

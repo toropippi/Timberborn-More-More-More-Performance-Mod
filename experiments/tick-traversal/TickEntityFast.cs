@@ -6,11 +6,9 @@ using Debug = UnityEngine.Debug;
 
 namespace T3MP.Runtime;
 
-// TickableEntity.Tick with the vanilla enumerator replaced by index access and
-// one exact shortcut: an alive entity whose tickable components are all
-// disabled returns before reading activeInHierarchy, because vanilla would only
-// read that flag and then run an empty loop. Every Enabled flag is read live at
-// the moment of the visit; nothing is cached, reordered or skipped otherwise.
+// TickableEntity.Tick with the vanilla enumerator replaced by index access.
+// Preserve the native activeInHierarchy check before reading Enabled, and read
+// each flag once at its visit so getter patches retain their order and effects.
 // The exception wrapper reproduces the vanilla message verbatim.
 internal static class TickEntityFast
 {
@@ -118,35 +116,9 @@ internal static class TickEntityFast
     {
         try
         {
-            var gameObject = entity._entityComponent.GameObject;
-            var components = entity._tickableComponents;
-            // Alive object, nothing enabled: vanilla reads activeInHierarchy and
-            // runs an empty loop, so returning here changes nothing. The scan
-            // reads the same field-backed Enabled flags vanilla reads. Should a
-            // malformed component make a read throw, the vanilla order below
-            // raises (or skips) it exactly as vanilla would.
-            bool needsVisit;
-            try
+            if (entity._entityComponent.GameObject.activeInHierarchy)
             {
-                needsVisit = false;
-                var length = components.Length;
-                for (var i = 0; i < length; i++)
-                {
-                    var component = components[i];
-                    if (component == null || component.Enabled)
-                    {
-                        needsVisit = true;
-                        break;
-                    }
-                }
-            }
-            catch (Exception)
-            {
-                needsVisit = true;
-            }
-            if (!needsVisit && gameObject) return;
-            if (gameObject!.activeInHierarchy)
-            {
+                var components = entity._tickableComponents;
                 var tick = _tick!;
                 var count = components.Length;
                 for (var i = 0; i < count; i++)

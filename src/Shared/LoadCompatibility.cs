@@ -47,6 +47,14 @@ internal static class LoadCompatibility
     internal static bool ReviewedModule(string name, string expected, string? actual) =>
         actual == expected || !SteamBaseline && Steam1124.TryGetValue(name + "|" + expected, out var steam) && actual == steam;
 
+    // Frontier's reviewed postfix only invalidates its own tracked tick groups
+    // when a cache is initialized again. It does not change components, models,
+    // activation or the native Initialize call. Keep this exemption method-local.
+    internal static bool ReviewedCacheObserver(MethodBase method, string owner) =>
+        owner == "t3mp.runtime.frontier" &&
+        method.DeclaringType == typeof(Timberborn.BaseComponentSystem.ComponentCache) &&
+        method.Name == "Initialize";
+
     internal static bool Reviewed(params string[] modules)
     {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();

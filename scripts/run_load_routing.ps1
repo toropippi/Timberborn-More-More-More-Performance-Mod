@@ -128,6 +128,8 @@ param(
     [switch] $LazyGoodStack,
     [switch] $LazyGoodStackValidate,
     [switch] $GoodStackExercise,
+    [switch] $GoodStackBaseline,
+    [string] $GoodStackPlan,
     [switch] $CarriedPreparation,
     [switch] $CarriedMetadata,
     [switch] $NavShapePlans,
@@ -141,6 +143,8 @@ param(
     [int] $TimeoutSeconds = 300
 )
 $ErrorActionPreference = 'Stop'
+if ($GoodStackBaseline -and $LazyGoodStack) { throw 'GoodStack baseline cannot enable the lazy experiment' }
+if ($GoodStackPlan) { $GoodStackPlan = (Resolve-Path -LiteralPath $GoodStackPlan).Path }
 if ($ConstructionBoundArguments -or $ConstructionBoundArgumentsValidate) { $ConstructionRecipes = $true }
 if ($LoadMemoryBundle) {
     $RangedEvents = $true
@@ -326,9 +330,11 @@ try {
     if ($AllModelVisualSnapshot) { $arguments += '-t3mpTestAllModelVisualSnapshot' }
     if ($NaturalModelTransition -or $NaturalModelValidate) { $arguments += '-t3mpTestNaturalModelTransition' }
     if ($NaturalModelValidate) { $arguments += '-t3mpTestNaturalModelValidate' }
-    if ($LazyGoodStack -or $LazyGoodStackValidate) { $arguments += '-t3mpTestLazyGoodStack' }
+    if ($LazyGoodStack) { $arguments += '-t3mpTestLazyGoodStack' }
     if ($LazyGoodStackValidate) { $arguments += '-t3mpTestLazyGoodStackValidate' }
     if ($GoodStackExercise) { $arguments += '-t3mpTestGoodStackExercise' }
+    if ($GoodStackBaseline) { $arguments += '-t3mpTestLazyGoodStackBaseline' }
+    if ($GoodStackPlan) { $arguments += @('-t3mpTestGoodStackPlan', ('"' + $GoodStackPlan + '"')) }
     if ($CarriedPreparation) { $arguments += '-t3mpTestCarriedPreparation' }
     if ($CarriedMetadata) { $arguments += '-t3mpTestCarriedMetadata' }
     if ($NavShapePlans) { $arguments += '-t3mpTestNavShapePlans' }
@@ -373,14 +379,32 @@ finally {
         Copy-Item -LiteralPath $original.Backup -Destination $original.Target -Force
         if ((Get-FileHash -LiteralPath $original.Target).Hash -ne $original.Hash) { throw 'Installed DLL restoration failed' }
     }
-    foreach ($item in @(@($stage, $saves), @($driver, $mods))) {
-        if (-not (Test-Path -LiteralPath $item[0])) { continue }
-        $resolved = (Resolve-Path -LiteralPath $item[0]).Path
-        $parent = (Resolve-Path -LiteralPath $item[1]).Path.TrimEnd('\') + '\'
-        if (-not $resolved.StartsWith($parent, [StringComparison]::OrdinalIgnoreCase) -or
-            (Split-Path -Leaf $resolved) -ne $runName) { throw 'Unsafe temporary-directory cleanup path' }
-        Remove-Item -LiteralPath $resolved -Recurse -Force
+    $archiveErrors = @()
+    $archives = @()
+    foreach ($item in @(@($stage, $saves, 'save-archive'), @($driver, $mods, 'driver-archive'))) {
+        try {
+            if (-not (Test-Path -LiteralPath $item[0])) { continue }
+            $resolved = (Resolve-Path -LiteralPath $item[0]).Path
+            $parent = (Resolve-Path -LiteralPath $item[1]).Path.TrimEnd('\') + '\'
+            if (-not $resolved.StartsWith($parent, [StringComparison]::OrdinalIgnoreCase) -or
+                (Split-Path -Leaf $resolved) -ne $runName) { throw 'Unsafe temporary-directory cleanup path' }
+            $destination = Join-Path $output $item[2]
+            if ([IO.Path]::GetPathRoot($resolved) -ne [IO.Path]::GetPathRoot($destination)) {
+                # Directory Move-Item cannot cross drives. Keep that archive on
+                # its original drive, alongside (outside) the active Saves/Mods.
+                $archiveRoot = Join-Path (Split-Path -Parent $item[1]) 'T3MPTestArchives'
+                New-Item -ItemType Directory -Path $archiveRoot -Force | Out-Null
+                $destination = Join-Path (Resolve-Path -LiteralPath $archiveRoot).Path ($runName + '-' + $item[2])
+            }
+            if (Test-Path -LiteralPath $destination) { throw 'Archive destination already exists' }
+            Move-Item -LiteralPath $resolved -Destination $destination
+            $archives += [pscustomobject]@{ Kind=$item[2]; Path=$destination }
+        } catch { $archiveErrors += $_.Exception.Message }
     }
-    if ((Get-FileHash -LiteralPath $source).Hash -ne $sourceHash) { throw 'Source save changed' }
-    Write-Output 'Restored all installed DLLs; removed test driver and copied settlement; source save unchanged.'
+    try {
+        $archives | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'archive-locations.json') -Encoding utf8
+    } catch { $archiveErrors += ('Archive manifest write failed: ' + $_.Exception.Message) }
+    if ((Get-FileHash -LiteralPath $source).Hash -ne $sourceHash) { $archiveErrors += 'Source save changed' }
+    if ($archiveErrors.Count -gt 0) { throw ($archiveErrors -join '; ') }
+    Write-Output 'Restored all installed DLLs; archived test driver and copied settlement; source save unchanged.'
 }

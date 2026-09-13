@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Timberborn.BaseComponentSystem;
-using Timberborn.EntitySystem;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
@@ -58,28 +56,18 @@ internal static class DeferredGoodStackModels
             typeof(BaseComponent).GetMethod("GetComponent")!.MakeGenericMethod(type)), typeof(object)), obj).Compile();
     }
     internal static bool Installed { get; private set; }
-    internal static Action<IReadOnlyList<EntityComponent>>? BeforeSnapshot = null;
     private static bool _production, _compatible;
     private static string _patchOwner = "";
     private static readonly List<MethodBase> Guarded = new();
     private static readonly Dictionary<Type, bool> ComponentSafety = new();
-    private static Type? MainType => AppDomain.CurrentDomain.GetAssemblies().Where(a => a != typeof(DeferredGoodStackModels).Assembly)
-        .Select(a => a.GetType(typeof(DeferredGoodStackModels).FullName!)).FirstOrDefault(t => t != null && (bool)(t.GetProperty("Installed", All)?.GetValue(null) ?? false));
-    private static bool Forward(string name, object argument)
-    {
-        var main = MainType;
-        if (main == null) return false;
-        main.GetField(nameof(BeforeSnapshot), All)!.SetValue(null, BeforeSnapshot);
-        main.GetMethod(name, All)!.Invoke(null, new[] { argument }); return true;
-    }
     internal static void Install(string patchOwner = "t3mp.test.lazy-good-stack", bool production = false)
     {
         var args = Environment.GetCommandLineArgs();
-        if (Installed || MainType != null) return;
+        if (Installed || LoadCompatibility.MainInstalled(typeof(DeferredGoodStackModels))) return;
         _production = production; _patchOwner = patchOwner;
         var lazy = production ? !args.Contains("-t3mpTestLazyGoodStackBaseline") : args.Contains("-t3mpTestLazyGoodStack");
         if (production && !Reviewed()) { Debug.Log("[T3MPLAZYSTACK] native fallback: unreviewed game modules"); return; }
-        if (!lazy && !args.Contains("-t3mpTestGoodStackExercise")) return;
+        if (!lazy) return;
         var factory = Find("Timberborn.GoodStackSystem.GoodStackModelFactory");
         var owner = Find("Timberborn.GoodStackSystem.GoodStack");
         _model = owner.GetField("_goodStackModel", All)!;
@@ -94,7 +82,6 @@ internal static class DeferredGoodStackModels
         var a = Expression.Parameter(typeof(object)); var b = Expression.Parameter(typeof(object));
         _create = Expression.Lambda<Action<object, object>>(Expression.Call(Expression.Convert(a, factory),
             factory.GetMethod("Create", All)!, Expression.Convert(b, owner)), a, b).Compile();
-        if (!lazy) return;
         var ht = Find("HarmonyLib.Harmony"); var hm = Find("HarmonyLib.HarmonyMethod");
         var harmony = Activator.CreateInstance(ht, patchOwner);
         var patch = ht.GetMethods().Single(m => m.Name == "Patch" && m.GetParameters().Length == 5);
@@ -165,7 +152,8 @@ internal static class DeferredGoodStackModels
                     LoadCompatibility.Unmodified(type.GetMethods(All | BindingFlags.DeclaredOnly).Where(m =>
                         m.Name == "Awake" || m.Name.Contains("Initialize") || m.Name.Contains("Model") ||
                         m.Name.Contains("Material") || m.Name.Contains("Bounds")), _patchOwner,
-                        (method, patchOwner) => patchOwner == "local.gpupathinginvestigation.benchmarkprobe" &&
+                        (method, patchOwner) => LoadCompatibility.ReviewedCacheObserver(method, patchOwner) ||
+                            patchOwner == "local.gpupathinginvestigation.benchmarkprobe" &&
                             method.DeclaringType?.FullName == "Timberborn.BlockObjectModelSystem.BlockObjectModelController" && method.Name == "UpdateModel");
                 ComponentSafety.Add(type, safe);
                 if (!safe) Debug.Log("[T3MPLAZYSTACK] native component fallback: " + type.FullName);
@@ -188,7 +176,6 @@ internal static class DeferredGoodStackModels
     }
     internal static void Report(string phase)
     {
-        if (Forward(nameof(Report), phase)) return;
         if (!Installed) return;
         Entries.RemoveAll(w => !w.TryGetTarget(out var e) || e.Done || !e.Owner);
         Debug.Log($"[T3MPLAZYSTACK] phase={phase} deferred={_deferred} created={_created} pending={Entries.Count} factoryFallback={_factoryFallback} visibilityCaptures={_captured} reasons={string.Join(",", Reasons.Select(p => p.Key + ":" + p.Value))}");
@@ -287,69 +274,4 @@ internal static class DeferredGoodStackModels
     }
     private static void NaturalVisibility(object __instance, bool visible)
     { Visit(((BaseComponent)__instance).GameObject, entry => { entry.HasEnabled = true; entry.Enabled = visible; _captured++; }); }
-
-    internal static void Exercise(IReadOnlyList<EntityComponent> entities)
-    {
-        if (Forward(nameof(Exercise), entities)) return;
-        if (!Environment.GetCommandLineArgs().Contains("-t3mpTestGoodStackExercise")) return;
-        var ownerType = _model.DeclaringType!;
-        var getOwner = ComponentGetter(ownerType);
-        var cutType = Find("Timberborn.Cutting.Cuttable"); var getCut = ComponentGetter(cutType);
-        var yielder = cutType.GetProperty("Yielder", All)!;
-        var yield = yielder.PropertyType.GetProperty("Yield", All)!;
-        var amount = yield.PropertyType.GetProperty("Amount", All)!;
-        var enable = ownerType.GetMethods(All).Single(m => m.Name == "EnableGoodStack" && m.GetParameters().Length == 1);
-        var toggle = Find("Timberborn.BlockObjectModelSystem.GameObjectExtensions").GetMethod("ToggleModelVisibility", All)!;
-        var query = Find("Timberborn.Rendering.EntityMaterials").GetMethod("GetChildMaterials", All)!;
-        var lightingType = Find("Timberborn.Rendering.MaterialLightingRenderers"); var getLighting = ComponentGetter(lightingType);
-        var collect = lightingType.GetMethod("CollectRenderers", All)!;
-        var completed = 0;
-        foreach (var entity in entities.OrderBy(e => e.EntityId))
-        {
-            var owner = (BaseComponent?)getOwner(entity);
-            var cut = (BaseComponent?)getCut(entity);
-            if (owner == null || cut == null || !owner || !cut || !_empty(_inventory(owner))) continue;
-            var goods = yield.GetValue(yielder.GetValue(cut))!;
-            if ((int)amount.GetValue(goods)! <= 0) continue;
-            var parent = (GameObject)_fullModel(_getBlockModel(owner));
-            // Real native post-load mutations before first use; replay must
-            // preserve the final shadow mode even through a both-false call.
-            toggle.Invoke(null, new object[] { parent, false, true });
-            toggle.Invoke(null, new object[] { parent, false, false });
-            toggle.Invoke(null, new object[] { parent, true, false });
-            switch (completed % 3)
-            {
-                case 0: enable.Invoke(owner, new[] { goods }); break;
-                case 1: query.Invoke(_getMaterials(owner), new object[] { parent.transform, new List<Material>() }); break;
-                case 2: collect.Invoke(getLighting(owner), null); break;
-            }
-            Debug.Log($"[T3MPSTACKEXERCISE] entity={entity.EntityId} route={completed % 3} goods={goods}");
-            if (++completed == 24) break;
-        }
-        if (completed != 24) throw new InvalidOperationException("Not enough GoodStack exercise fixtures");
-        Debug.Log("[T3MPSTACKEXERCISE] completed=24; native inventory enable/produce, material query, renderer cache; post-load copied-world diagnostic");
-        Report("after-exercise");
-    }
-
-    internal static void ValidateBeforeSnapshots(IReadOnlyList<EntityComponent> entities)
-    {
-        if (Forward(nameof(ValidateBeforeSnapshots), entities)) return;
-        if (!Environment.GetCommandLineArgs().Contains("-t3mpTestLazyGoodStackValidate")) return;
-        Report("before-validation");
-        BeforeSnapshot?.Invoke(entities);
-        var args = Environment.GetCommandLineArgs();
-        var directory = Path.GetDirectoryName(args[Array.IndexOf(args, "-logFile") + 1])!;
-        var selection = Path.Combine(directory, "selection-state.tsv");
-        if (File.Exists(selection)) File.Move(selection, Path.Combine(directory, "selection-lazy.tsv"));
-        var count = 0;
-        foreach (var reference in Entries.ToArray())
-            if (reference.TryGetTarget(out var entry) && !entry.Done && entry.Owner)
-            {
-                if (!_empty(_inventory(entry.Owner)) || (GameObject?)_root.GetValue(entry.Model))
-                    throw new InvalidOperationException("Pending model is nonempty or already initialized");
-                Ensure(entry, "validation"); count++;
-            }
-        Debug.Log("[T3MPLAZYSTACK] VALIDATE materialized=" + count + "; compare complete snapshots against native baseline; post-load work");
-        Report("after-validation");
-    }
 }

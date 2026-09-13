@@ -1,0 +1,304 @@
+{
+  "schema": 1,
+  "as_of": "2026-09-13",
+  "purpose": "Selected evidence needed for decisions; operation logs and superseded drafts are omitted.",
+  "save": {
+    "name": "n10c",
+    "sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4"
+  },
+  "playtest": {
+    "version": "1.2.1",
+    "sha256": "A32B9D93AE73FD58FA9B522E1087CE6B4B08600C73F50CBE3DF545F975A51CD6",
+    "mvid": "802f93a6-d651-4bda-822f-342d0e0d83f6",
+    "observation": "User reports no animation/display anomalies while playing.",
+    "automated_checks": "Both supported API builds; speed-controller and meter offline tests; code review.",
+    "limits": "No full current-DLL automated regression or performance comparison after speed-policy/Shift+O restoration."
+  },
+  "records": [
+    {
+      "id": "runtime-n10c-reference",
+      "status": "historical_reference_not_current_playtest",
+      "conditions": {
+        "game": "1.1.2.4",
+        "save": "n10c",
+        "candidate_sha256": "E2199B6EB29E998AE3557E124BF2136149F26DFC2F3504D99B58B31196A09FDC",
+        "driver_sha256": "9CCF308BA2047D836CA6C9BAA77734B6CF8DD229594E1421182CB330B4C7D046",
+        "order": "VBBV",
+        "requested_speed": 99,
+        "effective_time_scale": 40.2,
+        "rendered": true,
+        "resolution": [
+          2560,
+          1440
+        ],
+        "graphics": "D3D11",
+        "vsync": 0,
+        "frame_cap": -1,
+        "warmup_ticks": 256,
+        "measured_ticks_per_run": 2048
+      },
+      "runs": [
+        {
+          "arm": "V",
+          "seconds": 142.0201392,
+          "ticks_per_second": 14.420490020192856
+        },
+        {
+          "arm": "B",
+          "seconds": 103.0833146,
+          "ticks_per_second": 19.867424790781808
+        },
+        {
+          "arm": "B",
+          "seconds": 104.26551329999998,
+          "ticks_per_second": 19.642161009722862
+        },
+        {
+          "arm": "V",
+          "seconds": 144.0378571,
+          "ticks_per_second": 14.218484232087343
+        }
+      ],
+      "pooled": {
+        "V": {
+          "ticks": 4096,
+          "seconds": 286.0579963,
+          "ticks_per_second": 14.318774699464676
+        },
+        "B": {
+          "ticks": 4096,
+          "seconds": 207.34882789999997,
+          "ticks_per_second": 19.754150729877363
+        }
+      },
+      "ratio": 1.3795978458000246,
+      "limits": "Low external load sampled, not zero-load proof. Below 1 FPS; not normal-play FPS gain. E219 precedes the current speed policy.",
+      "source": {
+        "sha256": "4e9e5f2dc6b408ef39d5fac5956e0f3a4a6710035d8fdb351c8051d74cd8f5ca",
+        "source_name": "docs/measurements/isolated-runtime-ab-2026-09-13.json"
+      }
+    },
+    {
+      "id": "legacy-n10c-reference",
+      "status": "historical_not_matched_to_current_build",
+      "native_tps": 17.95,
+      "t3mp_tps": 27.2,
+      "conditions": "Recorded 2026-07-03, rendered throughput ceiling; different version/run from current benchmarks.",
+      "source_name": "docs/optimization-attribution.md"
+    },
+    {
+      "id": "load-steam-1124",
+      "status": "historical_feature_validation",
+      "conditions": "n10c; same candidate; A disables Steam compatibility mapping, B enables it; BAAB; hidden window.",
+      "scene_seconds_BAAB": [
+        29.718,
+        65.416,
+        80.87,
+        29.919
+      ],
+      "loadall_cpu_seconds_A_mean": 54.484,
+      "loadall_cpu_seconds_B_mean": 24.398,
+      "limits": "A is compatibility fallback, not a clean no-MOD baseline. Do not discard slow A2 or mix CPU and elapsed seconds.",
+      "source": {
+        "sha256": "72cd046463886d9d1de417858c26399022103de22a5b6975c62a3d1d218d8522",
+        "source_name": "docs/measurements/load-steam-1124-timing.json"
+      }
+    },
+    {
+      "id": "tick-index",
+      "status": "removed",
+      "ratio_without_over_with": 1.000857,
+      "adjacent_ratios": [
+        1.010158,
+        0.991501
+      ],
+      "conditions": "n10c/1.1.2.4, Frontier on, BKKB, 256 warmup + 2048 measured ticks; no consistent incremental benefit.",
+      "source_name": "docs/tick-attribution-2026-09-13.md"
+    },
+    {
+      "id": "frontier-positions",
+      "status": "hold",
+      "ratio": 1.010649,
+      "adjacent_ratios": [
+        0.970989,
+        1.051719
+      ],
+      "conditions": "7B baseline versus position-index candidate, n10c/1.1.2.4, PQQP.",
+      "limits": "External Python workers began during the run; not accepted speedup evidence.",
+      "source": {
+        "sha256": "38b8db3d0d9dc8f6d35e338260f9d1dd5197558ed62f6858df1b96c12b4ab3db",
+        "source_name": "docs/measurements/frontier-positions-current-retest-2026-09-13.json"
+      }
+    },
+    {
+      "id": "road-cache",
+      "status": "hold",
+      "same_observer_ratio_R_over_C": 1.019804,
+      "product_adjacent_ratios_R_over_B": [
+        1.049393,
+        0.999822
+      ],
+      "conditions": "E219, n10c/1.1.2.4, BCRRCB; base product, observer-only, observer+cache.",
+      "limits": "Product baseline drift about 5.31%; live construction/deletion invalidation and foreign patch compatibility incomplete.",
+      "source": {
+        "sha256": "b19ed82b1a55e5b37b3605df753bdcbf7ca2cba2f46a809b89e6aad0a9cbc07c",
+        "source_name": "docs/measurements/road-cache-repetition-2026-09-13.json"
+      }
+    },
+    {
+      "id": "movement-magnitude",
+      "status": "not_adopted",
+      "ratio": 1.000788,
+      "conditions": "n10c/1.1.2.4, BMMB after native-method equivalence checks.",
+      "limits": "No useful measured gain; cannot multiply this ratio into another benchmark.",
+      "source": {
+        "sha256": "4d580e6cc33b502162a552c8d48950aefc06178684d757d68a2405d9982ec532",
+        "source_name": "docs/measurements/movement-math-2026-09-13.json"
+      }
+    },
+    {
+      "id": "unity-bool",
+      "status": "not_adopted",
+      "ratio": 1.003762,
+      "adjacent_ratios": [
+        1.007682,
+        0.999882
+      ],
+      "conditions": "Copied game CoreModule, n10c/1.1.2.4, BOOB.",
+      "limits": "Unstable small gain; distinct from T4MP results and not a Workshop deployment technique.",
+      "source": {
+        "sha256": "03b98e2e923e6a1f388262f2a02ea086befeb29ccfa3f46744e0874a4e0bc1fa",
+        "source_name": "docs/measurements/offline-unity-bool-2026-09-13.json"
+      }
+    },
+    {
+      "id": "haul-sort",
+      "status": "not_adopted",
+      "observation_seconds": 64.184303,
+      "sort_calls": 2602,
+      "sort_milliseconds": 46.1634,
+      "reusable_sort_milliseconds": 4.8723,
+      "conditions": "E219, n10c/1.1.2.4; observer leaves native sort running.",
+      "limits": "Instrumented local timing with external load; parent inclusive cost is not removable sort cost.",
+      "source": {
+        "sha256": "b40877d0104ae9a7e2e589d2dbd0a31302b4aba162e6c18b3c819da097231c00",
+        "source_name": "docs/measurements/haul-sort-feasibility-2026-09-13.json"
+      }
+    },
+    {
+      "id": "harvest-profile",
+      "status": "low_priority",
+      "observation_seconds": 64.754989,
+      "inclusive_ms": {
+        "FindLivingYielderWithoutAccessible": 940.5254,
+        "FindYielderWithAccessible": 0,
+        "PlantingSpotFinder.FindClosest": 542.4432,
+        "InRangeYielders.GetYielders": 185.4441
+      },
+      "conditions": "0F3546 candidate, n10c/1.1.2.4, instrumented search profile.",
+      "limits": "Inclusive timing and probe overhead; not exclusive additive savings or whole-game speedup.",
+      "source": {
+        "sha256": "86170707dd6f4f6c7cc9e96065b9090a5c0ed86c4c3e60698938a0a897c546bf",
+        "source_name": "docs/measurements/harvest-search-profile-2026-09-13.json"
+      }
+    },
+    {
+      "id": "prepared-visuals-owner-exemption",
+      "status": "rejected",
+      "selection_ray_differences": 32,
+      "conditions": "Expanded Frontier self-owner exemption; GoodStack-only exemption retained.",
+      "limits": "Partial CPU savings do not establish whole-load gain.",
+      "source": {
+        "sha256": "82469a266085c39992f0a91ff73aa0c83e15700017be16ef5900bd2d09f63930",
+        "source_name": "docs/measurements/load-frontier-good-stack-2026-09-12.json"
+      }
+    },
+    {
+      "id": "good-stack-first-use",
+      "status": "scoped_pass",
+      "first_use_cases": 24,
+      "conditions": "3 first-use routes, 8 cases each; compare native factory result, models and selection.",
+      "limits": "Scope-limited earlier-candidate test, not complete current-build regression.",
+      "source": {
+        "sha256": "e852bcba8ff5eb48283a0a6c306bef4754865cf0471672385cfbb4c0199e9b3c",
+        "source_name": "docs/measurements/good-stack-first-use-2026-09-13.json"
+      }
+    },
+    {
+      "id": "water-upload",
+      "status": "reproduced_and_fixed",
+      "conditions": "Native upload between optimized calls after Harmony patch-chain regeneration left stale GPU history; discard history on regeneration.",
+      "limits": "Selected texture types/layers and supported D3D11 builds; not all external texture writes.",
+      "source": {
+        "sha256": "b372d8f7a72f7018f82bee7f497919a20ca092c4b2f84e77c7f136af06e9d81d",
+        "source_name": "docs/measurements/runtime-correctness-2026-09-13.json"
+      }
+    },
+    {
+      "id": "tube-lights",
+      "status": "scoped_pass",
+      "conditions": "Vanilla-only lingering-light reproduction; 7B product smoke 45 seconds per supported version, four positive-tube-count samples each.",
+      "results": "No sampled stuck-light, visitor/renderer mismatch or monitor errors.",
+      "limits": "Separate from animation skipping; short smoke is not long-run coverage.",
+      "source": {
+        "sha256": "0bb8dae3c3423018ca16b77cd98860a457e4f058643817c5d27b0194f317f7f7",
+        "source_name": "docs/measurements/frontier-diagnostics-cleanup-2026-09-13.json"
+      },
+      "vanilla_log": "testlogs/tubelight-20260912-184200.log"
+    },
+    {
+      "id": "stairs",
+      "status": "scoped_pass",
+      "conditions": "E219 plus Hooman Stairs 2.0.2 versus Hooman alone; 1.1.2.4/n10c and 1.0.13.1/m7c. Completed buckets joined before snapshots at 0,64,after deletion64,128.",
+      "matched_graph_and_order_pairs": 16,
+      "limits": "Not placement visuals, all stair MODs, or VerticalNavMesh binary coverage.",
+      "source": {
+        "sha256": "29858439e2b4260d359785b759ee76ce7997db61108686bbc010388a785f6ebf",
+        "source_name": "docs/measurements/stairs-completed-boundary-2026-09-13.json"
+      }
+    },
+    {
+      "id": "flood-reload",
+      "status": "scoped_pass",
+      "conditions": "BD247 candidate; six trees; two flood/drain cycles; wet/dry saved-state reload comparisons.",
+      "limits": "Earlier candidate and limited objects; 1.0 status registration occurs at first water tick. Does not identify every historical visual report.",
+      "source": {
+        "sha256": "f6ec99e8743ecfcfa04f8aa21ec977fa944e8c9a2e63eb747fc19b366be0eabc",
+        "source_name": "docs/measurements/flood-persistence-2026-09-13.json"
+      },
+      "v10_source": {
+        "sha256": "cd196d01d4024dfdee8487e0617474348af81cc1b7e9bad9e93c31f5078695eb",
+        "source_name": "docs/measurements/v10-same-binary-flood-2026-09-13.json"
+      }
+    },
+    {
+      "id": "startup-gate",
+      "status": "scoped_pass",
+      "candidate_sha256": "E2199B6EB29E998AE3557E124BF2136149F26DFC2F3504D99B58B31196A09FDC",
+      "scenarios": 6,
+      "conditions": "LaunchArgs, MenuLoad, NewGame on 1.0.13.1 and 1.1.2.4; same frozen DLL.",
+      "limits": "E219-era package/startup gate; not current A32 acceptance, performance or all regression cases.",
+      "source": {
+        "sha256": "b986764ff2e9c8da6c4559abc28f5bb425e663a028cbac51450ac06122361f4f",
+        "source_name": "docs/measurements/release-gate-2026-09-13.json"
+      }
+    },
+    {
+      "id": "legacy-ui-audit",
+      "status": "static_defects_found",
+      "conditions": "Actual old v1.1.7 package and both native versions inspected.",
+      "findings": [
+        "Repeated dirty rebuild may never reach stair mesh",
+        "Preview node snapshot mixed with later live entrance/graph state",
+        "Global model-update deferral changes native order",
+        "FlowField replacement is shared with movement"
+      ],
+      "limits": "Specific reported play scene and causation not reproduced. These old implementations are absent from current product.",
+      "source": {
+        "sha256": "71dda74987c9f1ca492006061c2303a3050e00be580ba2e681fa98aa326735a3",
+        "source_name": "docs/measurements/ui-option-static-audit-2026-09-13.json"
+      }
+    }
+  ],
+  "source_identification": "source_name and source hashes identify the measurement summarized in each record; they are provenance labels, not file links."
+}

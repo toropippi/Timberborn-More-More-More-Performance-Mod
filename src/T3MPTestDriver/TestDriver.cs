@@ -30,8 +30,14 @@ public sealed class TestDriverModStarter : IModStarter
     public void StartMod(IModEnvironment modEnvironment)
     {
         Debug.Log("[T3MPTEST] Test driver loaded. " + TestArguments.Describe());
+        ReleaseIdentity.ReportIfRequested();
         FullTickCounter.Install();
+        if (EventDelegateValidation.Requested) EventDelegateValidation.Run();
+        if (WaterUploadValidation.Requested) WaterUploadValidation.Run();
+        RoadReachabilityExperiment.Install();
+        BoolInliningExperiment.Install();
         TickProfiler.Install();
+        SearchProfiler.Install();
         if (TestArguments.LoadRoutingRequested) LoadRoutingTestDriver.Configure();
     }
 }
@@ -244,6 +250,15 @@ public sealed class GameTestDriver : IPostLoadableSingleton
 
     public void PostLoad()
     {
+        if (StairsCompatibilityProbe.Requested)
+        {
+            new GameObject("T3MPTEST.Stairs").AddComponent<StairsCompatibilityProbe>().Initialize(_container, _speedManager);
+            return;
+        }
+        if (WorldReloadProbe.Requested)
+            new GameObject("T3MPTEST.WorldReload").AddComponent<WorldReloadProbe>().Initialize(_container, _speedManager);
+        if (FloodRegression.Requested)
+            new GameObject("T3MPTEST.FloodRegression").AddComponent<FloodRegression>().Initialize(_entityRegistry, _container, _speedManager);
         // Start observers before scenario handling so the tube flag also works
         // alone, without unpausing or changing the game speed.
         if (ModelGapMonitor.Requested && !TestArguments.LoadRoutingRequested &&
@@ -269,7 +284,11 @@ public sealed class GameTestDriver : IPostLoadableSingleton
         var speed = TestArguments.Speed ?? 1f;
         Debug.Log("[T3MPTEST] Game scene loaded OK. Unpausing (speed " + speed + ").");
         _speedManager.ChangeSpeed(speed);
-        if (TestArguments.Speed != null)
+        if (FixedTickBenchmark.Requested)
+        {
+            new GameObject("T3MPTEST.FixedTickBenchmark").AddComponent<FixedTickBenchmark>().Initialize(_speedManager);
+        }
+        else if (TestArguments.Speed != null)
         {
             new GameObject("T3MPTEST.SimulationRate").AddComponent<SimulationRateLogger>();
         }
@@ -281,29 +300,32 @@ public sealed class GameTestDriver : IPostLoadableSingleton
 public sealed class SimulationRateLogger : MonoBehaviour
 {
     private const float WindowSeconds = 20f;
-    private float _windowStart;
+    private double _windowStart;
     private long _windowTicks;
-    private float _totalStart;
+    private double _totalStart;
     private long _totalTicks;
     private int _windows;
 
     private void Start()
     {
-        _windowStart = _totalStart = Time.realtimeSinceStartup;
+        SearchProfiler.Begin();
+        _windowStart = _totalStart = Time.realtimeSinceStartupAsDouble;
         _windowTicks = _totalTicks = FullTickCounter.FullTicks;
     }
 
+    private void OnDestroy() => SearchProfiler.End();
+
     private void Update()
     {
-        var now = Time.realtimeSinceStartup;
+        var now = Time.realtimeSinceStartupAsDouble;
         if (now - _windowStart < WindowSeconds) return;
         var ticks = FullTickCounter.FullTicks;
         var rate = (ticks - _windowTicks) / (now - _windowStart);
         var total = (ticks - _totalTicks) / (now - _totalStart);
         _windows++;
         Debug.Log(string.Format(System.Globalization.CultureInfo.InvariantCulture,
-            "[T3MPTEST] Simulation rate {0:F2} ticks/s window={1} ticks={2} timeScale={3:F2} cumulative={4:F2} ticks/s",
-            rate, _windows, ticks - _windowTicks, Time.timeScale, total));
+            "[T3MPTEST] Simulation rate {0:F2} ticks/s window={1} ticks={2} timeScale={3:F2} cumulative={4:F2} ticks/s elapsed={5:F6}",
+            rate, _windows, ticks - _windowTicks, Time.timeScale, total, now - _windowStart));
         try
         {
             var water = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.WaterTextureUpload")).FirstOrDefault(t => t != null);
@@ -317,8 +339,8 @@ public sealed class SimulationRateLogger : MonoBehaviour
             if (frontier != null)
             {
                 const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
-                Debug.Log("[T3MPTEST] frontier sweeps=" + frontier.GetField("Sweeps", all)!.GetValue(null) + " visited=" + frontier.GetField("Visited", all)!.GetValue(null) +
-                          " skipped=" + frontier.GetField("Skipped", all)!.GetValue(null));
+                var compared = frontier.GetField("PositionComparisons", all);
+                if (compared != null) Debug.Log("[T3MPTEST] Frontier positions compared=" + compared.GetValue(null));
             }
             var tube = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.TubeVisitFix")).FirstOrDefault(t => t != null);
             if (tube != null)
@@ -328,7 +350,10 @@ public sealed class SimulationRateLogger : MonoBehaviour
             }
         }
         catch (Exception) { /* diagnostics only */ }
-        TickProfiler.Report(now - _windowStart);
+        TickProfiler.Report((float)(now - _windowStart));
+        SearchProfiler.Report(now - _windowStart);
+        RoadReachabilityExperiment.Report();
+        BoolInliningExperiment.Report();
         _windowStart = now;
         _windowTicks = ticks;
     }

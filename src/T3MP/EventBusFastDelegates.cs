@@ -1,122 +1,107 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
+using System.Reflection.Emit;
 using T3MP.Loading;
 using Debug = UnityEngine.Debug;
 
 namespace T3MP.Runtime;
 
-/// <summary>
-/// Replaces the closure EventBus.RegisterMethod builds for every [OnEvent]
-/// handler. Vanilla registers
-///     e => method.Invoke(subscriber, new object[1] { e })
-/// so every event delivery pays a reflection invoke plus an object[]
-/// allocation. This registers a compiled delegate instead:
-///     Action&lt;T&gt; typed = Delegate.CreateDelegate(...);
-///     e => { if (e is T a) { try { typed(a); } catch (x) { throw new TargetInvocationException(x); } } else method.Invoke(subscriber, new[] { e }); }
-/// Semantics are identical: same handler, same subscriber, same registration
-/// order (the same SubscriptionRegistry.Add call), same validation exceptions
-/// (replicated verbatim), handler exceptions wrapped in TargetInvocationException
-/// exactly like MethodInfo.Invoke, and an argument of another type keeps the
-/// reflective call and its binder exception. Shapes CreateDelegate cannot bind
-/// fall back to the vanilla registration.
-/// </summary>
+// Preserve RegisterMethod's native validation, closure and registry call.
+// Only substitute the resulting Action<object> before native registration.
+// A changed transpiler stream keeps all of its original instructions.
 internal static class EventBusFastDelegates
 {
     private const string Owner = "t3mp.runtime.events";
-    private static bool _initialized;
-    private static bool _disabled;
+    private const string ReviewedRegisterBody = "0BAEB08D685FB927EE904C5842CCF2B9E107AED986A9DF3014B380F428BBA44C";
+    private static bool _registered, _rewritten, _passThroughReported;
     private static int _warnCount;
-    private static FieldInfo? _subscriptionsField;
-    private static MethodInfo? _registryAddMethod;
-    private static MethodInfo? _createWrapperDefinition;
-    internal static bool Installed { get; private set; }
+    private static RuntimePatches.Shape? _shape;
+    private static readonly MethodInfo WrapperFactory = typeof(EventBusFastDelegates)
+        .GetMethod(nameof(CreateWrapper), BindingFlags.Public | BindingFlags.Static)!;
+
+    // Harmony may regenerate this stream after another mod patches/unpatches.
+    // Report the current rewrite state, not just that a patch was registered.
+    internal static bool Installed => _registered && _rewritten;
 
     internal static void Install(Type harmonyType, Type harmonyMethodType, MethodInfo patch)
     {
-        if (Installed) return;
-        var bus = typeof(Timberborn.SingletonSystem.EventBus);
-        var register = bus.GetMethod("RegisterMethod", RuntimePatches.All | BindingFlags.DeclaredOnly, null,
-            new[] { typeof(object), typeof(MethodInfo) }, null);
-        if (register == null)
+        if (_registered) return;
+        _registered = RuntimePatches.TryInstall(Owner, harmonyType, harmonyMethodType, patch, apply =>
         {
-            Debug.LogWarning("[T3MP] EventBus fast delegates: RegisterMethod not found; vanilla retained.");
-            return;
-        }
-        // Raw-IL SHA256 of the reviewed vanilla body (same on 1.0.13.1, 1.1.2.0 and 1.1.2.4).
-        if (!RuntimePatches.ReviewedBody(register, "0BAEB08D685FB927EE904C5842CCF2B9E107AED986A9DF3014B380F428BBA44C"))
-        {
-            Debug.LogWarning("[T3MP] EventBus fast delegates: RegisterMethod is not a reviewed build; vanilla retained.");
-            return;
-        }
-        Installed = RuntimePatches.TryInstall(Owner, harmonyType, harmonyMethodType, patch,
-            apply => apply(register, nameof(Prefix), null, null, null), typeof(EventBusFastDelegates));
+            var bus = typeof(Timberborn.SingletonSystem.EventBus);
+            var register = bus.GetMethod("RegisterMethod", RuntimePatches.All | BindingFlags.DeclaredOnly, null,
+                new[] { typeof(object), typeof(MethodInfo) }, null)
+                ?? throw new MissingMethodException(bus.FullName, "RegisterMethod");
+            // Identical reviewed raw IL on 1.0.13.1, 1.1.2.0 and 1.1.2.4.
+            if (!RuntimePatches.ReviewedBody(register, ReviewedRegisterBody) ||
+                register.GetMethodBody()!.ExceptionHandlingClauses.Count != 0)
+                throw new InvalidOperationException("EventBus.RegisterMethod is not a reviewed build");
+            _shape = RuntimePatches.OriginalShape(harmonyType, register);
+            apply(register, null, null, nameof(Rewrite), null);
+        }, typeof(EventBusFastDelegates));
         if (Installed) Debug.Log("[T3MP] EventBus fast delegates installed.");
     }
 
-    private static bool Prefix(object __instance, object subscriber, MethodInfo method) =>
-        TryRegisterMethod(__instance, subscriber, method);
-
-    // Returns true when the vanilla registration must run.
-    internal static bool TryRegisterMethod(object busInstance, object subscriber, MethodInfo method)
+    private static IEnumerable<T> Rewrite<T>(IEnumerable<T> instructions)
     {
-        if (_disabled || subscriber is null || method is null) return true;
-        if (!_initialized)
+        var list = new List<T>(instructions);
+        _rewritten = false;
+        if (_shape == null || !RuntimePatches.SameShape(_shape, RuntimePatches.DescribeShape(list)))
+            return PassThrough(list);
+        var opcode = typeof(T).GetField("opcode", RuntimePatches.All)!;
+        var operand = typeof(T).GetField("operand", RuntimePatches.All)!;
+        var actionConstructors = new List<int>();
+        for (var i = 0; i < list.Count; i++)
         {
-            try { Initialize(busInstance.GetType()); }
-            catch (Exception exception) { Disable("EventBus inspection failed: " + exception.GetBaseException().Message); }
-            if (_disabled) return true;
+            if ((OpCode)opcode.GetValue(list[i])! == OpCodes.Newobj &&
+                operand.GetValue(list[i]) is ConstructorInfo constructor && constructor.DeclaringType == typeof(Action<object>))
+                actionConstructors.Add(i);
         }
+        if (actionConstructors.Count != 1) return PassThrough(list);
+        // The existing delegate is already on the stack. Keep every original
+        // instruction, label and exception marker at its original instruction.
+        var index = actionConstructors[0] + 1;
+        var replacement = typeof(EventBusFastDelegates).GetMethod(nameof(PreferTyped), RuntimePatches.All)!;
+        T Instruction(OpCode code, object? value = null) => (T)Activator.CreateInstance(typeof(T), code, value)!;
+        list.InsertRange(index, new[] { Instruction(OpCodes.Ldarg_1), Instruction(OpCodes.Ldarg_2), Instruction(OpCodes.Call, replacement) });
+        _rewritten = true;
+        return list;
+    }
 
-        // Replicate the vanilla validations verbatim so invalid subscribers
-        // fail with the exact same exceptions.
-        if (method.ReturnType != typeof(void))
+    private static IEnumerable<T> PassThrough<T>(List<T> instructions)
+    {
+        if (!_passThroughReported)
         {
-            throw new ArgumentException($"Can't register {method} of {subscriber.GetType()}. " + "Listening methods must return void.");
+            _passThroughReported = true;
+            Debug.Log("[T3MP] EventBus fast delegates: RegisterMethod instructions changed; retaining the supplied registration body.");
         }
+        return instructions;
+    }
 
-        ParameterInfo[] parameters = method.GetParameters();
-        if (parameters.Length != 1)
-        {
-            throw new ArgumentException($"Can't register {method} of {subscriber.GetType()}. " + "Listening methods must have exactly one parameter.");
-        }
-
-        var parameterType = parameters[0].ParameterType;
+    internal static Action<object> PreferTyped(Action<object> original, object subscriber, MethodInfo method)
+    {
+        // These binding shapes can only arrive through nonstandard direct
+        // RegisterMethod calls. Keep the native delegate and its own errors.
+        if (subscriber is null) return original;
+        var parameterType = method.GetParameters()[0].ParameterType;
         if (method.ContainsGenericParameters || method.IsStatic || parameterType.IsByRef || parameterType.IsPointer)
-        {
-            return true;
-        }
-
+            return original;
         Action<object> wrapper;
         try
         {
-            wrapper = (Action<object>)_createWrapperDefinition!
-                .MakeGenericMethod(parameterType)
+            wrapper = (Action<object>)WrapperFactory.MakeGenericMethod(parameterType)
                 .Invoke(null, new object[] { subscriber, method })!;
         }
         catch (Exception exception)
         {
             if (_warnCount++ < 3)
-            {
-                Debug.LogWarning($"[T3MP] EventBus fast delegate fallback for {subscriber.GetType().Name}.{method.Name}: {exception.GetBaseException().GetType().Name}");
-            }
-            return true;
+                Debug.LogWarning("[T3MP] EventBus fast delegate binding kept native: " + exception.GetBaseException().GetType().Name);
+            return original;
         }
-
-        try
-        {
-            LoadEventRouter.RememberHandler(wrapper, subscriber, method);
-            var registry = _subscriptionsField!.GetValue(busInstance);
-            _registryAddMethod!.Invoke(registry, new[] { (object)parameterType, subscriber, wrapper });
-        }
-        catch (TargetInvocationException invocationException) when (invocationException.InnerException is not null)
-        {
-            // SubscriptionRegistry.Add throws (duplicate subscriber): rethrow
-            // the raw exception exactly like the vanilla direct call would.
-            System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(invocationException.InnerException).Throw();
-            throw invocationException.InnerException;
-        }
-
-        return false;
+        // Keep callback failure behavior; no partial registration has occurred.
+        LoadEventRouter.RememberHandler(wrapper, subscriber, method);
+        return wrapper;
     }
 
     public static Action<object> CreateWrapper<T>(object subscriber, MethodInfo method)
@@ -126,49 +111,15 @@ internal static class EventBusFastDelegates
         {
             if (eventObject is T argument)
             {
-                try
-                {
-                    typed(argument);
-                }
-                catch (Exception exception)
-                {
-                    // MethodInfo.Invoke wraps handler exceptions; keep that shape.
-                    throw new TargetInvocationException(exception);
-                }
+                try { typed(argument); }
+                catch (Exception exception) { throw new TargetInvocationException(exception); }
             }
             else
             {
+                // Preserve reflection's null, binder and value-type conversion
+                // semantics for an event outside the strongly typed branch.
                 method.Invoke(subscriber, new[] { eventObject });
             }
         };
-    }
-
-    private static void Initialize(Type eventBusType)
-    {
-        _initialized = true;
-        const BindingFlags instanceFlags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-        _subscriptionsField = eventBusType.GetField("_subscriptions", instanceFlags);
-        _registryAddMethod = _subscriptionsField?.FieldType.GetMethod("Add", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-        _createWrapperDefinition = typeof(EventBusFastDelegates).GetMethod(nameof(CreateWrapper), BindingFlags.Static | BindingFlags.Public);
-        if (_subscriptionsField is null || _registryAddMethod is null || _createWrapperDefinition is null)
-        {
-            Disable("EventBus internals were not found.");
-            return;
-        }
-
-        var addParameters = _registryAddMethod.GetParameters();
-        if (addParameters.Length != 3 ||
-            addParameters[0].ParameterType != typeof(Type) ||
-            addParameters[1].ParameterType != typeof(object) ||
-            addParameters[2].ParameterType != typeof(Action<object>))
-        {
-            Disable("SubscriptionRegistry.Add had an unexpected signature.");
-        }
-    }
-
-    private static void Disable(string reason)
-    {
-        _disabled = true;
-        Debug.LogWarning($"[T3MP] EventBus fast delegates disabled: {reason}");
     }
 }

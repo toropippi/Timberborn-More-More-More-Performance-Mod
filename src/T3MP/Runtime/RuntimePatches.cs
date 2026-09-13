@@ -21,18 +21,18 @@ internal static class RuntimePatches
     {
         if (_installed) return;
         _installed = true;
-        if (!ModSettings.EnableRuntimePatches)
-        {
-            Debug.Log("[T3MP] Runtime patches skipped (-t3mpTestRuntimeBaseline).");
-            return;
-        }
         try
         {
             var harmonyType = LoadPatchBridge.Find("HarmonyLib.Harmony");
             var harmonyMethodType = LoadPatchBridge.Find("HarmonyLib.HarmonyMethod");
             var patch = harmonyType.GetMethods().Single(m => m.Name == "Patch" && m.GetParameters().Length == 5);
+            RequestedSpeedPolicy.Install(harmonyType, harmonyMethodType, patch);
+            if (!ModSettings.EnableRuntimePatches)
+            {
+                Debug.Log("[T3MP] Runtime optimizations skipped (-t3mpTestRuntimeBaseline); requested speed policy retained.");
+                return;
+            }
             if (ModSettings.EnableEventBusFastDelegates) EventBusFastDelegates.Install(harmonyType, harmonyMethodType, patch);
-            if (ModSettings.EnableTickEntityFast) TickEntityFast.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableWaterTextureUpload) WaterTextureUpload.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableTickFrontier) TickFrontier.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableTubeVisitFix) TubeVisitFix.Install(harmonyType, harmonyMethodType, patch);

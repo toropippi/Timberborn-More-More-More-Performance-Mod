@@ -20,6 +20,8 @@ param(
     [string] $OutputDir = '',
     [int] $LoadTimeoutSeconds = 180,
     [int] $SecondsAfterLoad = 0,
+    # Optional dev-driver completion marker. SecondsAfterLoad becomes a timeout.
+    [string] $CompletionPattern = '',
     [switch] $UseSteamLaunchOptions,
     [switch] $AutoConfirmMods,
     [switch] $SkipModManager,
@@ -49,6 +51,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ($UseSteamLaunchOptions -and $StopAfter) {
+    throw 'StopAfter requires a directly launched game process; use direct launch to establish ownership.'
+}
 
 $shouldAutoResumeAfterLoad = $false
 
@@ -317,11 +323,14 @@ Write-Host "  settlement: $SettlementName"
 Write-Host "  save:       $SaveName"
 Write-Host "  args:       $(if ($UseSteamLaunchOptions) { '<Steam launch options>' } else { $arguments })"
 
-$process = if ($UseSteamLaunchOptions) {
-    Start-Process -FilePath $SteamExe -WorkingDirectory (Split-Path -Parent $SteamExe) -ArgumentList "-applaunch $SteamAppId" -PassThru
-} else {
-    Start-Process -FilePath $TimberbornExe -WorkingDirectory (Split-Path -Parent $TimberbornExe) -ArgumentList $arguments -PassThru
-}
+$process = $null
+$observationStarted = $null
+$observationEnded = $null
+$observationCompleted = $false
+$completionMatched = $false
+$probeFailure = $null
+$finalizationFailures = [Collections.Generic.List[string]]::new()
+$logCaptured = $false
 $deadline = (Get-Date).AddSeconds($LoadTimeoutSeconds)
 $processGraceDeadline = (Get-Date).AddSeconds(20)
 $sawLoading = $false
@@ -352,7 +361,7 @@ function Update-ProbeStateFromLines([string[]] $Lines) {
     $exceptionMatches = @($Lines | Where-Object {
         $_ -match 'First uncaught exception' -or
         $_ -match '^Rethrow as Exception:' -or
-        $_ -match 'InvalidOperationException'
+        $_ -match 'InvalidOperationException|^\s*(?:[\w]+\.)*[\w]*Exception\s*:'
     })
     if ($exceptionMatches.Count -gt 0) {
         $script:sawException = $true
@@ -360,86 +369,137 @@ function Update-ProbeStateFromLines([string[]] $Lines) {
     }
 }
 
-while ((Get-Date) -lt $deadline) {
-    $running = Get-TimberbornProcesses
-    if (-not $running) {
-        if ((Get-Date) -gt $processGraceDeadline) {
-            Write-Host "Timberborn process exited before load completion."
-            break
+try {
+    $process = if ($UseSteamLaunchOptions) {
+        Start-Process -FilePath $SteamExe -WorkingDirectory (Split-Path -Parent $SteamExe) -ArgumentList "-applaunch $SteamAppId" -PassThru
+    } else {
+        Start-Process -FilePath $TimberbornExe -WorkingDirectory (Split-Path -Parent $TimberbornExe) -ArgumentList $arguments -PassThru
+    }
+    while ((Get-Date) -lt $deadline) {
+        $running = Get-TimberbornProcesses
+        if (-not $running) {
+            if ((Get-Date) -gt $processGraceDeadline) {
+                Write-Host "Timberborn process exited before load completion."
+                break
+            }
+
+            Start-Sleep -Seconds 1
+            continue
         }
 
-        Start-Sleep -Seconds 1
-        continue
+        if (Test-Path -LiteralPath $PlayerLog) {
+            $tail = Get-Content -LiteralPath $PlayerLog -Tail 160 -ErrorAction SilentlyContinue
+            Update-ProbeStateFromLines @($tail)
+
+            if ($sawLoadTime) {
+                break
+            }
+        }
+
+        if ($AutoConfirmMods -and
+            -not $sawLoading -and
+            $autoConfirmClicks -lt $AutoConfirmMaxClicks -and
+            ((Get-Date) - $startedAt).TotalSeconds -ge $AutoConfirmStartSeconds -and
+            ((Get-Date) - $lastAutoConfirm).TotalSeconds -ge $AutoConfirmIntervalSeconds)
+        {
+            if (Invoke-TimberbornBottomOkClick) {
+                $autoConfirmClicks++
+                $lastAutoConfirm = Get-Date
+                Write-Host "Auto-confirm click sent: $autoConfirmClicks"
+            }
+        }
+
+        Start-Sleep -Seconds 2
     }
 
-    if (Test-Path -LiteralPath $PlayerLog) {
-        $tail = Get-Content -LiteralPath $PlayerLog -Tail 160 -ErrorAction SilentlyContinue
-        Update-ProbeStateFromLines @($tail)
+    if ($AutoResumeAfterLoad -or (-not $SkipAutoResumeAfterLoad)) {
+        Write-Host "Auto-resume key press skipped. Speed is controlled by the deployed mod build."
+    }
 
-        if ($sawLoadTime) {
-            break
+    if ($ForceOptimizedAfterLoad -and (Get-TimberbornProcesses)) {
+        if (Invoke-TimberbornCtrlShiftKeyPress 0x4F) {
+            Write-Host "Forced Optimized hotkey sent."
         }
     }
 
-    if ($AutoConfirmMods -and
-        -not $sawLoading -and
-        $autoConfirmClicks -lt $AutoConfirmMaxClicks -and
-        ((Get-Date) - $startedAt).TotalSeconds -ge $AutoConfirmStartSeconds -and
-        ((Get-Date) - $lastAutoConfirm).TotalSeconds -ge $AutoConfirmIntervalSeconds)
-    {
-        if (Invoke-TimberbornBottomOkClick) {
-            $autoConfirmClicks++
-            $lastAutoConfirm = Get-Date
-            Write-Host "Auto-confirm click sent: $autoConfirmClicks"
+    if ($PressUltraAfterLoad -and (Get-TimberbornProcesses)) {
+        if (Invoke-TimberbornKeyPress 0x34) {
+            Write-Host "Ultra speed key 4 sent."
         }
     }
 
-    Start-Sleep -Seconds 2
-}
-
-if ($AutoResumeAfterLoad -or (-not $SkipAutoResumeAfterLoad)) {
-    Write-Host "Auto-resume key press skipped. Speed is controlled by the deployed mod build."
-}
-
-if ($ForceOptimizedAfterLoad -and (Get-TimberbornProcesses)) {
-    if (Invoke-TimberbornCtrlShiftKeyPress 0x4F) {
-        Write-Host "Forced Optimized hotkey sent."
+    if ($PressNormalAfterLoad -and (Get-TimberbornProcesses)) {
+        if (Invoke-TimberbornKeyPress 0x31) {
+            Write-Host "Normal speed key 1 sent."
+        }
     }
-}
 
-if ($PressUltraAfterLoad -and (Get-TimberbornProcesses)) {
-    if (Invoke-TimberbornKeyPress 0x34) {
-        Write-Host "Ultra speed key 4 sent."
+
+
+
+    if ($SecondsAfterLoad -gt 0 -and (Get-TimberbornProcesses)) {
+        $observationStarted = [DateTime]::UtcNow
+        $observationDeadline = (Get-Date).AddSeconds($SecondsAfterLoad)
+        while ((Get-Date) -lt $observationDeadline -and (Get-TimberbornProcesses)) {
+            if ($CompletionPattern -and (Test-Path -LiteralPath $PlayerLog)) {
+                $observationTail = Get-Content -LiteralPath $PlayerLog -Tail 80 -ErrorAction SilentlyContinue
+                if ($observationTail -match $CompletionPattern) { $completionMatched = $true; break }
+            }
+            Start-Sleep -Seconds 2
+        }
+        $process.Refresh()
+        $observationCompleted = $sawLoadTime -and ((Get-Date) -ge $observationDeadline -or $completionMatched) -and
+            (-not $UseSteamLaunchOptions) -and (-not $process.HasExited)
     }
-}
 
-if ($PressNormalAfterLoad -and (Get-TimberbornProcesses)) {
-    if (Invoke-TimberbornKeyPress 0x31) {
-        Write-Host "Normal speed key 1 sent."
+} catch {
+    $probeFailure = $_.ToString()
+} finally {
+    # Freeze observed duration before log copying and process teardown.
+    if ($null -ne $observationStarted) { $observationEnded = [DateTime]::UtcNow }
+    try {
+        if (Test-Path -LiteralPath $PlayerLog) {
+            $logLines = Get-Content -LiteralPath $PlayerLog -ErrorAction Stop
+            Update-ProbeStateFromLines @($logLines)
+        }
+    } catch { $finalizationFailures.Add($_.ToString()) }
+    try {
+        if (Test-Path -LiteralPath $PlayerLog) {
+            Copy-Item -LiteralPath $PlayerLog -Destination $outLog -Force -ErrorAction Stop
+            $logCaptured = $true
+        }
+    } catch { $finalizationFailures.Add($_.ToString()) }
+    if ($StopAfter) {
+        try {
+            if ($null -ne $process) {
+                $process.Refresh()
+                if (-not $process.HasExited) {
+                    try { Stop-Process -InputObject $process -Force -ErrorAction Stop }
+                    catch { $process.Refresh(); if (-not $process.HasExited) { throw } }
+                    if (-not $process.WaitForExit(30000)) { throw 'Owned probe did not exit' }
+                }
+            }
+        } catch { $finalizationFailures.Add($_.ToString()) }
     }
+    [ordered]@{
+        ProcessId = if ($null -ne $process) { $process.Id } else { $null }
+        DirectLaunch = -not [bool]$UseSteamLaunchOptions
+        SawLoadTime = $sawLoadTime
+        SawException = $sawException
+        ObservationCompleted = $observationCompleted
+        CompletionMatched = $completionMatched
+        RequestedSeconds = $SecondsAfterLoad
+        ObservationStarted = if ($null -ne $observationStarted) { $observationStarted.ToString('o') } else { $null }
+        ObservationEnded = if ($null -ne $observationEnded) { $observationEnded.ToString('o') } else { $null }
+        ObservedSeconds = if ($null -ne $observationEnded) { ($observationEnded - $observationStarted).TotalSeconds } else { 0 }
+        Log = $outLog
+        LogCaptured = $logCaptured
+        Failure = $probeFailure
+        FinalizationFailures = $finalizationFailures.ToArray()
+    } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $OutputDir "probe-summary-$stamp.json") -Encoding utf8
 }
-
-if ($SecondsAfterLoad -gt 0 -and (Get-TimberbornProcesses)) {
-    Start-Sleep -Seconds $SecondsAfterLoad
-}
-
-if (Test-Path -LiteralPath $PlayerLog) {
-    $logLines = Get-Content -LiteralPath $PlayerLog -ErrorAction SilentlyContinue
-    Update-ProbeStateFromLines @($logLines)
-}
-
-if (Test-Path -LiteralPath $PlayerLog) {
-    Copy-Item -LiteralPath $PlayerLog -Destination $outLog -Force
-}
-
-if ($StopAfter) {
-    $processesToStop = @(Get-TimberbornProcesses)
-    if ($processesToStop.Count -gt 0) {
-        $processesToStop | Stop-Process -Force
-        # Wait for teardown so a follow-up probe's already-running check does
-        # not trip over the dying process.
-        $processesToStop | Wait-Process -Timeout 30 -ErrorAction SilentlyContinue
-    }
+if ($probeFailure -or $finalizationFailures.Count) {
+    throw ('Probe failed: ' + $probeFailure + ' ' + ($finalizationFailures -join '; ') + '; records: ' + $OutputDir)
 }
 
 $pids = (Get-TimberbornProcesses | Select-Object -ExpandProperty Id) -join ','

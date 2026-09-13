@@ -20,9 +20,7 @@ internal static class TubeVisitFix
     private static MethodInfo? _target;
     private static MethodInfo? _exitTube;
     private static MethodInfo? _removeVisitor;
-    private static bool _failureLogged;
     internal static long Repairs;
-    internal static long Failures;
     internal static bool Installed { get; private set; }
 
     internal static void Install(Type harmonyType, Type harmonyMethodType, MethodInfo patch)
@@ -84,23 +82,12 @@ internal static class TubeVisitFix
         if (!__instance) return;
         if (__instance._enterer.IsInside && __instance._currentTube)
         {
-            try
-            {
-                // Vanilla ExitTube allocates an EventHandler per repair, just as on a normal tube exit.
-                __instance.ExitTube(__instance._currentTube, false);
-                // Recompute membership on the next outside sample, even in the old cell.
-                __instance._lastGridPosition = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
-                Repairs++;
-            }
-            catch (Exception exception)
-            {
-                Failures++;
-                if (!_failureLogged)
-                {
-                    _failureLogged = true;
-                    Debug.LogWarning("[T3MP] Tube visit repair failed; vanilla behavior retained: " + exception.Message);
-                }
-            }
+            // RemoveVisitor notifies listeners before ExitTube finishes updating membership.
+            // Let failures propagate as on a native exit; the partial change cannot be rolled back here.
+            __instance.ExitTube(__instance._currentTube, false);
+            // Recompute membership on the next outside sample, even in the old cell.
+            __instance._lastGridPosition = new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
+            Repairs++;
         }
     }
 }

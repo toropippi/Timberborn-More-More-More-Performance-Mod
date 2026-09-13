@@ -10,6 +10,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Reference Include="Timberborn.CharacterMovementSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.CharacterMovementSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Collections">
+      <HintPath>$(TimberbornManagedDir)\Unity.Collections.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Timberborn.TemplateSystem">
       <HintPath>$(TimberbornManagedDir)\Timberborn.TemplateSystem.dll</HintPath>
       <Private>false</Private>
@@ -149,4 +157,5 @@
   </ItemGroup>
   <ItemGroup><Compile Include="../Shared/DeferredGoodStackModels.cs" Link="Loading/DeferredGoodStackModels.cs" /></ItemGroup>
   <ItemGroup><Compile Include="../Shared/NavigationShapePlans.cs" Link="Loading/NavigationShapePlans.cs" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="BoolTargets.tsv" LogicalName="T3MPTestDriver.BoolTargets.tsv" /></ItemGroup>
 </Project>

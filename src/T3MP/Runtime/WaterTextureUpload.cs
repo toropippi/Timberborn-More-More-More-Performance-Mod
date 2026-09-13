@@ -18,13 +18,14 @@ namespace T3MP.Runtime;
 // (texture, layer) and omits only a transfer whose bytes are identical to what
 // that texture layer already holds. The simulation, the data arrays and the
 // renderer are untouched; only redundant GPU transfers are skipped. The
-// texture arrays are compute-shader inputs and have no other writer than this
-// method (audited on 1.0.13.1 and 1.1.2.4), so the snapshot cannot go stale.
+// texture arrays are compute-shader inputs and have no other native writer than
+// this method (audited on 1.0.13.1 and 1.1.2.4). Regenerating a Harmony wrapper
+// discards snapshots because its native path may have written different bytes.
 internal static class WaterTextureUpload
 {
     private const string Owner = "t3mp.runtime.water";
     private sealed class State { public readonly Dictionary<int, byte[]> Layers = new Dictionary<int, byte[]>(); }
-    private static readonly ConditionalWeakTable<Texture2DArray, State> States = new ConditionalWeakTable<Texture2DArray, State>();
+    private static ConditionalWeakTable<Texture2DArray, State> States = new ConditionalWeakTable<Texture2DArray, State>();
     private static bool _direct3D11;
     private static readonly Dictionary<Type, RuntimePatches.Shape> Shapes = new Dictionary<Type, RuntimePatches.Shape>();
     private static bool _passThroughReported;
@@ -97,6 +98,11 @@ internal static class WaterTextureUpload
     // stream already changed by another mod's transpiler passes through.
     private static IEnumerable<T> Rewrite<T>(IEnumerable<T> instructions, Type element)
     {
+        // This runs only when Harmony rebuilds a patched method, including when
+        // a foreign transpiler is added or removed. Native writes during a
+        // pass-through interval invalidate the old GPU snapshot. Clear on both
+        // transitions; do not inspect Harmony or allocate in the upload loop.
+        States = new ConditionalWeakTable<Texture2DArray, State>();
         var list = new List<T>(instructions);
         if (!Shapes.TryGetValue(element, out var shape) || !RuntimePatches.SameShape(shape, RuntimePatches.DescribeShape(list)))
         {
@@ -174,5 +180,4 @@ internal static class WaterTextureUpload
         Graphics.CopyTexture(temporary, 0, 0, target, layer, 0);
     }
 
-    internal static string Describe() => $"calls={Calls} uploaded={Uploaded} identical={Reused}";
 }

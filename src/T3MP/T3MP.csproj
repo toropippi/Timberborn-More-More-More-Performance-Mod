@@ -269,6 +269,10 @@
       <HintPath>$(TimberbornManagedDir)\Unity.InputSystem.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Timberborn.InputSystem">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.InputSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../Shared/PreparedStatusIcons.cs" Link="Loading/PreparedStatusIcons.cs" />

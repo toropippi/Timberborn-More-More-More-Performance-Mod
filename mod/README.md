@@ -1,77 +1,83 @@
-# More More More Performance! (T3MP) v1.2
+# More More More Performance! (T3MP)
 
-**v1.2 is a rebuild from scratch.** Every optimization from 1.0–1.1.7 that could
-change behavior or visuals has been removed. What remains is behavior-exact:
-the simulation produces the same colony as vanilla, tick for tick.
+Version 1.2.1 — local playtest build. Workshop release is pending.
 
-## What it does
+T3MP reduces repeated work during save loading and simulation. Its runtime
+optimizations preserve simulation updates and their order. Performance depends
+on the colony, game version and other enabled mods.
 
-- **Faster save loading.** A large late-game save (28,000 entities) loads in
-  about 29 seconds instead of about 65 seconds on the same PC (game 1.1.2.4,
-  measured with the game's own `Load time` line). Entity construction,
-  initialization, event delivery and navigation graph building during load are
-  done with fewer repeated lookups; every step verifies the game build it was
-  reviewed on and otherwise stays vanilla.
-- **A lighter simulation loop.** Four exact changes: event handlers are
-  called through typed delegates instead of reflection, entity ticks walk their
-  component arrays by index, the tick sweep skips entities whose tickable
-  components are all disabled (vanilla would only read a flag and run an empty
-  loop for them; about 90% of visits on large colonies), and water texture
-  uploads whose bytes did not change are not re-sent to the GPU. Measured gain
-  depends on the save: about 1.56x on one large colony, about 1.27x on another
-  (same on game 1.0 and 1.1). **Do not expect a fixed figure.**
-- **Tube lights after building entry.** Works around a vanilla visual bug that
-  leaves a character registered in its last tube after entering a building.
-  Clears that stale visit so lighting reflects the remaining visitors, while
-  keeping the building occupant hidden and simulation behavior unchanged.
+## Features
 
-## What is gone (and why)
+- **Shift+O — smooth mode.** Optional, off at load. Targets 30 fps by adjusting
+  whole-game speed between x1 and the selected speed. Press again to restore
+  the selected speed. While governing, VSync and the frame cap are temporarily
+  released. The meter shows `Smooth 30fps [Shift+O]` while enabled; `iSPD`
+  remains the selected speed and `rSPD` reports measured progress.
 
-Shift+P turbo, Shift+O smooth mode, the hidden speed-throttle removal, all
-frame-based caches, animation snapping and render suppression. The bugs
-reported for 1.1.x — beavers stuck in tubes, models jumping, water and flood
-visuals lingering, conflicts with navigation mods — all traced back to those
-systems. Removing them is the fix.
+- **Selected speed.** Speed buttons 1/2/3 select x1/x3/x7 without population-based
+  reduction. `iSPD` shows the selected multiplier; `rSPD` shows measured progress
+  and can be lower when the computer cannot keep up.
+
+- **Bottom-right speed meter.** `rSPD` is measured simulation speed, `iSPD` is
+  the current target speed, and `UPS` is simulation ticks per real second.
+  The meter refreshes four times per second over about two seconds. Pause
+  shows zero. These values describe the running game; they do not measure
+  speedup against a separate unmodded run.
+- **Save loading.** Entity construction, initialization, event delivery and
+  navigation setup use fewer repeated lookups on supported game builds.
+- **Simulation overhead.** Typed event delegates reduce reflection calls.
+  Frontier avoids empty entity visits when all tickable components are disabled.
+  Water texture layers with identical bytes avoid a redundant GPU upload.
+- **Tube lighting repair.** Clears stale tube visitor registration when a
+  character enters a building immediately after passing through a tube, so
+  lighting reflects the remaining visitors.
 
 ## Compatibility
 
-Game 1.0.13.1 and 1.1.2.x, Windows, Direct3D11. Requires the Harmony mod. If a
-game update changes one of the patched methods, that optimization detects the
-mismatch and stays vanilla; the mod never guesses.
+Requires Harmony. The compatibility targets are Timberborn 1.1.2.4 and
+1.0.13.1 on Windows. Water upload optimization requires Direct3D11. Game
+method checks and checks for conflicting patches retain native execution
+when an optimization cannot safely apply.
+
+The older frame-based simulation caches, animation snapping and render suppression
+have been removed. Tube lighting
+repair does not change movement animation.
 
 ---
 
 # 日本語
 
-**v1.2はゼロからの作り直しです。** 1.0〜1.1.7で挙動や見た目を変え得た最適化は
-すべて撤去しました。残っているのは結果を変えない変更だけで、シミュレーションは
-tick単位でバニラと同じ集落になります。
+バージョン1.2.1のローカル試遊版です。Workshop公開前の候補です。
 
-## できること
+T3MPはセーブのロードとシミュレーション中の重複処理を減らします。
+ランタイムの最適化はシミュレーションの更新と順序を維持します。
+高速化の効果は集落、ゲームの版、併用MODによって変わります。
 
-- **セーブのロード高速化。** 28,000エンティティの大規模セーブが同一PCで
-  約65秒→約29秒（ゲーム1.1.2.4、ゲーム自身の `Load time` 行で計測）。
-  ロード中のエンティティ生成・初期化・イベント配信・経路網構築の重複処理を
-  減らします。各処理は審査済みのゲームビルドかを確認し、違えばバニラのままです。
-- **本編ループの軽量化。** 結果を変えない4点：イベントハンドラをリフレクション
-  でなく型付きdelegateで呼ぶ、エンティティのtickで部品配列を添字で走査する、
-  tick部品がすべて無効なエンティティ（バニラはフラグを読んで空ループを回すだけ。
-  大規模集落で訪問の約90%）をtick走査で飛ばす、byteが変わらない水テクスチャを
-  GPUへ再送しない。効き方はセーブ次第で、ある大規模集落では約1.56倍、別の集落では
-  約1.27倍でした（ゲーム1.0でも1.1でも同じ）。**固定の倍率は期待しないでください。**
+## 機能
 
-- **建物に入った後のチューブ照明。** 建物に入ったキャラクターが直前のチューブに
-  登録されたままになるバニラの表示バグを回避します。古い訪問登録を解除して照明を
-  残りの訪問者に合わせます。建物内のモデルは非表示のまま、シミュレーションは変わりません。
+- **Shift+O — スムーズモード。** ロード時はOFF。30fpsを目標に、×1から選択速度までの範囲で
+  ゲーム全体の速度を自動調整します。再度押すと選択速度に戻ります。自動調整中はVSyncと
+  FPS上限を一時解除します。有効時はメーター上に `Smooth 30fps [Shift+O]` と表示し、
+  `iSPD`は選択倍率、`rSPD`は実測倍率を示します。
 
-## 撤去したもの（理由）
+- **選択した速度を維持。** 速度ボタン1・2・3は×1・×3・×7です。人口による減速を解除します。
+  `iSPD`は選択倍率、`rSPD`は実測倍率です。処理能力が足りない場合、実測倍率は選択倍率を下回ります。
 
-Shift+Pターボ、Shift+Oスムーズモード、速度スロットラー撤廃、フレーム基準の
-キャッシュ全部、モデルのスナップ、描画の停止。1.1.x系で報告されたチューブ内の
-固着、モデルの跳躍、水・浸水表示の残留、ナビゲーション系MODとの競合は、
-いずれもこれらが原因でした。撤去そのものが修正です。
+- **右下の速度メーター。** `rSPD`は実測の進行速度、`iSPD`は現在の設定速度、
+  `UPS`は実時間1秒あたりのシミュレーションtick数です。約2秒の実測を毎秒4回更新し、
+  一時停止では0を表示します。現在のゲームの速度を示すもので、MODなしとの比較倍率ではありません。
+- **セーブのロード。** 対応するゲーム版で、エンティティ生成・初期化・イベント配信・
+  経路網構築の重複した検索を減らします。
+- **本編ループの軽量化。** 型付きdelegateによるイベント配信、tick部品がすべて無効な
+  エンティティの空の走査の省略、同じbyte列の水テクスチャのGPU再送抑制を行います。
+- **配管照明の修正。** 配管を通過した直後に建物へ入ったキャラクターの古い訪問登録を解除し、
+  残っている訪問者に合わせて照明を更新します。
 
 ## 互換性
 
-ゲーム1.0.13.1と1.1.2.x、Windows、Direct3D11。Harmony必須。ゲーム更新で対象
-メソッドが変わった場合、その最適化は不一致を検出してバニラのままになります。
+Harmonyが必要です。対応対象はWindowsのTimberborn 1.1.2.4と1.0.13.1です。
+水テクスチャの最適化にはDirect3D11が必要です。ゲームの対象メソッドと他MODのパッチを確認し、
+安全に適用できない最適化は元の処理を使います。
+
+旧版のフレーム基準のシミュレーションキャッシュ、モデルのスナップ、描画抑制は削除しました。
+今回の配管照明修正は移動アニメーションを変更しません。

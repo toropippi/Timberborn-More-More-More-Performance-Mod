@@ -1,0 +1,61 @@
+--- a/src/T3MPTestDriver/TestDriver.cs
++++ b/src/T3MPTestDriver/TestDriver.cs
+@@ -36,6 +36,7 @@
+         if (WaterUploadValidation.Requested) WaterUploadValidation.Run();
+         RoadReachabilityExperiment.Install();
+         BoolInliningExperiment.Install();
++        MovementMathExperiment.Install();
+         TickProfiler.Install();
+         SearchProfiler.Install();
+         if (TestArguments.LoadRoutingRequested) LoadRoutingTestDriver.Configure();
+@@ -356,6 +357,7 @@
+         SearchProfiler.Report(now - _windowStart);
+         RoadReachabilityExperiment.Report();
+         BoolInliningExperiment.Report();
++        MovementMathExperiment.Report();
+         _windowStart = now;
+         _windowTicks = ticks;
+     }
+--- a/src/T3MPTestDriver/FixedTickBenchmark.cs
++++ b/src/T3MPTestDriver/FixedTickBenchmark.cs
+@@ -145,7 +145,8 @@
+             var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime." + name)).FirstOrDefault(t => t != null);
+             return name + "=" + (type?.GetProperty("Installed", flags)?.GetValue(null)?.ToString() ?? "absent");
+         })) + ",RoadCacheInstalled=" + RoadReachabilityExperiment.Installed + ",RoadCacheEnabled=" + RoadReachabilityExperiment.Enabled +
+-            ",BoolInlineInstalled=" + BoolInliningExperiment.Installed + ",BoolInlineEnabled=" + BoolInliningExperiment.Enabled;
++            ",BoolInlineInstalled=" + BoolInliningExperiment.Installed + ",BoolInlineEnabled=" + BoolInliningExperiment.Enabled +
++            ",MovementMathInstalled=" + MovementMathExperiment.Installed;
+     }
+ 
+     private static int ReadInt(string[] args, string flag, int fallback, int minimum)
+--- a/scripts/run_fixed_tick_ab.ps1
++++ b/scripts/run_fixed_tick_ab.ps1
+@@ -2,9 +2,10 @@
+ # and Harmony for measurement. Saves/settings are restored and stages archived.
+ # C/R = installed T3MP plus identical experimental road observers, cache off/on.
+ # H/U = installed T3MP plus bool call-site wrappers, native/expanded IL.
++# M = installed T3MP plus reuse of the movement step's existing magnitude.
+ [CmdletBinding()]
+ param(
+-    [ValidatePattern('^[VBCRHU]+$')][string] $Order = 'VBBV',
++    [ValidatePattern('^[VBCRHUM]+$')][string] $Order = 'VBBV',
+     [ValidateRange(1, 1000000)][int] $WarmupTicks = 256,
+     [ValidateRange(1, 1000000)][int] $MeasuredTicks = 2048,
+     [ValidateRange(1, 10000)][double] $Speed = 99,
+@@ -93,6 +94,7 @@
+         if ($arm -eq 'C') { $gameArgs += '-t3mpTestRoadCacheBaseline' }
+         if ($arm -eq 'H' -or $arm -eq 'U') { $gameArgs += '-t3mpTestBoolInline' }
+         if ($arm -eq 'H') { $gameArgs += '-t3mpTestBoolBaseline' }
++        if ($arm -eq 'M') { $gameArgs += '-t3mpTestMoveMath' }
+         & (Join-Path $PSScriptRoot 'run_autoload_probe.ps1') -TimberbornExe $TimberbornExe -SettlementName $settlement -SaveName n10c `
+             -Scenario LaunchArgs -TestSpeed $Speed -SkipModManager -OutputDir $runDir -SecondsAfterLoad $TimeoutSeconds `
+             -CompletionPattern '\[T3MPTEST\] Fixed benchmark result ' -StopAfter `
+@@ -115,6 +117,8 @@
+         if (($result.patches -split ',') -cnotcontains "RoadCacheInstalled=$roadInstalled" -or
+             ($result.patches -split ',') -cnotcontains "RoadCacheEnabled=$roadEnabled") { throw 'Unexpected road experiment state' }
+         $boolInstalled = [string]([bool]($arm -eq 'H' -or $arm -eq 'U'))
++        $movementInstalled = [string]([bool]($arm -eq 'M'))
++        if (($result.patches -split ',') -cnotcontains "MovementMathInstalled=$movementInstalled") { throw 'Unexpected movement math experiment state' }
+         $boolEnabled = [string]([bool]($arm -eq 'U'))
+         if (($result.patches -split ',') -cnotcontains "BoolInlineInstalled=$boolInstalled" -or
+             ($result.patches -split ',') -cnotcontains "BoolInlineEnabled=$boolEnabled") { throw 'Unexpected bool experiment state' }

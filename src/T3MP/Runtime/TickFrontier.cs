@@ -23,10 +23,19 @@ namespace T3MP.Runtime;
 internal static class TickFrontier
 {
     private const string Owner = "t3mp.runtime.frontier";
-    private static readonly string[] AllowedTickOwners = { Owner, "t3mp.runtime.tick" };
 
     // Raw-IL SHA256 of the reviewed vanilla bodies (scripts/IlFingerprint):
     // 1.0.13.1 first, then 1.1.2.0 (identical modules on 1.1.2.4 per the Steam audit).
+    private static readonly string[] ReviewedEntityTick =
+    {
+        "1505E4964C1B5B1243D4E48190FCC49617B6A34362A012A60937B1AF26130C34",
+        "9DC6FCDBD41B512C73522FBD1AE22893ADA21277BB8E56621F44D34DB159E2CA"
+    };
+    private static readonly string[] ReviewedEntityLoop =
+    {
+        "F7D063689233726D8BB0CE335466978A40CC9B86E088D99721D5A18216119180",
+        "ADF101E3EEB721D1535EC28BAC0105EB26853DB0617C8998EA65F4808BC6F5CB"
+    };
     private static readonly string[] ReviewedTickAll =
     {
         "78B1320D9AA9DB7EEE411481BE0C36020B5F42DAFEB0C3E2E936502F7E34887F",
@@ -67,7 +76,6 @@ internal static class TickFrontier
     };
 
     internal static bool Installed { get; private set; }
-    internal static long Visited, Skipped, Sweeps, Rebuilds, Invalidations;
     private static Type? _harmonyType;
     private static MethodBase[] _guardedAny = Array.Empty<MethodBase>();
     private static MethodInfo? _tickAll, _entityTick;
@@ -103,7 +111,6 @@ internal static class TickFrontier
         }
         internal void Invalidate()
         {
-            if (!Invalid) Invalidations++;
             Invalid = true;
             Publish();
         }
@@ -237,7 +244,7 @@ internal static class TickFrontier
             !RuntimePatches.ReviewedBody(disable, ReviewedDisable) || !RuntimePatches.ReviewedBody(setEnabled, ReviewedSetEnabled) ||
             !RuntimePatches.ReviewedBody(getEnabled, ReviewedGetEnabled) || !RuntimePatches.ReviewedBody(meteredGetEnabled, ReviewedMeteredGetEnabled) ||
             !RuntimePatches.ReviewedBody(onDestroy, ReviewedOnDestroy) || !RuntimePatches.ReviewedBody(cacheInitialize, ReviewedCacheInitialize) ||
-            !RuntimePatches.ReviewedBody(entityTick, TickEntityFast.ReviewedTick) || !RuntimePatches.ReviewedBody(entityLoop, TickEntityFast.ReviewedLoop) ||
+            !RuntimePatches.ReviewedBody(entityTick, ReviewedEntityTick) || !RuntimePatches.ReviewedBody(entityLoop, ReviewedEntityLoop) ||
             tickAll.GetMethodBody()?.ExceptionHandlingClauses.Count != 0)
         {
             Debug.LogWarning("[T3MP] Tick frontier: a target body is not a reviewed build; vanilla retained.");
@@ -271,7 +278,7 @@ internal static class TickFrontier
     {
         if (_harmonyType == null || _tickAll == null || _entityTick == null) return true;
         if (RuntimePatches.ForeignPatched(_harmonyType, _tickAll, Owner, transpilersOnly: true)) return true;
-        if (RuntimePatches.ForeignPatched(_harmonyType, _entityTick, AllowedTickOwners, transpilersOnly: false)) return true;
+        if (RuntimePatches.ForeignPatched(_harmonyType, _entityTick, Owner, transpilersOnly: false)) return true;
         foreach (var method in _guardedAny)
             if (RuntimePatches.ForeignPatched(_harmonyType, method, Owner, transpilersOnly: false)) return true;
         return false;
@@ -517,7 +524,6 @@ internal static class TickFrontier
 
     private static void Rebuild(BucketIndex index, SortedList<Guid, TickableEntity> source)
     {
-        Rebuilds++;
         index.Clear();
         index.Untrusted = true;
         for (var i = 0; i < source.Count; i++)
@@ -544,14 +550,11 @@ internal static class TickFrontier
                 Debug.LogWarning("[T3MP] Tick frontier: index rebuild failed; bucket traversal stays vanilla: " + exception.GetBaseException().Message);
             }
         }
-        Sweeps++;
         for (var i = 0; i < entities.Count; i++)
         {
             var next = index.NextIndex(entities, i);
-            Skipped += next - i;
             i = next;
             if (i >= entities.Count) break;
-            Visited++;
             var entity = entities.Values[i];
             if (index.Awaiting > 0) index.ObserveActivation(entities.Keys[i], entity);
             entity.Tick();
@@ -567,5 +570,4 @@ internal static class TickFrontier
         toRemove.Clear();
     }
 
-    internal static string Describe() => $"sweeps={Sweeps} visited={Visited} skipped={Skipped} rebuilds={Rebuilds} invalidations={Invalidations}";
 }

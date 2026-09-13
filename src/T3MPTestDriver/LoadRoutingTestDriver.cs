@@ -97,7 +97,6 @@ public sealed class LoadRoutingTestDriver : MonoBehaviour
             ModelVisibilityProbe.Install();
             ModelVisibilityExperiment.Install();
             NaturalModelTransitionExperiment.Install();
-            LazyGoodStackExperiment.BeforeSnapshot = SelectionSnapshot.Report;
             LazyGoodStackExperiment.Install();
             T3MP.Loading.PreparedCarriedItems.Install();
             RangedEventExperiment.Install();
@@ -128,7 +127,7 @@ public sealed class LoadRoutingTestDriver : MonoBehaviour
             var ticks = FullTickCounter.FullTicks - _smokeStartTicks;
             NavigationPackedSource.Report();
             Log(ticks > 0 ? "SMOKE PASS ticks=" + ticks : "ERROR simulation did not advance");
-            LazyGoodStackExperiment.Report("smoke-end");
+            GoodStackValidation.Report("smoke-end");
             RangedEventExperiment.Report("smoke-end");
             NavigationRemovalView.Report("smoke-end");
             LazyBuildingPreviewExperiment.Report("smoke-end");
@@ -178,8 +177,8 @@ public sealed class LoadRoutingTestDriver : MonoBehaviour
             MeshSnapshot.Report(entities);
             ComponentMemoryCensus.Report(entities, _container);
             ModelVariantCensus.Report(entities);
-            LazyGoodStackExperiment.Exercise(entities);
-            LazyGoodStackExperiment.ValidateBeforeSnapshots(entities);
+            GoodStackValidation.Exercise(entities);
+            GoodStackValidation.ValidateBeforeSnapshots(entities);
             LazyPathVariantExperiment.Report("scene-ready");
             LazyPathVariantExperiment.ValidateBeforeSnapshots(entities);
             LazyConstructionStageExperiment.ValidateBeforeSnapshots(entities);

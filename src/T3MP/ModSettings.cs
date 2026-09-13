@@ -6,14 +6,13 @@ namespace T3MP;
 // flag; nothing here reads game state.
 internal static class ModSettings
 {
-    public const string Version = "1.2.0";
+    public const string Version = "1.2.1";
 
-    // Runtime patches: typed EventBus delegates, indexed tick traversal,
+    // Runtime patches: typed EventBus delegates, sparse bucket traversal,
     // de-duplicated water uploads and visual tube-visit repair. See Runtime/.
     public static readonly bool EnableRuntimePatches = !HasCommandLineFlag("-t3mpTestRuntimeBaseline");
     // Per-feature test switches (attribution runs only; omit in normal play).
     public static readonly bool EnableEventBusFastDelegates = !HasCommandLineFlag("-t3mpTestNoEvents");
-    public static readonly bool EnableTickEntityFast = !HasCommandLineFlag("-t3mpTestNoTick");
     public static readonly bool EnableWaterTextureUpload = !HasCommandLineFlag("-t3mpTestNoWater");
     public static readonly bool EnableTickFrontier = !HasCommandLineFlag("-t3mpTestNoFrontier");
     public static readonly bool EnableTubeVisitFix = !HasCommandLineFlag("-t3mpTestNoTubeFix");

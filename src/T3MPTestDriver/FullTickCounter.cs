@@ -6,7 +6,9 @@ using UnityEngine;
 
 namespace T3MPTestDriver;
 
-// Development-only full-tick counter (postfix on TickProgressService.Tick).
+// Development-only counter of TickProgressService.Tick in the singleton bucket.
+// This marks cycle starts, not completion of the later entity buckets. Probes
+// needing completed world state must also verify the native bucket boundary.
 // Lives in the test driver so the shipped mod carries no probes.
 internal static class FullTickCounter
 {
@@ -15,6 +17,7 @@ internal static class FullTickCounter
     private static bool _installed;
 
     internal static long FullTicks => Interlocked.Read(ref _fullTicks);
+    internal static bool Available { get; private set; }
 
     internal static void Install()
     {
@@ -31,6 +34,7 @@ internal static class FullTickCounter
                 .First(m => m.Name == "Tick" && m.GetParameters().Length == 0);
             var postfix = Activator.CreateInstance(hm, typeof(FullTickCounter).GetMethod(nameof(Postfix), All));
             patch.Invoke(harmony, new object?[] { target, null, postfix, null, null });
+            Available = true;
             Debug.Log("[T3MPTEST] Full tick counter installed.");
         }
         catch (Exception exception)
@@ -39,5 +43,10 @@ internal static class FullTickCounter
         }
     }
 
-    private static void Postfix() => Interlocked.Increment(ref _fullTicks);
+    private static void Postfix()
+    {
+        var tick = Interlocked.Increment(ref _fullTicks);
+        RoadReachabilityExperiment.SimulationStarted();
+        FixedTickBenchmark.RecordTick(tick);
+    }
 }
