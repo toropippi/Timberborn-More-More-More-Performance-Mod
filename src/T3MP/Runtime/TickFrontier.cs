@@ -192,7 +192,11 @@ internal static class TickFrontier
             while (low < high)
             {
                 var mid = low + (high - low) / 2;
-                if (keys[mid].CompareTo(lower) < 0) low = mid + 1; else high = mid;
+                var comparison = keys[mid].CompareTo(lower);
+                // A matching default-ordered key is already at cursor. Keep the
+                // original lookup for custom comparers, including their side effects.
+                if (comparison == 0 && ReferenceEquals(source.Comparer, Comparer<Guid>.Default)) return cursor;
+                if (comparison < 0) low = mid + 1; else high = mid;
             }
             if (low >= keys.Count) return source.Count;
             var result = source.IndexOfKey(keys[low]);

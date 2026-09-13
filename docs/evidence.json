@@ -298,6 +298,40 @@
         "sha256": "71dda74987c9f1ca492006061c2303a3050e00be580ba2e681fa98aa326735a3",
         "source_name": "docs/measurements/ui-option-static-audit-2026-09-13.json"
       }
+    },
+    {
+      "id": "frontier-search-early-exit",
+      "status": "source_candidate_offline_verified",
+      "conditions": "Current NextIndex method extracted verbatim into a CoreCLR fixture with the unused entity value type replaced by int. No game launch or installed DLL replacement.",
+      "correctness": {
+        "assertions": 909375,
+        "cases": [
+          "exhaustive eligibility sets through 10 members",
+          "12000 live membership/eligibility mutations and reloads",
+          "untrusted/count mismatch/stale-key fallbacks",
+          "custom comparer call traces and exception wrapping"
+        ]
+      },
+      "builds": [
+        "1.1.2.4 API: 0 warnings, 0 errors",
+        "1.0.13.1 API: 0 warnings, 0 errors"
+      ],
+      "search_only_timing": {
+        "runtime": "CoreCLR .NET 8",
+        "members": 8192,
+        "sweeps_per_sample": 100,
+        "alternating_pairs": 6,
+        "statistic": "upper median of six times per variant",
+        "previous_over_candidate_by_eligible_percent": {
+          "0": 1.0,
+          "1": 1.001,
+          "10": 1.106,
+          "50": 2.235,
+          "100": 2.053
+        }
+      },
+      "reproduce": "python tests/FrontierSearch.py --benchmark",
+      "limits": "Synthetic search-only timings do not establish Unity Mono speedup, n10c throughput, or FPS improvement. Current A32 playtest DLL is unchanged; whole-game adoption remains unvalidated."
     }
   ],
   "source_identification": "source_name and source hashes identify the measurement summarized in each record; they are provenance labels, not file links."
