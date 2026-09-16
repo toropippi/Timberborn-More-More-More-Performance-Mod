@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.4.1" />
+    <Compile Include="../../src/T3MP/Runtime/WalkerSpeedDelegates.cs" Link="WalkerSpeedDelegates.cs" />
+    <Compile Include="../../src/T3MP/Runtime/RuntimePatches.cs" Link="RuntimePatches.cs" />
+    <Compile Include="../../src/T3MP/ModSettings.cs" Link="ModSettings.cs" />
+    <Compile Include="../../src/Shared/LoadPatchBridge.cs" Link="LoadPatchBridge.cs" />
+  </ItemGroup>
+</Project>

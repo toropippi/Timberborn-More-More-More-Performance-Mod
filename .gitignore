@@ -1,6 +1,7 @@
 # Build output
 bin/
 obj/
+__pycache__/
 *.user
 *.suo
 .vs/
@@ -22,3 +23,29 @@ shaderbuild/SmokeOutput*/
 shaderbuild/*.csproj
 shaderbuild/*.sln
 mod/AssetBundles/*.manifest
+
+# Generated packages, local snapshots, saves and credentials
+*.dll
+*.exe
+*.pdb
+*.timber
+*.zip
+*.7z
+*.dmp
+*.bundle
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+credentials.json
+localconfig.vdf
+loginusers.vdf
+/benchmark/AssetBundles/
+/mod/AssetBundles/
+
+# Raw experiment output; publish selected results in docs/evidence.json
+/docs/measurements/*
+!/docs/measurements/.gitkeep

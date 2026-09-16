@@ -30,11 +30,25 @@ public sealed class TestDriverModStarter : IModStarter
     public void StartMod(IModEnvironment modEnvironment)
     {
         Debug.Log("[T3MPTEST] Test driver loaded. " + TestArguments.Describe());
+        ReleaseIdentity.ReportIfRequested();
+        FullTickCounter.Install();
+        MatchedBenchmarkConditions.Install();
+        if (EventDelegateValidation.Requested) EventDelegateValidation.Run();
+        if (WaterUploadValidation.Requested) WaterUploadValidation.Run();
+        RoadReachabilityExperiment.Install();
+        BoolInliningExperiment.Install();
+        TickProfiler.Install();
+        MovementProbe.Install();
+        HotCountProbe.Install();
+        SubsystemProfiler.Install();
+        SearchProfiler.Install();
+        if (TestArguments.LoadRoutingRequested) LoadRoutingTestDriver.Configure();
     }
 }
 
 internal static class TestArguments
 {
+    public static bool LoadRoutingRequested => HasFlag("-t3mpTestLoadRouting");
     public static bool MenuLoadRequested => HasFlag("-t3mpTestMenuLoad");
 
     public static bool NewGameRequested => HasFlag("-t3mpTestNewGame");
@@ -46,6 +60,8 @@ internal static class TestArguments
     public static string? Save => GetValue("-t3mpTestSave");
 
     public static string? Map => GetValue("-t3mpTestMap");
+
+    public static string NewSettlement => GetValue("-t3mpTestNewSettlement") ?? "t3mp-test";
 
     public static string Faction => GetValue("-t3mpTestFaction") ?? "Folktails";
 
@@ -210,7 +226,7 @@ public sealed class MainMenuTestDriver : IUpdatableSingleton
 
         Debug.Log("[T3MPTEST] NewGame: starting map=" + mapName + " faction=" + TestArguments.Faction);
         _gameSceneLoader.StartNewGameInstantly(
-            TestArguments.Faction, MapFileReference.FromResource(mapName), "t3mp-test");
+            TestArguments.Faction, MapFileReference.FromResource(mapName), TestArguments.NewSettlement);
     }
 }
 
@@ -225,15 +241,59 @@ public sealed class GameTestConfigurator : IConfigurator
 
 public sealed class GameTestDriver : IPostLoadableSingleton
 {
+    private readonly IContainer _container;
     private readonly SpeedManager _speedManager;
+    private readonly Timberborn.EntitySystem.EntityRegistry _entityRegistry;
 
-    public GameTestDriver(SpeedManager speedManager)
+    public GameTestDriver(SpeedManager speedManager, Timberborn.EntitySystem.EntityRegistry entityRegistry, IContainer container)
     {
+        _container = container;
         _speedManager = speedManager;
+        _entityRegistry = entityRegistry;
     }
 
     public void PostLoad()
     {
+        // After the product installed its patches at mod start: the audit's
+        // prefix/postfix must be the later generation (docs/DIAGNOSTICS.md).
+        MovementValidation.Install();
+#if ACTIVE_TRANSITION_EXPERIMENT
+        if (ActiveTransitionValidation.Requested)
+        {
+            var originalSpeed = _speedManager.CurrentSpeed;
+            _speedManager.ChangeSpeed(0f);
+            ActiveTransitionValidation.Begin(() => _speedManager.ChangeSpeed(originalSpeed));
+            return;
+        }
+#endif
+        if (TickPortValidation.Requested) TickPortValidation.Run();
+        if (ActiveLookupValidation.Requested) ActiveLookupValidation.Run();
+        if (StairsCompatibilityProbe.Requested)
+        {
+            new GameObject("T3MPTEST.Stairs").AddComponent<StairsCompatibilityProbe>().Initialize(_container, _speedManager);
+            return;
+        }
+        if (WorldReloadProbe.Requested)
+            new GameObject("T3MPTEST.WorldReload").AddComponent<WorldReloadProbe>().Initialize(_container, _speedManager);
+        if (FloodRegression.Requested)
+            new GameObject("T3MPTEST.FloodRegression").AddComponent<FloodRegression>().Initialize(_entityRegistry, _container, _speedManager);
+        // Start observers before scenario handling so the tube flag also works
+        // alone, without unpausing or changing the game speed.
+        if (ModelGapMonitor.Requested && !TestArguments.LoadRoutingRequested &&
+            (TestArguments.AnyScenarioRequested || TestArguments.Speed != null))
+        {
+            new GameObject("T3MPTEST.ModelGap").AddComponent<ModelGapMonitor>().Initialize(_entityRegistry);
+        }
+        if (TubeLightMonitor.Requested)
+        {
+            new GameObject("T3MPTEST.TubeLights").AddComponent<TubeLightMonitor>().Initialize(_entityRegistry, _container);
+        }
+        if (TestArguments.LoadRoutingRequested)
+        {
+            _speedManager.ChangeSpeed(0f);
+            new GameObject("T3MPTEST.LoadRouting").AddComponent<LoadRoutingTestDriver>().Initialize(_entityRegistry, _speedManager, _container);
+            return;
+        }
         if (!TestArguments.AnyScenarioRequested && TestArguments.Speed == null)
         {
             return;
@@ -242,5 +302,80 @@ public sealed class GameTestDriver : IPostLoadableSingleton
         var speed = TestArguments.Speed ?? 1f;
         Debug.Log("[T3MPTEST] Game scene loaded OK. Unpausing (speed " + speed + ").");
         _speedManager.ChangeSpeed(speed);
+        if (FixedTickBenchmark.Requested)
+        {
+            new GameObject("T3MPTEST.FixedTickBenchmark").AddComponent<FixedTickBenchmark>().Initialize(_speedManager);
+        }
+        else if (TestArguments.Speed != null)
+        {
+            new GameObject("T3MPTEST.SimulationRate").AddComponent<SimulationRateLogger>();
+        }
+    }
+}
+
+// Logs full ticks per second in fixed real-time windows so A/B runs of the
+// same save can be compared from Player.log. Test driver only.
+public sealed class SimulationRateLogger : MonoBehaviour
+{
+    private const float WindowSeconds = 20f;
+    private double _windowStart;
+    private long _windowTicks;
+    private double _totalStart;
+    private long _totalTicks;
+    private int _windows;
+
+    private void Start()
+    {
+        SearchProfiler.Begin();
+        _windowStart = _totalStart = Time.realtimeSinceStartupAsDouble;
+        _windowTicks = _totalTicks = FullTickCounter.FullTicks;
+    }
+
+    private void OnDestroy() => SearchProfiler.End();
+
+    private void Update()
+    {
+        var now = Time.realtimeSinceStartupAsDouble;
+        if (now - _windowStart < WindowSeconds) return;
+        var ticks = FullTickCounter.FullTicks;
+        var rate = (ticks - _windowTicks) / (now - _windowStart);
+        var total = (ticks - _totalTicks) / (now - _totalStart);
+        _windows++;
+        Debug.Log(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+            "[T3MPTEST] Simulation rate {0:F2} ticks/s window={1} ticks={2} timeScale={3:F2} cumulative={4:F2} ticks/s elapsed={5:F6}",
+            rate, _windows, ticks - _windowTicks, Time.timeScale, total, now - _windowStart));
+        try
+        {
+            var water = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.WaterTextureUpload")).FirstOrDefault(t => t != null);
+            if (water != null)
+            {
+                const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+                Debug.Log("[T3MPTEST] water calls=" + water.GetField("Calls", all)!.GetValue(null) + " uploaded=" + water.GetField("Uploaded", all)!.GetValue(null) +
+                          " identical=" + water.GetField("Reused", all)!.GetValue(null));
+            }
+            var frontier = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.TickFrontier")).FirstOrDefault(t => t != null);
+            if (frontier != null)
+            {
+                const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+                var compared = frontier.GetField("PositionComparisons", all);
+                if (compared != null) Debug.Log("[T3MPTEST] Frontier positions compared=" + compared.GetValue(null));
+            }
+            var tube = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.TubeVisitFix")).FirstOrDefault(t => t != null);
+            if (tube != null)
+            {
+                const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static;
+                Debug.Log("[T3MPTEST] tube repairs=" + tube.GetField("Repairs", all)!.GetValue(null));
+            }
+        }
+        catch (Exception) { /* diagnostics only */ }
+        TickProfiler.Report((float)(now - _windowStart));
+        MovementProbe.Report(now - _windowStart);
+        HotCountProbe.Report(now - _windowStart);
+        SubsystemProfiler.Report(now - _windowStart);
+        SearchProfiler.Report(now - _windowStart);
+        RoadReachabilityExperiment.Report();
+        BoolInliningExperiment.Report();
+        _windowStart = now;
+        _windowTicks = ticks;
     }
 }

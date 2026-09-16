@@ -1,0 +1,153 @@
+diff --git a/src/T3MP/Runtime/TickFrontier.cs b/src/T3MP/Runtime/TickFrontier.cs
+index 5134ca6..04bed45 100644
+--- a/src/T3MP/Runtime/TickFrontier.cs
++++ b/src/T3MP/Runtime/TickFrontier.cs
+@@ -68,5 +68,9 @@ internal static class TickFrontier
+ 
+     internal static bool Installed { get; private set; }
++#if T3MP_FRONTIER_VALIDATE
++    internal const bool PositionValidation = true;
++    internal static long PositionComparisons;
++#endif
+     private static Type? _harmonyType;
+     private static MethodBase[] _guardedAny = Array.Empty<MethodBase>();
+     private static MethodInfo? _tickAll, _entityTick;
+@@ -122,7 +126,12 @@ internal static class TickFrontier
+     private sealed class BucketIndex
+     {
+         private readonly Dictionary<Guid, Group> _members = new Dictionary<Guid, Group>();
++#if !T3MP_FRONTIER_POSITIONS || T3MP_FRONTIER_VALIDATE
+         private readonly SortedList<Guid, byte> _eligible = new SortedList<Guid, byte>();
++#endif
++#if T3MP_FRONTIER_POSITIONS
++        private readonly FrontierPositions<TickableEntity> _positions = new FrontierPositions<TickableEntity>();
++#endif
+         private readonly HashSet<Guid> _awaiting = new HashSet<Guid>();
+         internal bool Untrusted;
+         internal int Count => _members.Count;
+@@ -130,6 +139,9 @@ internal static class TickFrontier
+ 
+         internal void Add(Guid key, Group group)
+         {
++#if T3MP_FRONTIER_POSITIONS
++            _positions.MembershipChanged();
++#endif
+             if (_members.TryGetValue(key, out var previous) && !ReferenceEquals(previous, group))
+                 previous.Buckets.Remove(this);
+             _members[key] = group;
+@@ -144,14 +156,24 @@ internal static class TickFrontier
+                 _members.Remove(key);
+                 group.Buckets.Remove(this);
+             }
++#if !T3MP_FRONTIER_POSITIONS || T3MP_FRONTIER_VALIDATE
+             _eligible.Remove(key);
++#endif
++#if T3MP_FRONTIER_POSITIONS
++            _positions.Remove(key);
++#endif
+             _awaiting.Remove(key);
+         }
+ 
+         internal void Update(Guid key, bool needed, bool awaiting)
+         {
+             if (!_members.ContainsKey(key)) return;
++#if !T3MP_FRONTIER_POSITIONS || T3MP_FRONTIER_VALIDATE
+             if (needed) _eligible[key] = 0; else _eligible.Remove(key);
++#endif
++#if T3MP_FRONTIER_POSITIONS
++            _positions.Set(key, needed);
++#endif
+             if (awaiting) _awaiting.Add(key); else _awaiting.Remove(key);
+         }
+ 
+@@ -159,7 +181,12 @@ internal static class TickFrontier
+         {
+             foreach (var group in _members.Values) group.Buckets.Remove(this);
+             _members.Clear();
++#if !T3MP_FRONTIER_POSITIONS || T3MP_FRONTIER_VALIDATE
+             _eligible.Clear();
++#endif
++#if T3MP_FRONTIER_POSITIONS
++            _positions.Clear();
++#endif
+             _awaiting.Clear();
+         }
+ 
+@@ -179,6 +206,22 @@ internal static class TickFrontier
+         internal int NextIndex(SortedList<Guid, TickableEntity> source, int cursor)
+         {
+             if (Untrusted || _members.Count != source.Count || cursor < 0 || cursor >= source.Count) return cursor;
++#if T3MP_FRONTIER_POSITIONS
++            var candidate = _positions.Next(source, cursor);
++#if T3MP_FRONTIER_VALIDATE
++            var reference = ReferenceNext(source, cursor);
++            if (candidate != reference) throw new InvalidOperationException("Frontier positions mismatch: cursor=" + cursor + " candidate=" + candidate + " reference=" + reference);
++            PositionComparisons++;
++#endif
++            return candidate;
++#else
++            return ReferenceNext(source, cursor);
++#endif
++        }
++
++#if !T3MP_FRONTIER_POSITIONS || T3MP_FRONTIER_VALIDATE
++        private int ReferenceNext(SortedList<Guid, TickableEntity> source, int cursor)
++        {
+             var lower = source.Keys[cursor];
+             var keys = _eligible.Keys;
+             int low = 0, high = keys.Count;
+@@ -191,6 +234,7 @@ internal static class TickFrontier
+             var result = source.IndexOfKey(keys[low]);
+             return result < cursor ? cursor : result;
+         }
++#endif
+     }
+ 
+     private static readonly ConditionalWeakTable<TickableEntityBucket, BucketIndex> Buckets = new ConditionalWeakTable<TickableEntityBucket, BucketIndex>();
+@@ -253,6 +297,9 @@ internal static class TickFrontier
+         _guardedAny = new MethodBase[] { entityLoop, getGameObject, getCachedGameObject, setEnabled, getEnabled, meteredGetEnabled };
+         Installed = RuntimePatches.TryInstall(Owner, harmonyType, harmonyMethodType, patch, apply =>
+         {
++#if T3MP_FRONTIER_POSITIONS
++            if (!FrontierPositions<TickableEntity>.Supported) throw new InvalidOperationException("native sorted-list version is unavailable");
++#endif
+             if (Foreign()) throw new InvalidOperationException("another mod patches the tick path or BaseComponent.Enabled");
+             _shape = RuntimePatches.OriginalShape(harmonyType, tickAll);
+             apply(add, null, nameof(AfterAdd), null, null);
+@@ -265,6 +312,13 @@ internal static class TickFrontier
+             apply(tickAll, null, null, nameof(Rewrite), null);
+         }, typeof(TickFrontier));
+         if (Installed) Debug.Log("[T3MP] Tick frontier installed.");
++#if T3MP_FRONTIER_POSITIONS
++#if T3MP_FRONTIER_VALIDATE
++        if (Installed) Debug.Log("[T3MPTEST] Frontier positions installed validate=True");
++#else
++        if (Installed) Debug.Log("[T3MPTEST] Frontier positions installed validate=False");
++#endif
++#endif
+     }
+ 
+     private static bool Foreign()
+diff --git a/src/T3MP/T3MP.csproj b/src/T3MP/T3MP.csproj
+index dfe1dff..7a6c392 100644
+--- a/src/T3MP/T3MP.csproj
++++ b/src/T3MP/T3MP.csproj
+@@ -10,6 +10,18 @@
+     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+   </PropertyGroup>
+ 
++  <!-- Temporary candidate builds; neither the helper nor its branches are in
++       the default product. Remove the experiment or adopt after measurement. -->
++  <PropertyGroup Condition="'$(FrontierPositionsExperiment)' == 'true' Or '$(FrontierPositionsValidate)' == 'true'">
++    <DefineConstants>$(DefineConstants);T3MP_FRONTIER_POSITIONS</DefineConstants>
++  </PropertyGroup>
++  <PropertyGroup Condition="'$(FrontierPositionsValidate)' == 'true'">
++    <DefineConstants>$(DefineConstants);T3MP_FRONTIER_VALIDATE</DefineConstants>
++  </PropertyGroup>
++  <ItemGroup Condition="'$(FrontierPositionsExperiment)' == 'true' Or '$(FrontierPositionsValidate)' == 'true'">
++    <Compile Include="../Experiments/FrontierPositions.cs" Link="Runtime/FrontierPositions.cs" />
++  </ItemGroup>
++
+   <ItemGroup>
+     <!-- Compile-time access to the game's internal types (runtime Mono does
+          not enforce member visibility, the standard Timberborn modding

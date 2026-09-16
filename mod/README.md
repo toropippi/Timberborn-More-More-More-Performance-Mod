@@ -1,148 +1,94 @@
 # More More More Performance! (T3MP)
 
-**A performance mod: it makes the game itself run faster — not a speed
-multiplier.** It makes the simulation's heaviest CPU work much cheaper, so large
-late-game colonies and fast-forward actually keep up, while producing the
-**exact same colony** as vanilla.
+Version 1.2.3.
 
-- **~1.5x faster simulation, always on** — install it, load your save, done
-  (measured per full in-game day on a large colony, so day/night load is
-  averaged out).
-- **Up to ~2.4x with the Shift+P turbo** — skips animations while you
-  fast-forward; press Shift+P again to go back (the exact factor depends on
-  your CPU).
-- **Hidden speed-button slowdown removed** — as your colony grows, vanilla
-  quietly weakens the speed buttons: on a big colony the fastest button runs at
-  **less than half** of its real speed. With this mod the speed you press is
-  the speed you get: even on a medium or large colony, **the speed feel of
-  your first days on a fresh map comes right back**.
-- **Behavior-identical to vanilla** — pathfinding, reservations, inventories and
-  water are never skipped or approximated. Same result, every time.
-
-## What it is (and isn't)
-
-Other speed mods raise the game-speed **multiplier** — but the more you raise it,
-the more the game stutters, because the simulation is **CPU-bound**. This mod
-attacks the other side: it makes each simulation tick **cheaper to compute**, so
-raising the speed (with the base game controls or any speed mod) actually
-delivers instead of grinding to a halt. Pair it with your favorite speed mod.
-
-It does **not** change any game behavior — it just does the same math with far
-less overhead.
-
-## Why is it faster? (the biggest win, in plain words)
-
-Every step of game time, the game must give tens of thousands of things —
-every beaver, building and tree — their turn to act. How that list is stored
-decides how much time is wasted *between* the turns:
-
-- **Vanilla** keeps the list in a structure that is slow to walk through, and
-  re-checks every entry one by one, every step, thousands of times per second.
-- **This mod** lays the same list out flat in memory, in the exact same order,
-  so the CPU sweeps straight through it front to back — the layout CPUs read
-  fastest.
-
-Same turns, same order, same results — just far less bookkeeping per step.
-That one change alone was worth roughly a quarter more speed on a large test
-colony; the rest comes from many smaller changes in the same spirit, each one
-measured (the full optimization history is in the GitHub repo).
+T3MP reduces repeated work during save loading and simulation. Its runtime
+optimizations preserve simulation decisions and their order. Performance depends
+on the colony, game version and other enabled mods.
 
 ## Features
 
-1. **Always-on optimizations** — enabled automatically as soon as a save
-   loads. Nothing to configure.
-2. **Hidden speed-button slowdown removed** — vanilla quietly weakens every
-   speed above x1 as the colony grows; the bigger the colony, the less your
-   speed buttons actually deliver (less than half on a 200+ beaver colony).
-   With this mod the speed you press is the speed you get. (This is the mod's
-   one deliberate behavior change; a flag in the source disables it. The exact
-   vanilla formula is documented in the GitHub repo.)
-3. **Turbo rendering (Shift+P)** — for leaving a heavy colony fast-forwarding
-   unattended. Toggles a render blackout + animation thinning: the screen goes
-   dark (one frame is drawn every 100 ticks so you can watch progress) and the
-   time normally spent rendering is given back to the simulation — measured up
-   to ~2.4x the vanilla tick rate at very high speeds on the test colony. At
-   the base game's normal speeds it does **not** change the tick rate, it just
-   darkens the screen. Press Shift+P again — or simply open the Esc menu — to
-   turn rendering back on (opening the menu always cancels the turbo, so it
-   can never follow you into another save).
+- **Shift+O — smooth mode.** Optional, off at load. Targets 30 fps by adjusting
+  whole-game speed between x1 and the selected speed. Press again to restore
+  the selected speed. While governing, VSync and the frame cap are temporarily
+  released. The meter shows `Smooth 30fps [Shift+O]` while enabled; `iSPD`
+  remains the selected speed and `rSPD` reports measured progress.
 
-A live speed meter is shown bottom-right whenever the mod is active:
-`rSPD/iSPD` — the real vs. ideal speed multiple (real = what you are actually
-getting, ideal = what the game is trying to run — with the throttle removed
-this normally equals the speed you pressed) —
-and `UPS` (simulation updates/ticks per second). It keeps updating during a
-Shift+P blackout, so you can confirm the simulation is still running while the
-screen is dark.
+- **Selected speed.** Speed buttons 1/2/3 select x1/x3/x7 without population-based
+  reduction. `iSPD` shows the selected multiplier; `rSPD` shows measured progress
+  and can be lower when the computer cannot keep up.
 
-## Tip: V-Sync and fps at high speed
+- **Bottom-right speed meter.** `rSPD` is measured simulation speed, `iSPD` is
+  the current target speed, and `UPS` is simulation ticks per real second.
+  The meter refreshes four times per second over about two seconds. Pause
+  shows zero. These values describe the running game; they do not measure
+  speedup against a separate unmodded run.
+- **Save loading.** Entity construction, initialization, event delivery and
+  navigation setup use fewer repeated lookups on supported game builds. A thin
+  progress bar at the bottom of the window shows the load phases of a world load.
+- **Simulation overhead.** Typed event delegates reduce reflection calls.
+  Frontier avoids empty entity visits when all tickable components are disabled.
+  Water texture layers with identical bytes avoid a redundant GPU upload.
+  Walker speed callbacks are reused instead of re-created every tick, terrain
+  path searches skip duplicate neighbor visits, inventories read allowed-good
+  amounts directly, and harvest searches skip path queries for trees and crops
+  that cannot change the result.
+- **Movement.** Characters move corner to corner along their path instead of
+  0.1-unit sub-steps. Stop rules and path choices are unchanged; positions can
+  differ from vanilla in the last decimals.
+- **Tube lighting repair.** Clears stale tube visitor registration when a
+  character enters a building immediately after passing through a tube, so
+  lighting reflects the remaining visitors.
 
-If fps sits below 60 at high speed even though the CPU is keeping up
-(rSPD ≈ iSPD on the meter), that is usually V-Sync quantization: the moment a
-frame takes even slightly longer than 16.7 ms, V-Sync snaps it to the next
-30-fps slot. Turning **V-Sync off** (or raising the fps cap) in the game's
-graphics settings lets the frame rate float at its true value instead.
-Trade-off: possible screen tearing and higher GPU load — simulation
-correctness is unaffected either way.
+## Compatibility
 
-## Install
+Requires Harmony. The compatibility targets are Timberborn 1.1.2.4 and
+1.0.13.1 on Windows. Water upload optimization requires Direct3D11. Game
+method checks and checks for conflicting patches retain native execution
+when an optimization cannot safely apply.
 
-1. Install the **Harmony** mod (required).
-2. Enable this mod in the in-game Mod Manager and restart if prompted.
+The older frame-based simulation caches, animation snapping and render suppression
+have been removed. Tube lighting repair does not change movement animation.
 
 ---
 
-## 日本語
+# 日本語
 
-**高速化 MOD です。ゲームの計算を軽くして、ゲームそのものを速くします（速度
-倍率を変える MOD ではありません）。** 大規模な終盤コロニーや高速再生が本当に
-速く回るようになり、結果はバニラと**完全に同じ**です。
+バージョン1.2.3。
 
-- **常時、シミュレーションが約 1.5 倍**：導入してセーブを読み込むだけ
-  （大規模コロニーで、ゲーム内 1 日単位で計測。昼夜の負荷差を平均化）
-- **Shift+P のターボで最大約 2.4 倍**：アニメーションを省略して早送り。
-  もう一度押すと元に戻ります（CPU に依存）
-- **速度ボタンの隠し減速を撤廃**：バニラは人口が増えると速度ボタンの効きを
-  こっそり弱めます。大きなコロニーでは、最速ボタンを押しても**本来の半分以下**
-  しか出ません。本 MOD では押した速度がそのまま出て、中規模・大規模コロニー
-  でも**ゲームを始めたばかりの頃の速度感がそのまま戻ってきます**
-- **挙動はバニラと完全一致** — 経路・予約・在庫・水を一切省略・近似しません。
-  だから結果は毎回同じ
+T3MPはセーブのロードとシミュレーション中の重複処理を減らします。
+ランタイムの最適化はシミュレーションの判断と順序を維持します。
+高速化の効果は集落、ゲームの版、併用MODによって変わります。
 
-他の速度 mod は「倍率」を上げますが、上げるほどカクつきます（シミュが CPU 律速
-のため）。この mod は逆側、**1 tick あたりの計算を軽くする**ので、（本体の速度
-コントロールでも他の速度 mod でも）上げた速度が実際に出るようになります。お好みの
-速度 mod と併用できます。
+## 機能
 
-**なぜ結果を変えずに速くなるのか（一番効いた改良を平たく）**：ゲームは時間を
-一歩進めるたびに、街の数万個の対象（ビーバー・建物・木…）に順番を回して動かし
-ます。この「一覧の持ち方」で、順番を回す合間のムダの量が決まります。バニラは
-たどるのが遅い形で一覧を持ち、毎回 1 件ずつ余計な確認をしながら回します——それが
-毎秒何千回も。本 mod は同じ一覧を、**同じ順番のまま**、メモリ上に隙間なく並べ
-直しました。CPU は前から一気になめるだけ——CPU が最も速く読める形です。回す
-順番も結果も同じで、管理の手間だけが減ります。この 1 つだけで大規模コロニーの
-速度が約 1/4 上がりました。残りは同じ発想の細かい改良の積み重ねです（1 つずつ
-実測した記録は GitHub リポジトリの optimization history にあります）。
+- **Shift+O — スムーズモード。** ロード時はOFF。30fpsを目標に、×1から選択速度までの範囲で
+  ゲーム全体の速度を自動調整します。再度押すと選択速度に戻ります。自動調整中はVSyncと
+  FPS上限を一時解除します。有効時はメーター上に `Smooth 30fps [Shift+O]` と表示し、
+  `iSPD`は選択倍率、`rSPD`は実測倍率を示します。
 
-- **常時最適化**：セーブ読み込みと同時に自動で有効。設定不要。
-- **速度ボタンの隠し減速の撤廃**：バニラは人口が増えるほど、1倍を超える速度の
-  効きをこっそり弱めます（200匹以上のコロニーでは最速ボタンでも本来の半分以下）。
-  本modでは押した速度がそのまま通ります。（これが本mod唯一の意図的な挙動変更です。
-  ソースのフラグで無効化可能。バニラの正確な式は GitHub リポジトリに記載）
-- **ターボ描画（Shift+P）**：重いコロニーを放置で早送りするとき用。画面を暗転
-  ＋アニメ間引きして、描画に使っていた時間をシミュに回します（超高速時に
-  バニラ比最大約2.4倍を計測）。通常速度では tick は変わりません。
-  もう一度 Shift+P を押すか、Esc メニューを開くと描画に戻ります（メニューを
-  開くと必ず解除されるので、別のセーブに持ち越されることはありません）。
+- **選択した速度を維持。** 速度ボタン1・2・3は×1・×3・×7です。人口による減速を解除します。
+  `iSPD`は選択倍率、`rSPD`は実測倍率です。処理能力が足りない場合、実測倍率は選択倍率を下回ります。
 
-右下に速度メーターを表示：`rSPD/iSPD`（実際／理想の倍速。実際＝出ている倍速、
-理想＝人口スロットル補正後にゲームが出そうとしている倍速）と `UPS`（1秒あたりの
-tick 数）。暗転中も更新され続けます。
+- **右下の速度メーター。** `rSPD`は実測の進行速度、`iSPD`は現在の設定速度、
+  `UPS`は実時間1秒あたりのシミュレーションtick数です。約2秒の実測を毎秒4回更新し、
+  一時停止では0を表示します。現在のゲームの速度を示すもので、MODなしとの比較倍率ではありません。
+- **セーブのロード。** 対応するゲーム版で、エンティティ生成・初期化・イベント配信・
+  経路網構築の重複した検索を減らします。ワールドのロード中は画面下部に細いプログレスバーを表示します。
+- **本編ループの軽量化。** 型付きdelegateによるイベント配信、tick部品がすべて無効な
+  エンティティの空の走査の省略、同じbyte列の水テクスチャのGPU再送抑制を行います。
+  歩行者の速度コールバックの再利用、地形経路探索の重複した隣接探索の省略、
+  在庫の許可品目の直接参照、結果を変えない木や作物への経路照会の省略も行います。
+- **移動処理。** キャラクターは0.1マス刻みではなく経路のコーナー単位で進みます。
+  停止規則と経路の選択は変わりません。座標の下位桁はバニラと一致しないことがあります。
+- **配管照明の修正。** 配管を通過した直後に建物へ入ったキャラクターの古い訪問登録を解除し、
+  残っている訪問者に合わせて照明を更新します。
 
-**Tips（V-Syncとfps）**：CPUに余裕がある（メーターで rSPD≒iSPD）のに高速時に
-60fpsを切る場合、大抵はV-Syncの量子化です（フレームが16.7msをわずかに超えた瞬間、
-次の30fps枠に切り下げられる）。グラフィック設定で**V-SyncをOFF**（またはfps上限を
-引き上げ）にするとfpsが実力値で出ます。代償はティアリングの可能性とGPU負荷増のみで、
-シミュレーションの正確さには一切影響しません。
+## 互換性
 
-**導入**：1) **Harmony**（必須）を入れる → 2) ゲーム内 Mod Manager で有効化して再起動。
+Harmonyが必要です。対応対象はWindowsのTimberborn 1.1.2.4と1.0.13.1です。
+水テクスチャの最適化にはDirect3D11が必要です。ゲームの対象メソッドと他MODのパッチを確認し、
+安全に適用できない最適化は元の処理を使います。
+
+旧版のフレーム基準のシミュレーションキャッシュ、モデルのスナップ、描画抑制は削除しました。
+配管照明修正は移動アニメーションを変更しません。

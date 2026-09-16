@@ -1,266 +1,45 @@
-# Changelog — More More More Performance! (T3MP)
+# Changelog
 
-More performance. Then more. Then, because the name promised it, a little more.
+## v1.2.3 — Workshop release (2026-09-16)
 
----
+- Harvest searches (lumberjacks, farms, gatherers) skip the path query for candidates that cannot change the result; the first candidate is always queried so cached flow fields fill as before.
+- Inventories read allowed-good amounts directly instead of a repeated linear search.
+- The large load-status window is replaced by a single text-free progress bar shown only during world loads.
+- All measurement, validation and experiment code moved out of the shipped assembly; `scripts/check_product_purity.ps1` gates every build and `scripts/measure.ps1` is the single measurement entry (rules: `docs/DIAGNOSTICS.md`).
 
-## v1.1.7 — "less baggage, more compatibility"
+## v1.2.2 — local playtest
 
-**Fixed a crash on game version 1.0 caused by a stray benchmark file.**
+- Characters move corner to corner along their path instead of 0.1-unit sub-steps (stop rules and path choices unchanged; positions can differ from vanilla in the last decimals).
 
-- **No more "Failed to load asset bundle t3mp-bot-instancing" crash.** v1.1.6
-  accidentally shipped a development-only asset bundle (part of an unreleased
-  GPU-instancing experiment) inside the mod package. The bundle was built with
-  the Unity version used by Timberborn 1.1, so on game v1.0 the game's own mod
-  loader failed to load it and crashed before reaching the main menu. The
-  bundle is no longer part of the released mod; it now lives only in the
-  development repository for local benchmarks.
-- **No gameplay or performance change.** The bundle was never used by any
-  shipped feature — removing it changes nothing about how the mod runs.
+## v1.2.1 — local playtest
 
-**Fixed: characters visually stuck inside tubes at very high speed.**
+- Added the bottom-right meter and restored x1/x3/x7 selected speeds and optional Shift+O smooth mode.
+- Preserved native EventBus registration and validation while using typed delegates.
+- Fixed water-upload history invalidation when Harmony regenerates a patch chain.
+- Refined tube-visitor cleanup and GoodStack compatibility; removed ineffective tick-index code and unused diagnostics.
 
-- At the mod's uncapped speeds (far beyond vanilla's x3), the visual model
-  playback could no longer keep up with the simulation — especially at low
-  fps. The lagging model position drives tube visuals, so the tube travel
-  glow (with the character inside) stayed parked in the tube long after the
-  simulation had finished the transit, looking like beavers stuck in the
-  pipes. The mod now snaps a character's visual model forward whenever its
-  animation falls more than ~2 tiles behind its real position — the same
-  resync turbo mode already used, applied continuously. Vanilla-speed
-  visuals are unaffected (the lag threshold is never reached below high
-  fast-forward), and simulation results are unchanged as always.
+Current status and validation limits: [handoff](docs/HANDOFF.md).
 
-### 日本語
+## v1.2.0 — runtime rebuild
 
-**ゲーム本体 v1.0 でのクラッシュを修正しました。**
+Replaced the previous runtime implementation with guarded event delegates,
+Frontier traversal and water-upload deduplication. Added the tube-light workaround
+and expanded load optimizations. Older frame-based caches and model/render
+shortcuts were removed. Reported symptoms are not all proven to share one cause.
 
-- **「Failed to load asset bundle t3mp-bot-instancing」クラッシュの修正。**
-  v1.1.6 に、未公開の GPU インスタンシング実験用の開発専用アセットバンドルが
-  誤って同梱されていました。このバンドルは Timberborn 1.1 の Unity で
-  ビルドされているため、v1.0 ではゲーム側のMODローダーが読み込みに失敗し、
-  メインメニューに到達する前にクラッシュしていました。バンドルを配布物から
-  除外しました（開発リポジトリ内のベンチマーク専用に移動）。
-- **ゲームプレイ・性能への影響はありません。** このバンドルは公開機能では
-  一切使われていないため、除外しても動作は変わりません。
+## v1.1 history
 
-**修正：超高倍速でビーバーがチューブ内に固着して見えるバグ。**
+These entries describe the earlier implementation, not the current feature set.
 
-- 本MODの上限解放速度（バニラ最大 x3 を大きく超える領域）では、見た目の
-  モデル再生がシミュレーションに追いつけなくなります（特に低fps時）。
-  チューブの通過表示は「モデルの位置」を参照するため、シミュレーション上は
-  とっくに通過済みでも、青い通過光（とその中のビーバー）がチューブ内に
-  残り続け、詰まっているように見えていました。修正後は、モデルの見た目が
-  実位置から約2マス以上遅れた時点で即座に実位置へスナップします
-  （ターボモードが以前から使っている再同期処理を常時適用する形）。
-  バニラ速度帯では遅延がしきい値に達しないため見た目への影響はなく、
-  シミュレーション結果も従来どおり完全に同一です。
+| Version | Main change at the time |
+|---|---|
+| 1.1.7 | Removed a development asset bundle that broke game 1.0 loading |
+| 1.1.6 | Made mode hotkeys respect text-input blocking |
+| 1.1.5 | Changed water-object update handling |
+| 1.1.4 | Corrected flood-state updates |
+| 1.1.3 | Corrected resource reachability updates |
+| 1.1.2 | Revised path-range drawing |
+| 1.1.1 | Added mechanical highlight/UI work |
+| 1.1.0 | Initial simulation optimizations and optional render mode |
 
----
-
-## v1.1.6 — "more typing, fewer surprises"
-
-**Hotkeys now respect text input, just like vanilla.**
-
-- **No accidental mode changes while typing in chat.** Shift+P and Shift+O now
-  use Timberborn's own input-blocked state before handling the mod's raw
-  keyboard shortcuts. Typing those letters in chat or another focused text
-  field no longer toggles turbo or smooth mode.
-- **Vanilla-consistent input behavior.** The mod follows the same
-  `InputBlocker` state that suppresses the base game's gameplay shortcuts, so
-  normal gameplay hotkeys still work immediately after text input closes.
-
-### 日本語
-
-**文字入力中のホットキー動作を、バニラと同じにしました。**
-
-- **チャット入力中にモードが誤作動しません。** Shift+P / Shift+O の判定前に、
-  Timberborn 本体が使う入力ブロック状態を確認するよう変更しました。チャットや
-  フォーカス中のテキスト欄で P / O を入力しても、ターボ／スムーズモードは
-  切り替わりません。
-- **入力欄を閉じれば通常どおり。** バニラのゲーム操作キーと同じ
-  `InputBlocker` に従うため、文字入力終了後は直ちにホットキーが再び使えます。
-
----
-
-## v1.1.5 — "more water, less work"
-
-**More water objects, less per-tick work. Same vanilla result.**
-
-- **Faster water-object updates on big, watery maps.** Every tick the game
-  re-checks every water object (floodable buildings and more) to see if the
-  water above it changed — ~10k-17k of them on a large late-game map. This adds
-  a fast path that caches each object's map cell once (its coordinates never
-  move) and then reads the live water column directly each tick, skipping the
-  repeated bounds/index/wrapper overhead vanilla pays per object. Measured
-  **~35% less time** on that step (e.g. ~1.6 ms → ~1.05 ms per tick with ~10.6k
-  objects).
-- **Exactly vanilla.** The water column is re-read from the live state every
-  tick (no cached lookup that could go stale as water rises or drains), and the
-  actual flooded/unflooded change + event is still performed by the game's own
-  WaterObject.UpdateWaterAboveBase(), only when the value changed. It replaces
-  the v1.1.4-removed skip that used the wrong signal. A tight full-vanilla safety
-  pass runs periodically as belt-and-suspenders.
-- **Still zero gameplay changes.** Only *when* the check is done cheaply — what
-  floods, and when, is identical to vanilla.
-
-### 日本語
-
-**水オブジェクトは増えても、1tickの手間は減る。結果はバニラ同一。**
-
-- **広大で水の多いマップで、水オブジェクト更新が高速に。** ゲームは毎tick、全ての
-  水オブジェクト（浸水しうる建物など。大規模終盤マップで約1〜1.7万個）の水位変化を
-  再チェックします。この処理に高速パスを追加：各オブジェクトのマップセルを一度だけ
-  キャッシュし（座標は動きません）、以降は毎tick現在の水柱を直接読むことで、バニラが
-  オブジェクトごとに払う境界判定・インデックス計算・ラッパ生成の重複を省きます。
-  **約35%短縮**（例：約1.6ms→約1.05ms/tick、水オブジェクト約1.06万個時）。
-- **バニラ完全一致。** 水柱は毎tick現在の状態から読み直すため（水位上昇・排水で
-  古くなる索引キャッシュは持ちません）、浸水の発生も復帰も取りこぼしません。実際の
-  浸水／復帰処理とイベントは、値が変わったときだけゲーム本体の
-  WaterObject.UpdateWaterAboveBase() が行います。v1.1.4 で撤去した「誤った信号を使う
-  スキップ」の正しい置き換えです。保険として短い間隔でフルバニラ一巡も回します。
-- **ゲーム内容の変更はゼロ。** 変えたのはチェックを安くする*やり方*だけ。何がいつ
-  浸水するかはバニラと同一です。
-
----
-
-## v1.1.4 — "more drainage"
-
-**More drainage. More vanilla. Zero more stuck-flooded buildings.**
-
-- **Buildings recover from flooding again.** A building that was temporarily
-  submerged could stay stuck in the "flooded" state forever after the water
-  receded. The mod skipped the per-tick water-object update whenever no column
-  *structurally* changed — but a building's flooded state depends on water
-  *depth*, which keeps changing as water flows and drains. So a flow-driven
-  recede was never noticed. Reverted that skip to vanilla behavior, which
-  re-checks every water object every tick.
-- **More faithful.** Flooding and un-flooding now track the water exactly like
-  vanilla, with no dependence on a signal that didn't mean what it looked like.
-
-### 日本語
-
-**もっと水はけ。もっとバニラに。浸水したまま固まる建物をゼロに。**
-
-- **建物が浸水から復帰するようになりました。** 一時的に水没した建物が、水が引いた
-  あとも「浸水」状態のまま永久に固まることがありました。MODは「カラムの*構造*変化が
-  無い tick」の水オブジェクト更新をスキップしていましたが、建物の浸水判定は*水深*で
-  決まり、水深は流れ・排水で変わり続けます。そのため流れによる水位低下が検知されません
-  でした。このスキップをバニラ挙動（毎tick全水オブジェクトを再チェック）に戻しました。
-- **もっと忠実に。** 浸水・復帰が、見かけと意味の違う信号に依存せず、バニラと完全に
-  同じく水位を追うようになりました。
-
----
-
-## v1.1.3 — "more reachable"
-
-**More reachable. More vanilla. Zero more stuck workers.**
-
-- **Workers no longer ignore reachable resources after a route change.** If you
-  rerouted a path so a fruiting tree or crop became reachable (or moved it out of
-  reach), gatherers, farmhouses and lumberjacks could keep using the *old* road
-  layout — walking past a ripe tree they should harvest. Fixed: the reachability
-  the mod caches is now rebuilt the moment the paths change, exactly like vanilla
-  recomputes it every time.
-- **More faithful.** This closes a case where the mod's cached pathing could drift
-  from vanilla after you edited roads. Same speed, same results — now including
-  right after you change a route.
-
-### 日本語
-
-**もっと到達可能に。もっとバニラに。詰まる作業員をゼロに。**
-
-- **ルート変更後、到達できる資源を作業員が無視しなくなりました。** 道を引き直して
-  実った木や作物が新たに到達可能になった（または逆に届かなくなった）とき、採集者・
-  農家・木こりが*古い*道の状態を使い続け、採るべき実った木の前を素通りすることが
-  ありました。修正：MODがキャッシュしている到達可能性を、道が変わった瞬間に
-  再構築するようにしました（バニラが毎回再計算するのと同じ挙動）。
-- **もっと忠実に。** 道を編集した後にMODのキャッシュ経路がバニラからずれ得た事象を
-  解消。速度も結果もそのまま——ルート変更直後も含めてバニラと一致します。
-
----
-
-## v1.1.2 — "more steady"
-
-**More steady. More live. Zero more flicker.**
-
-- **No more blinking route lines.** While placing or connecting a road, the green
-  path-range overlay used to flicker on and off — the route light strobing roughly
-  every other frame. Fixed: it now stays solid the whole time you are placing.
-- **More live overlay.** The green range now tracks your cursor in real time while
-  you drag a road, instead of lagging a fraction of a second behind. What you are
-  about to connect is shown *now*, not after it catches up.
-- **Less code.** The change removed a preview-refresh shortcut that turned out to
-  be the source of the flicker, plus a superseded rebuild-throttle path that no
-  longer ran. Same speed, fewer moving parts.
-- **Still zero more gameplay changes.** Visual fix only — the simulation result is
-  *exactly* vanilla, as always.
-
-### 日本語
-
-**もっと安定。もっとライブ。チラつきゼロ。**
-
-- **道のルートラインが点滅しなくなりました。** 道を設置・接続している最中、緑の
-  到達範囲オーバーレイが1フレームおきくらいに点いたり消えたりしていました。修正済み：
-  設置中はずっと安定して表示されます。
-- **もっとライブなオーバーレイ。** 道をドラッグしている間、緑の範囲がコンマ数秒
-  遅れて追従するのではなく、カーソルにリアルタイムで追従するようになりました。
-  これから何が繋がるかが「今」見えます。
-- **コードも削減。** 点滅の原因だったプレビュー更新のショートカットと、すでに
-  使われていない旧リビルド抑制の分岐を削除しました。速度はそのまま、部品は少なく。
-- **ゲーム内容の変更はゼロのまま。** 見た目だけの修正で、シミュレーション結果は
-  いつもどおりバニラと完全に同一です。
-
----
-
-## v1.1.1 — "even more"
-
-**More instant. More smooth. More more.**
-
-- **More instant highlights.** Selecting a gear or a mechanical / power network now
-  lights up *instantly* — no more waiting, no more highlights drifting in from far
-  away like they lost the map. Touch a piece and the whole network is right there.
-  More responsive, more obvious, more done. (While drag-placing, the highlight now
-  ripples *outward* from the piece in your hand — the more natural direction.)
-- **More smooth at high speed — Shift+O.** New, now-official mode: press **Shift+O**
-  and the game holds a steady, smooth ~30 fps while the simulation runs as fast as
-  it possibly can underneath — up to the speed button you pressed, never below x1.
-  More of your colony stays smooth while it flies, so you get more speed *and* more
-  smoothness at the same time. The mod manages the frame cap for you: no more
-  fiddling with vsync or settings. A short note pops up when you toggle it, and the
-  bottom-right meter tags **iSPD** with **"(auto)"** while it is doing its thing.
-- **Still zero more gameplay changes.** More speed, more smoothness — but the
-  simulation result is *exactly* vanilla. Not one tick more, not one tick less.
-
-### 日本語
-
-**もっと即時。もっとなめらか。もっとmore。**
-
-- **もっと即時なハイライト。** 歯車や動力ネットワークを選択したときのハイライトが
-  *即座に*点くようになりました。もう待たされないし、遠くからこっちに寄ってくる
-  バグっぽい表示ともお別れ。触った瞬間、ネットワーク全体がそこに。もっと軽快、
-  もっと分かりやすく。（設置ドラッグ中は、掴んでいる建物から*外側へ*波及する
-  自然な向きになりました。）
-- **もっとなめらかな高速 — Shift+O。** 正式機能になった新モード。**Shift+O** を押すと、
-  なめらかな約30fpsを保ったまま、その裏でシミュレーションを可能な限り速く自動で
-  回します（上限＝押した速度ボタン、下限x1）。飛ばしてもコロニーがもっとなめらか、
-  つまり「速さ」と「なめらかさ」を同時にmore。フレーム上限はMODが自動管理するので、
-  vsyncも設定もいじる必要はもうありません。切り替え時に数秒だけ案内が出て、作動中は
-  右下メーターの **iSPD** に **「(auto)」** が付きます。
-- **ゲーム内容の変更はゼロのまま。** もっと速く、もっとなめらかに——でも
-  シミュレーション結果はバニラと*完全に同一*。1ティックたりとも増えも減りもしません。
-
----
-
-## v1.1.0 — the "more" that started it
-
-The core that makes everything above possible.
-
-- **More speed, always on.** The simulation itself runs up to about 1.5x faster on a
-  large late-game colony — same turns, same order, same results, just far less
-  bookkeeping per step. Install, load your save, done.
-- **More turbo — Shift+P.** Skips animations while you fast-forward for up to about
-  2.4x. Press again (or open the Esc menu) to return to normal.
-- **More of the speed you paid for.** Removed vanilla's hidden speed-button throttle:
-  on a big colony the fastest button no longer runs at less than half its real
-  speed — the speed you press is the speed you get.
+Detailed historical changes remain in Git history.

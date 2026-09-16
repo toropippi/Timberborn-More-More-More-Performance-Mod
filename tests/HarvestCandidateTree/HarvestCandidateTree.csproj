@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../experiments/harvest-tree/CandidateMinTree.cs" Link="CandidateMinTree.cs" />
+    <Reference Include="Timberborn.YielderFinding"><HintPath>$(TimberbornManagedDir)/Timberborn.YielderFinding.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Yielding"><HintPath>$(TimberbornManagedDir)/Timberborn.Yielding.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.TemplateSystem"><HintPath>$(TimberbornManagedDir)/Timberborn.TemplateSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.BaseComponentSystem"><HintPath>$(TimberbornManagedDir)/Timberborn.BaseComponentSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Common"><HintPath>$(TimberbornManagedDir)/Timberborn.Common.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Goods"><HintPath>$(TimberbornManagedDir)/Timberborn.Goods.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Persistence"><HintPath>$(TimberbornManagedDir)/Timberborn.Persistence.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.Carrying"><HintPath>$(TimberbornManagedDir)/Timberborn.Carrying.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.InventorySystem"><HintPath>$(TimberbornManagedDir)/Timberborn.InventorySystem.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+--- a/src/T3MPTestDriver/TestDriver.cs
++++ b/src/T3MPTestDriver/TestDriver.cs
+@@ -31,6 +31,7 @@
+     {
+         Debug.Log("[T3MPTEST] Test driver loaded. " + TestArguments.Describe());
+         ReleaseIdentity.ReportIfRequested();
++        OfflineUnityBoolValidation.RunIfRequested();
+         FullTickCounter.Install();
+         if (EventDelegateValidation.Requested) EventDelegateValidation.Run();
+         if (WaterUploadValidation.Requested) WaterUploadValidation.Run();

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WindowsPerformanceRecorder Version="1.0">
+  <Profiles>
+    <SystemCollector Id="LoadCollector" Name="T3MP Zen5 Load Counters">
+      <BufferSize Value="1024"/><Buffers Value="128"/>
+    </SystemCollector>
+    <SystemProvider Id="LoadProvider">
+      <Keywords><Keyword Value="Loader"/><Keyword Value="ProcessThread"/><Keyword Value="CSwitch"/></Keywords>
+    </SystemProvider>
+    <!-- Ryzen 9950X CPUID EAX=00B40F40: family 26, model 68, stepping 0.
+         AMD Zen5 demand fills: event 43, local L2/L3=03, DRAM/MMIO=48.
+         Refill counts are not a direct measure of stall cycles or bus bandwidth. -->
+    <MicroArchitecturalConfig Id="Zen5Config">
+      <ProfileSources Architecture="AMD" Family="26" Model="68" Stepping="0">
+        <ProfileSource Name="T3MP_LS_DEMAND_FILLS_CACHE" Event="0x43" Unit="0x03" Interval="65536" AllowsHalt="false" Persist="false"/>
+        <ProfileSource Name="T3MP_LS_DEMAND_FILLS_DRAM_IO" Event="0x43" Unit="0x48" Interval="65536" AllowsHalt="false" Persist="false"/>
+        <ProfileSource Name="T3MP_LS_LOAD_DISPATCH" Event="0x29" Unit="0x01" Interval="65536" AllowsHalt="false" Persist="false"/>
+      </ProfileSources>
+    </MicroArchitecturalConfig>
+    <HardwareCounter Id="LoadCounters" Strict="true">
+      <MicroArchitecturalConfigId Value="Zen5Config"/>
+      <Counters>
+        <Counter Value="TotalCycles"/><Counter Value="InstructionRetired"/>
+        <Counter Value="T3MP_LS_DEMAND_FILLS_CACHE"/><Counter Value="T3MP_LS_DEMAND_FILLS_DRAM_IO"/>
+        <Counter Value="T3MP_LS_LOAD_DISPATCH"/>
+      </Counters>
+      <Events><Event Value="CSwitch"/></Events>
+    </HardwareCounter>
+    <Profile Id="LoadZen5.Verbose.File" Name="LoadZen5" LoggingMode="File" DetailLevel="Verbose" Description="AMD Zen5 load instruction and data refill counters">
+      <Collectors><SystemCollectorId Value="LoadCollector">
+        <SystemProviderId Value="LoadProvider"/><HardwareCounterId Value="LoadCounters"/>
+      </SystemCollectorId></Collectors>
+    </Profile>
+  </Profiles>
+</WindowsPerformanceRecorder>
