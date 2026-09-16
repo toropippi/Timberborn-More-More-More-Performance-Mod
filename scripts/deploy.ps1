@@ -2,12 +2,7 @@
 param(
     [string] $Configuration = 'Release',
     [string] $ModsPath = (Join-Path $env:USERPROFILE 'Documents\Timberborn\Mods'),
-    [string] $ModFolderName = 'T3MP',
-    # Benchmark-only: copies benchmark\AssetBundles into the deployed mod so
-    # BotInstancingProbe can load its shader bundle. Never use before a
-    # Workshop upload — the bundle only loads on the game version whose Unity
-    # built it and crashes the mod loader on any other version.
-    [switch] $IncludeBenchmarkBundles
+    [string] $ModFolderName = 'T3MP'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -30,6 +25,8 @@ $builtDll = Join-Path (Split-Path -Parent $projectPath) "bin\$Configuration\nets
 if (-not (Test-Path -LiteralPath $builtDll)) {
     throw "Built DLL was not found: $builtDll"
 }
+# Product purity gate (docs/DIAGNOSTICS.md): a build carrying diagnostic code never reaches the Mods folder.
+& (Join-Path $PSScriptRoot 'check_product_purity.ps1') -Dll $builtDll | Out-Host
 
 $resolvedModsPath = (Resolve-Path -LiteralPath $ModsPath).Path.TrimEnd('\')
 $workshopDataBackup = $null
@@ -51,17 +48,12 @@ if (Test-Path -LiteralPath $targetPath) {
 New-Item -ItemType Directory -Force -Path $targetPath | Out-Null
 Copy-Item -Path (Join-Path $modSourcePath '*') -Destination $targetPath -Recurse -Force
 Copy-Item -LiteralPath $builtDll -Destination (Join-Path $targetPath 'Code.dll') -Force
-if ($IncludeBenchmarkBundles) {
-    $benchmarkBundles = Join-Path $repoRoot.Path 'benchmark\AssetBundles'
-    if (-not (Test-Path -LiteralPath $benchmarkBundles)) {
-        throw "Benchmark AssetBundles folder was not found: $benchmarkBundles"
-    }
-    Copy-Item -LiteralPath $benchmarkBundles -Destination (Join-Path $targetPath 'AssetBundles') -Recurse -Force
-    Write-Warning 'Benchmark AssetBundles included - do NOT upload this build to the Workshop.'
-}
+# Nothing else is ever copied here: asset bundles, driver DLLs and probes never ship
+# (docs/DIAGNOSTICS.md). The deployed folder is checked once more as a package.
 if ($null -ne $workshopDataBackup) {
     [System.IO.File]::WriteAllBytes((Join-Path $targetPath 'workshop_data.json'), $workshopDataBackup)
 }
 
+& (Join-Path $PSScriptRoot 'check_product_purity.ps1') -Dll (Join-Path $targetPath 'Code.dll') -Package $targetPath | Out-Host
 Write-Host "Deployed to: $targetPath"
 

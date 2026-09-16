@@ -9,7 +9,7 @@ using Debug = UnityEngine.Debug;
 namespace T3MP.Runtime;
 
 // Runtime patches: behavior-exact simulation plumbing and a visual tube-visit
-// bug workaround. No simulation state is cached across ticks and nothing is
+// bug workaround. No simulation decisions are cached across ticks and nothing is
 // keyed on frames. Each feature owns a separate Harmony id so a failed install
 // can remove only its own hooks.
 internal static class RuntimePatches
@@ -35,7 +35,11 @@ internal static class RuntimePatches
             if (ModSettings.EnableEventBusFastDelegates) EventBusFastDelegates.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableWaterTextureUpload) WaterTextureUpload.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableTickFrontier) TickFrontier.Install(harmonyType, harmonyMethodType, patch);
+            if (ModSettings.EnableWalkerSpeedDelegates) WalkerSpeedDelegates.Install(harmonyType, harmonyMethodType, patch);
+            if (ModSettings.EnableTerrainNeighborVisits) TerrainNeighborVisits.Install(harmonyType, harmonyMethodType, patch);
             if (ModSettings.EnableTubeVisitFix) TubeVisitFix.Install(harmonyType, harmonyMethodType, patch);
+            if (ModSettings.EnableAllowedGoodRows) AllowedGoodRows.Install(harmonyType, harmonyMethodType, patch);
+            if (ModSettings.EnableYielderReachabilitySkip) YielderReachabilitySkip.Install(harmonyType, harmonyMethodType, patch);
         }
         catch (Exception exception)
         {
@@ -210,8 +214,9 @@ internal static class RuntimePatches
     internal static IEnumerable<T> CallAndReturn<T>(MethodInfo target, int argumentCount)
     {
         var loads = new[] { OpCodes.Ldarg_0, OpCodes.Ldarg_1, OpCodes.Ldarg_2, OpCodes.Ldarg_3 };
-        if (argumentCount > loads.Length) throw new ArgumentOutOfRangeException(nameof(argumentCount));
-        for (var i = 0; i < argumentCount; i++) yield return Instruction<T>(loads[i], null);
+        if (argumentCount > byte.MaxValue) throw new ArgumentOutOfRangeException(nameof(argumentCount));
+        // Arguments beyond the four short forms use ldarg.s with a byte index.
+        for (var i = 0; i < argumentCount; i++) yield return i < loads.Length ? Instruction<T>(loads[i], null) : Instruction<T>(OpCodes.Ldarg_S, (byte)i);
         yield return Instruction<T>(OpCodes.Call, target);
         yield return Instruction<T>(OpCodes.Ret, null);
     }

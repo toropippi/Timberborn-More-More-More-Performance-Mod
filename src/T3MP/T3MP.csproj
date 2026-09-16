@@ -9,6 +9,12 @@
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+  <!-- Movement sub-steps ship in the product (Runtime/MovementSubsteps.cs). The
+       symbol keeps tests/WalkerSpeedDelegates, which compiles WalkerSpeedDelegates.cs
+       against fixtures, on the delegate-only code path. It is the only symbol the
+       product may define; experiment symbols and experiment sources never enter
+       this project (docs/DIAGNOSTICS.md, scripts/check_product_purity.ps1). -->
+  <PropertyGroup><DefineConstants>$(DefineConstants);MOVEMENT_SUBSTEPS</DefineConstants></PropertyGroup>
 
   <ItemGroup>
     <!-- Compile-time access to the game's internal types (runtime Mono does
@@ -30,6 +36,13 @@
     <Publicize Include="Bindito.Core" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.TubeSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.WalkingSystem" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.InventorySystem" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.Goods" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.YielderFinding" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="Timberborn.NaturalResourcesLifecycle">
+      <HintPath>$(TimberbornManagedDir)\Timberborn.NaturalResourcesLifecycle.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Publicize Include="Timberborn.WaterSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.TickSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.WaterSystemRendering" IncludeCompilerGeneratedMembers="false" />

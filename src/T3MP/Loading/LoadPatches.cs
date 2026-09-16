@@ -27,7 +27,11 @@ internal static class LoadPatches
     {
         Runtime.WaterTextureUpload.Revalidate();
         Runtime.TickFrontier.Revalidate();
+        Runtime.WalkerSpeedDelegates.Revalidate();
+        Runtime.TerrainNeighborVisits.Revalidate();
         Runtime.TubeVisitFix.Revalidate();
+        Runtime.AllowedGoodRows.Revalidate();
+        Runtime.YielderReachabilitySkip.Revalidate();
     }
 
     internal static void Install()

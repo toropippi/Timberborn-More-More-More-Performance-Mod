@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.2.3 — Workshop release (2026-09-16)
+
+- Harvest searches (lumberjacks, farms, gatherers) skip the path query for candidates that cannot change the result; the first candidate is always queried so cached flow fields fill as before.
+- Inventories read allowed-good amounts directly instead of a repeated linear search.
+- The large load-status window is replaced by a single text-free progress bar shown only during world loads.
+- All measurement, validation and experiment code moved out of the shipped assembly; `scripts/check_product_purity.ps1` gates every build and `scripts/measure.ps1` is the single measurement entry (rules: `docs/DIAGNOSTICS.md`).
+
+## v1.2.2 — local playtest
+
+- Characters move corner to corner along their path instead of 0.1-unit sub-steps (stop rules and path choices unchanged; positions can differ from vanilla in the last decimals).
+
 ## v1.2.1 — local playtest
 
 - Added the bottom-right meter and restored x1/x3/x7 selected speeds and optional Shift+O smooth mode.

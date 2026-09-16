@@ -1,0 +1,17 @@
+{
+  "All": [],
+  "Tick": ["EnableTickDispatchOptimizer", "EnableFlatTickDispatch", "EnableActiveInHierarchyMirror", "EnableSentinelTemplateInjection"],
+  "Haul": ["EnableHaulNoActionFrameCache", "EnableHaulNoActionOrderedCache"],
+  "Needs": ["EnableGlobalNeedTravelCache", "EnableGlobalNeedTravelShadowCache", "EnableTravelDistanceCache", "EnableDistrictNeedBehaviorDirectOptimizer", "EnableDistrictNeedAppraisalCache"],
+  "Harvest": ["EnableFastYielderFinder", "EnableFarmYielderSegmentTree", "EnableFarmHouseBehaviorDirectOptimizer", "EnablePlantingSpotFinderOptimizer", "EnableLumberjackYielderOptimizer", "EnableLumberjackNoCapacityFastEmpty", "EnableGatherWorkplaceOptimizer", "EnableFarmEventDrivenUpdates"],
+  "Inventory": ["EnableInventoryStockDistanceCache", "EnableInventoryNeedGoodOptimizer", "EnableCarryAmountCalculatorOptimizer", "EnableEmptyInventoriesFastPath"],
+  "Water": ["EnableWaterObjectTickFastPath"],
+  "District": ["EnableDistrictResourceCounterThrottle"],
+  "Navigation": ["EnableRoadReachabilityCache", "EnableFlowFieldFastPath"],
+  "Workers": ["EnableWorkerRootMetricsBypass", "EnableWorkerWorkingSpeedNoRepeatSet", "EnableWalkerMoverDelegateCacheOptimizer"],
+  "Visuals": ["EnableMechanicalDirectRotationOptimizer", "EnableMechanicalDirectRotationSampleCache", "EnableDefaultRotationOnlyDirectOptimizer", "EnableTickVisualSingletonThrottle", "EnableUnattendedVisualSuppression", "EnableMechanicalHighlightDiff", "EnableInstantHighlightOnSelect", "EnableHighlightSpatialOrder", "EnablePathOverlayInvalidationFilter", "EnableModelUpdateBatching", "EnablePathOverlayAmortizedRebuild"],
+  "Events": ["EnableEventBusFastDelegates"],
+  "NoMirror": ["EnableActiveInHierarchyMirror", "EnableSentinelTemplateInjection"],
+  "NoFlat": ["EnableFlatTickDispatch", "EnableActiveInHierarchyMirror", "EnableSentinelTemplateInjection"],
+  "OldExtras": ["EnableHaulNoActionFrameCache", "EnableHaulNoActionOrderedCache", "EnableGlobalNeedTravelCache", "EnableGlobalNeedTravelShadowCache", "EnableTravelDistanceCache", "EnableDistrictNeedBehaviorDirectOptimizer", "EnableDistrictNeedAppraisalCache", "EnableFastYielderFinder", "EnableFarmYielderSegmentTree", "EnableFarmHouseBehaviorDirectOptimizer", "EnablePlantingSpotFinderOptimizer", "EnableLumberjackYielderOptimizer", "EnableLumberjackNoCapacityFastEmpty", "EnableGatherWorkplaceOptimizer", "EnableFarmEventDrivenUpdates", "EnableInventoryStockDistanceCache", "EnableInventoryNeedGoodOptimizer", "EnableCarryAmountCalculatorOptimizer", "EnableEmptyInventoriesFastPath", "EnableWaterObjectTickFastPath", "EnableDistrictResourceCounterThrottle", "EnableRoadReachabilityCache", "EnableFlowFieldFastPath", "EnableWorkerRootMetricsBypass", "EnableWorkerWorkingSpeedNoRepeatSet", "EnableWalkerMoverDelegateCacheOptimizer", "EnableMechanicalDirectRotationOptimizer", "EnableMechanicalDirectRotationSampleCache", "EnableDefaultRotationOnlyDirectOptimizer", "EnableTickVisualSingletonThrottle", "EnableUnattendedVisualSuppression", "EnableMechanicalHighlightDiff", "EnableInstantHighlightOnSelect", "EnableHighlightSpatialOrder", "EnablePathOverlayInvalidationFilter", "EnableModelUpdateBatching", "EnablePathOverlayAmortizedRebuild"]
+}

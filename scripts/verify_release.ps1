@@ -89,6 +89,8 @@ try {
     $packageHashes=Get-ReleaseHashes $package
     $candidateHash=$packageHashes['Code.dll']
     $candidateMvid=Get-ReleaseMvid (Join-Path $package 'Code.dll')
+    # Product purity gate (docs/DIAGNOSTICS.md): no diagnostic code, switches or experiment sources in the package.
+    & (Join-Path $PSScriptRoot 'check_product_purity.ps1') -Dll (Join-Path $package 'Code.dll') -Package $package | Out-Host
     dotnet build (Join-Path $repo 'src/T3MPTestDriver/T3MPTestDriver.csproj') -c Release "-p:TimberbornInstall=$V11Install" *> (Join-Path $output 'driver-build.log')
     if($LASTEXITCODE -ne 0) {throw 'Driver build failed'}
     $driverInput=Join-Path $output 'T3MPTestDriver.dll'

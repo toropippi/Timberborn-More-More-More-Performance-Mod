@@ -284,7 +284,9 @@ internal static class TickFrontier
         if (RuntimePatches.ForeignPatched(_harmonyType, _tickAll, Owner, transpilersOnly: true)) return true;
         if (RuntimePatches.ForeignPatched(_harmonyType, _entityTick, Owner, transpilersOnly: false)) return true;
         foreach (var method in _guardedAny)
+        {
             if (RuntimePatches.ForeignPatched(_harmonyType, method, Owner, transpilersOnly: false)) return true;
+        }
         return false;
     }
 
@@ -475,6 +477,7 @@ internal static class TickFrontier
             group.Publish();
         }
     }
+
 
     private static void Drift(ComponentState state, bool actual)
     {

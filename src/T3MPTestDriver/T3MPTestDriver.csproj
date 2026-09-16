@@ -9,7 +9,17 @@
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(ActiveTransitionExperiment)' == 'true'">
+    <DefineConstants>$(DefineConstants);ACTIVE_TRANSITION_EXPERIMENT</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(ActiveTransitionExperiment)' != 'true'">
+    <Compile Remove="ActiveTransitionValidation.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(ActiveTransitionExperiment)' == 'true'">
+    <Reference Include="UnityEngine.AnimationModule"><HintPath>$(TimberbornManagedDir)\UnityEngine.AnimationModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
   <ItemGroup>
+    <Reference Include="Timberborn.Metrics"><HintPath>$(TimberbornManagedDir)\Timberborn.Metrics.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Timberborn.CharacterMovementSystem">
       <HintPath>$(TimberbornManagedDir)\Timberborn.CharacterMovementSystem.dll</HintPath>
       <Private>false</Private>
@@ -76,6 +86,7 @@
     </Reference>
     <PackageReference Include="Krafs.Publicizer" Version="2.2.1" PrivateAssets="all" />
     <Publicize Include="Timberborn.Navigation" IncludeCompilerGeneratedMembers="false" />
+    <Publicize Include="Timberborn.CharacterMovementSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.PrefabOptimization" IncludeCompilerGeneratedMembers="false" />
     <Reference Include="Timberborn.PrefabOptimization">
       <HintPath>$(TimberbornManagedDir)\Timberborn.PrefabOptimization.dll</HintPath>

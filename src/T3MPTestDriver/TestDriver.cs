@@ -32,11 +32,15 @@ public sealed class TestDriverModStarter : IModStarter
         Debug.Log("[T3MPTEST] Test driver loaded. " + TestArguments.Describe());
         ReleaseIdentity.ReportIfRequested();
         FullTickCounter.Install();
+        MatchedBenchmarkConditions.Install();
         if (EventDelegateValidation.Requested) EventDelegateValidation.Run();
         if (WaterUploadValidation.Requested) WaterUploadValidation.Run();
         RoadReachabilityExperiment.Install();
         BoolInliningExperiment.Install();
         TickProfiler.Install();
+        MovementProbe.Install();
+        HotCountProbe.Install();
+        SubsystemProfiler.Install();
         SearchProfiler.Install();
         if (TestArguments.LoadRoutingRequested) LoadRoutingTestDriver.Configure();
     }
@@ -250,6 +254,20 @@ public sealed class GameTestDriver : IPostLoadableSingleton
 
     public void PostLoad()
     {
+        // After the product installed its patches at mod start: the audit's
+        // prefix/postfix must be the later generation (docs/DIAGNOSTICS.md).
+        MovementValidation.Install();
+#if ACTIVE_TRANSITION_EXPERIMENT
+        if (ActiveTransitionValidation.Requested)
+        {
+            var originalSpeed = _speedManager.CurrentSpeed;
+            _speedManager.ChangeSpeed(0f);
+            ActiveTransitionValidation.Begin(() => _speedManager.ChangeSpeed(originalSpeed));
+            return;
+        }
+#endif
+        if (TickPortValidation.Requested) TickPortValidation.Run();
+        if (ActiveLookupValidation.Requested) ActiveLookupValidation.Run();
         if (StairsCompatibilityProbe.Requested)
         {
             new GameObject("T3MPTEST.Stairs").AddComponent<StairsCompatibilityProbe>().Initialize(_container, _speedManager);
@@ -351,6 +369,9 @@ public sealed class SimulationRateLogger : MonoBehaviour
         }
         catch (Exception) { /* diagnostics only */ }
         TickProfiler.Report((float)(now - _windowStart));
+        MovementProbe.Report(now - _windowStart);
+        HotCountProbe.Report(now - _windowStart);
+        SubsystemProfiler.Report(now - _windowStart);
         SearchProfiler.Report(now - _windowStart);
         RoadReachabilityExperiment.Report();
         BoolInliningExperiment.Report();

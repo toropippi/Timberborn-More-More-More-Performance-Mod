@@ -1,90 +1,2068 @@
 {
   "schema": 1,
-  "as_of": "2026-09-13",
+  "as_of": "2026-09-16",
   "purpose": "Selected evidence needed for decisions; operation logs and superseded drafts are omitted.",
   "save": {
     "name": "n10c",
     "sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4"
   },
   "playtest": {
-    "version": "1.2.1",
-    "sha256": "A32B9D93AE73FD58FA9B522E1087CE6B4B08600C73F50CBE3DF545F975A51CD6",
-    "mvid": "802f93a6-d651-4bda-822f-342d0e0d83f6",
-    "observation": "User reports no animation/display anomalies while playing.",
-    "automated_checks": "Both supported API builds; speed-controller and meter offline tests; code review.",
-    "limits": "No full current-DLL automated regression or performance comparison after speed-policy/Shift+O restoration."
+    "version": "1.2.3",
+    "sha256": "527F3B71E6BEE76C9654FFBCE2007E88BCA5595CF4E4543D15FB2FEDD095B60C",
+    "status": "installed_locally_and_published_to_workshop_2026-09-16",
+    "note": "Current install and release gate: record release-1.2.3-20260916 (progress_bar_only). The 1.2.1 playtest entry it replaces (86AD2537) is retained in the records as history.",
+    "previous": {
+      "version": "1.2.1",
+      "sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+      "mvid": "3183ecfe-e4be-44e0-9c04-f63e8f3908f1"
+    }
   },
   "records": [
     {
-      "id": "runtime-n10c-reference",
-      "status": "historical_reference_not_current_playtest",
+      "id": "exact-batch-20260915",
+      "status": "not_adopted_no_gain",
+      "summary": "Four output-identical rewrites (NeedManager.UpdateNeed predicate inlining, ModularShaftAnimator.UpdateAnimation single efficiency/speed read, FlowFieldPathBuilder.AddEdgeNode single neighbor scan, Appraiser.AppraiseEffects single need lookup), each estimated 0.3-1%, measured together in one build on the user's instruction. Sources in experiments/exact-batch/.",
       "conditions": {
         "game": "1.1.2.4",
         "save": "n10c",
-        "candidate_sha256": "E2199B6EB29E998AE3557E124BF2136149F26DFC2F3504D99B58B31196A09FDC",
-        "driver_sha256": "9CCF308BA2047D836CA6C9BAA77734B6CF8DD229594E1421182CB330B4C7D046",
-        "order": "VBBV",
-        "requested_speed": 99,
-        "effective_time_scale": 40.2,
-        "rendered": true,
-        "resolution": [
-          2560,
-          1440
-        ],
-        "graphics": "D3D11",
-        "vsync": 0,
-        "frame_cap": -1,
-        "warmup_ticks": 256,
-        "measured_ticks_per_run": 2048
+        "machine": "idle",
+        "baseline_sha256": "CAA2B50824EAD46A (installed v1.2.2 with AllowedGoodRows)",
+        "matched_conditions": true
       },
-      "runs": [
+      "blocks": [
         {
-          "arm": "V",
-          "seconds": 142.0201392,
-          "ticks_per_second": 14.420490020192856
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "BPPB",
+          "source": "fixed-ab-20260915-191937",
+          "trial_sha256": "7249966A13D166DB (before review fixes)",
+          "values": {
+            "B": [
+              22.1351,
+              22.1494
+            ],
+            "P": [
+              21.9737,
+              22.1797
+            ]
+          },
+          "pooled_B": 22.1423,
+          "pooled_P": 22.0767,
+          "ratio": 0.997,
+          "adjacent_ratios": [
+            0.9927,
+            1.0014
+          ]
         },
         {
-          "arm": "B",
-          "seconds": 103.0833146,
-          "ticks_per_second": 19.867424790781808
-        },
-        {
-          "arm": "B",
-          "seconds": 104.26551329999998,
-          "ticks_per_second": 19.642161009722862
-        },
-        {
-          "arm": "V",
-          "seconds": 144.0378571,
-          "ticks_per_second": 14.218484232087343
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "PBBP",
+          "source": "fixed-ab-20260915-193001",
+          "trial_sha256": "76081CA33FA01500 (review fixes)",
+          "values": {
+            "P": [
+              21.8501,
+              21.6462
+            ],
+            "B": [
+              22.757,
+              22.2394
+            ]
+          },
+          "pooled_B": 22.4982,
+          "pooled_P": 21.7481,
+          "ratio": 0.9667,
+          "adjacent_ratios": [
+            0.9601,
+            0.9733
+          ]
         }
       ],
-      "pooled": {
-        "V": {
-          "ticks": 4096,
-          "seconds": 286.0579963,
-          "ticks_per_second": 14.318774699464676
+      "pooled_four_pairs": {
+        "B": 22.3202,
+        "P": 21.9124,
+        "ratio": 0.9817
+      },
+      "review": "gpt-6-astra high read-only (testlogs/codex/exact-batch-review-20260915.md): no arithmetic defect with unpatched helpers; P2 findings (event delegate captured before argument construction, read order, invalidation re-checks, additional guards on NeedSpec/IsAnimated/Distance/GetNeed, Effect.From order, per-effect manager re-read, AllowedGoodRowsActive assertion) fixed in the second build.",
+      "decision": "Not adopted: no measurable gain; the second block is net negative. The guard costs of this pattern (per-row Active reads, observe transpilers on more than 20 helpers, exact-type checks) are of the same order as the savings for sub-1% items. Product source restored; rebuild hashes CAA2B508.",
+      "limits": [
+        "Two blocks of two pairs; the negative second block may include noise.",
+        "Per-feature contributions were not measured separately."
+      ]
+    },
+    {
+      "id": "subsystem-profile-20260915",
+      "status": "measured_no_candidate_above_2_percent",
+      "summary": "User-requested check of three subsystems (power graph incl. supply shortage, beaver pathfinding, area-effect buildings). Inclusive Harmony timing of every non-accessor method of 33 classes (src/T3MPTestDriver/SubsystemProfiler.cs, -t3mpTestSubsystemProfile) on installed v1.2.2 (CAA2B508), n10c x50; hooks add about 0.15 us per timed call, nested rows overlap, ticks/s fell to 14.1 during the run.",
+      "source": "testlogs/subsystem-profile-v122-20260915-185045 (window 4: 21.3 s, 300 ticks; 267 methods hooked)",
+      "per_window": {
+        "TickableBucketService.TickBuckets": "21006 ms (reference, whole tick)",
+        "NeedManager.Tick": "4880 ms inclusive, 497k calls; UpdateNeed 16.8M calls (34 needs per character per tick), CheckNewState 17.4M. Component-level profile without inner hooks: 2.2 ms/tick, about 4-5% of the 45 ms tick.",
+        "pathfinding": "PathfindingService.FindPathUncached 1695 ms / 94k calls (313 per tick) plus the 5-argument overload 630 ms / 11k; FlowFieldPathFinder.FindPathInFlowField 965 ms / 820k; FindRoadPathIfCachedAndFillIfNeeded 900 ms / 162k; NavigationService.FindTerrainPath 685 ms / 591k (1971 per tick: behavior distance/reachability queries against cached flow fields); TransformPathIntoPathCorners 512 ms / 44k (11.5 us per path, 23 nodes each, IPathTransformer chain per node); RoadAStarPathfinder.FillFlowFieldWithPath 264 ms / 57k; TerrainAStarPathfinder 103 ms / 7k. A* uses BinaryHeap with lazy deletion; no algorithmic pitfall found. Real share about 7% of the tick, spread over cached lookups and corner transforms.",
+        "ranged_effects": "RangedEffectSubject.Tick 1237 ms / 497k (per character per tick), ToContinuousEffect 246 ms / 627k, GetEfficiency 159 ms / 627k, NeedManager.ApplyEffect 531 ms / 721k, GetAffectingEffects 280 ms. Coverage (RangedEffectService.SetApplier, RangedEffects.Add/Remove) did not appear in the top 60: it is event-driven on build/toggle, not per tick. Real share about 3.5% of the tick, all in per-character application (about 2.4 effects per character, one ContinuousEffect object per effect per tick).",
+        "power": "BatteryService.Tick, MechanicalGraph*, MechanicalNode* did not appear in the top 60; counters are event-driven (OnNodePower*Changed) and PowerEfficiency is a division over cached sums (6,840 reads per tick, about 0.6%). No per-tick recomputation on supply changes."
+      },
+      "conclusion": "None of the three areas has an exact-preserving change above about 1-2%: power is already event-driven; area effects apply per character (small allocations, string-keyed need lookup) and their wide-area coverage is maintained on events; pathfinding is a heap A* whose time is mostly cached flow-field queries from behaviors (about 2000 per tick) and path-corner transforms. Candidates of about 1% each: inline need predicates in NeedManager.UpdateNeed, avoid the per-tick GetComponent/allocations in RangedEffectSubject.ApplyEffects, single neighbor scan in FlowFieldPathBuilder.AddEdgeNode.",
+      "limits": [
+        "Whole-class hooking inflates inclusive times of tiny methods (0.1-0.3 us rows are mostly hook overhead).",
+        "Single window; counts per tick are representative, absolute times are not."
+      ]
+    },
+    {
+      "id": "allowed-good-rows-20260915",
+      "status": "adopted_into_local_v1.2.2_pending_release_gate",
+      "summary": "Inventory.GetCapacity and InventoryFillCalculator.GetInventoryFillPercentage take each allowed-good row's own amount instead of Inventory.LimitedAmount's linear string search of the same row list (StorableGoodRegistry.GetAmount, first match); only when the registry's ids are unique (checked against the live list whenever its count changes). Disallower query, Math.Min order, row order, all other calls and outputs unchanged. src/T3MP/Runtime/AllowedGoodRows.cs, -t3mpTestNoAllowedGoodRows.",
+      "origin": "codex pitfall scan candidate 2 (testlogs/codex/pitfall-scan-20260915.md); hot-counts-20260915: 7,557 GetAmount calls per tick over 20 rows on average",
+      "conditions": {
+        "game": "1.1.2.4",
+        "save": "n10c",
+        "machine": "idle",
+        "baseline_sha256": "5AA5DCB0596A4B25 (installed v1.2.2 before this feature)",
+        "matched_conditions": true
+      },
+      "blocks": [
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "BPPB",
+          "source": "fixed-ab-20260915-175232",
+          "trial_sha256": "A16C81B4 (before review fixes)",
+          "values": {
+            "B": [
+              22.007,
+              22.0745
+            ],
+            "P": [
+              22.3986,
+              21.9761
+            ]
+          },
+          "pooled_B": 22.0407,
+          "pooled_P": 22.1873,
+          "ratio": 1.0067,
+          "adjacent_ratios": [
+            1.0178,
+            0.9955
+          ]
         },
-        "B": {
-          "ticks": 4096,
-          "seconds": 207.34882789999997,
-          "ticks_per_second": 19.754150729877363
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "PBBP",
+          "source": "fixed-ab-20260915-180252",
+          "trial_sha256": "CAA2B508 (review fixes; the deployed build)",
+          "values": {
+            "P": [
+              22.6567,
+              22.2906
+            ],
+            "B": [
+              22.1451,
+              22.012
+            ]
+          },
+          "pooled_B": 22.0786,
+          "pooled_P": 22.4737,
+          "ratio": 1.0179,
+          "adjacent_ratios": [
+            1.0231,
+            1.0127
+          ]
+        }
+      ],
+      "pooled_four_pairs": {
+        "B": 22.0597,
+        "P": 22.3305,
+        "ratio": 1.0123,
+        "adjacent_ratios": [
+          1.0178,
+          0.9955,
+          1.0231,
+          1.0127
+        ]
+      },
+      "review": "gpt-6-astra high read-only (testlogs/codex/allowed-good-rows-review-20260915.md): vanilla arithmetic, call order, duplicates, empty registry, tuple and plumbing verified; two P2 findings fixed before the second block: (1) Inventory.get_AllowedGoods and StorableGoodRegistry.get_Goods fingerprinted and observed so the enumerated rows are the checked registry's; (2) Active is re-read per row after the disallower call instead of once per call, so a patch installed during a callback is honored like native. Remaining assumption: main-thread execution (shared scratch set).",
+      "decision": "Adopted into the local v1.2.2 build on the user's instruction (2026-09-15: '1% is enough'). Measured +1.2% pooled over four pairs, three of four adjacent ratios positive; within about one noise band, consistent with the 0.7-1.0% estimate.",
+      "deployment": "Deployed 2026-09-15 evening as Code.dll CAA2B50824EAD46A (manifest 1.2.2); the previous 5AA5DCB0 build is the reference for the release-1.2.2-20260915 measurements. verify_release re-run: see HANDOFF.",
+      "limits": [
+        "Two blocks of two pairs; the effect is of the same size as run-to-run noise.",
+        "Registries with duplicate good ids fall back to the native search per call; other mods writing the private row list by reflection are not detected beyond the count check."
+      ]
+    },
+    {
+      "id": "hot-counts-20260915",
+      "status": "measured_counts_no_candidate_above_1_percent",
+      "summary": "Inner-loop call counts for the candidates from the codex Unity-pitfall/algorithmic-redundancy scan (testlogs/codex/pitfall-scan-20260915.md), measured with -t3mpTestHotCounts (postfix counters only) on installed v1.2.2, n10c x50.",
+      "source": "testlogs/hot-counts-v122-20260915-174029 (window 4: 22.5 s, 450 ticks, 20.0 ticks/s with counters)",
+      "per_tick": {
+        "StorableGoodRegistry.GetAmount": {
+          "calls": 7557,
+          "avg_rows_scanned": 20.3,
+          "callers": "Inventory.GetCapacity 579/tick (district counters) and InventoryFillCalculator.GetInventoryFillPercentage 633/tick (haul candidates); each iterates the allowed goods and calls LimitedAmount -> GetAmount, a linear string search of the same list",
+          "estimate": "about 60 ns per call removable (row amount is already in hand) -> 0.3-0.45 ms/tick, 0.7-1.0% of a 45 ms tick; exactness needs first-match semantics on possibly duplicated ids"
+        },
+        "MechanicalNode/Graph.get_PowerEfficiency": {
+          "calls": 6840,
+          "shafts": 1417,
+          "animators_per_shaft": 3.65,
+          "estimate": "compute once per shaft instead of 1+animators: about 0.2 ms/tick, 0.45%"
+        },
+        "RangedEffect.GetEfficiency": {
+          "calls": 4037,
+          "subjects": 1658,
+          "effects_per_subject": 2.4,
+          "estimate": "about 0.2 ms/tick, 0.45%, would need synchronous invalidation on applier changes (no event exists): high risk"
+        },
+        "NeedManager.GetNeed": {
+          "calls": 4747,
+          "estimate": "string-keyed dictionary, about 0.2 ms/tick, 0.4%"
+        },
+        "Appraiser.AppraiseEffects": {
+          "calls": 2176
         }
       },
-      "ratio": 1.3795978458000246,
-      "limits": "Low external load sampled, not zero-load proof. Below 1 FPS; not normal-play FPS gain. E219 precedes the current speed policy.",
-      "source": {
-        "sha256": "4e9e5f2dc6b408ef39d5fac5956e0f3a4a6710035d8fdb351c8051d74cd8f5ca",
-        "source_name": "docs/measurements/isolated-runtime-ab-2026-09-13.json"
+      "conclusion": "No single item above about 1% of tick time; all four together about 2-3%, each within the 1% run-to-run noise of the A/B procedure. Not implemented.",
+      "limits": [
+        "Counts include every caller, not only the redundant ones.",
+        "Per-call costs are estimates from unit costs measured earlier (string compare, dictionary lookup), not timed here."
+      ]
+    },
+    {
+      "id": "nonlinear-speed-memo-20260915",
+      "status": "not_adopted_no_demonstrated_speedup",
+      "summary": "One-entry memo of NonlinearAnimationManager.SpeedMultiplier (Pow(timeScale, Exponent)/timeScale) keyed on the bit patterns of the live time scale and Exponent; called once per animated modular-shaft segment per tick. Pure-function memo, bit-identical results. Proposed by the codex ideation (testlogs/codex/ideation-20260915.md, candidate 1, estimate 0.4-1.0%).",
+      "conditions": {
+        "game": "1.1.2.4",
+        "save": "n10c",
+        "machine": "idle",
+        "baseline_sha256": "5AA5DCB0596A4B25 (installed v1.2.2)",
+        "trial_sha256": "345E44D15C49EB81",
+        "trial_copy": "testlogs/movement-substeps-20260915/Code-nonlinear-memo-345E44D1.dll",
+        "matched_conditions": true
+      },
+      "blocks": [
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "BPPB",
+          "source": "fixed-ab-20260915-135827",
+          "values": {
+            "B": [
+              22.281,
+              22.1575
+            ],
+            "P": [
+              22.4629,
+              22.2206
+            ]
+          },
+          "pooled_B": 22.2192,
+          "pooled_P": 22.3418,
+          "throughput_ratio": 1.0055,
+          "adjacent_ratios": [
+            1.0082,
+            1.0029
+          ]
+        }
+      ],
+      "review": "gpt-6-astra high read-only (testlogs/codex/nonlinear-memo-review-20260915.md): no arithmetic, lifecycle or threading defect; one P2 (patches on the bypassed Mathf.Pow / Time.timeScale not guarded), addressed in the experiment copy (guards on Mathf.Pow and get_timeScale) after the measurement.",
+      "decision": "Below the measurable threshold (0.55% with adjacent ratios 0.3-0.8%); not worth the added guard surface. Source kept in experiments/nonlinear-speed-memo/, product wiring removed; the product build again hashes 5AA5DCB0.",
+      "limits": [
+        "One BPPB block; the ratio is within run-to-run noise.",
+        "The codex ideation's other candidates (need-state fast path 0.5-1.4%, path-edge single scan 0.2-0.6%, water flow single scan 0.1-0.6%, bonus key slots 0.15-0.5%, underwater predicate 0.1-0.35%) were not tried; each is of the same order."
+      ]
+    },
+    {
+      "id": "release-1.2.2-20260915",
+      "status": "installed_locally_measured_idle",
+      "summary": "v1.2.2 = v1.2.1 plus MovementSubsteps (local walker position, corner-to-corner stepping by default). Measured on an idle machine against no mod, the actual Workshop v1.1.7 and the exact-loop variant.",
+      "conditions": {
+        "game": "1.1.2.4-52e959e-sw",
+        "save": "n10c",
+        "save_sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4",
+        "product_sha256": "5AA5DCB0596A4B25",
+        "product_note": "Code.dll built from the 2026-09-15 working tree after the third codex review; manifest 1.2.2; backup of 1.2.1 at testlogs/release-1.2.2/backup-Code-1.2.1-86AD.dll",
+        "legacy_sha256": "825B95FA2DAEAFE82B9B54B4F94F4B3EFB02BCB98025EEF4AF1C3191320B16FD",
+        "driver": "src/T3MPTestDriver build of 2026-09-15",
+        "display": "2560x1440;fullscreen=Windowed;quality=0;vsync=0;cap=-1;api=Direct3D11;cameras=Camera(Clone):(79.55857, 68.32016, 111.42244):(-0.5136854, 0.0152012063, -0.009103144, -0.8577957):35",
+        "matched_conditions": true,
+        "machine": "idle (no interactive use), all arms focused",
+        "shell": "PowerShell 7.6.5 via scripts/run_fixed_tick_ab.ps1 (idle_measure2 sequence)"
+      },
+      "installed_audit": {
+        "source": "fixed-ab-20260915-124901 (-Order B -MovementValidation, x50, 64+768 ticks)",
+        "result": "validated=520385, indexDiffs=1, arrivalDiffs=1, maxPositionDelta=0.00177764893, integrityFailures=0"
+      },
+      "blocks": [
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "VBBV",
+          "source": "fixed-ab-20260915-125051",
+          "values": {
+            "V": [
+              14.632,
+              14.848
+            ],
+            "B": [
+              21.981,
+              22.338
+            ]
+          },
+          "pooled_V": 14.74,
+          "pooled_B": 22.16,
+          "ratio_B_over_V": 1.5034
+        },
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "OBBO",
+          "source": "fixed-ab-20260915-130404",
+          "values": {
+            "O": [
+              23.184,
+              23.247
+            ],
+            "B": [
+              22.108,
+              22.214
+            ]
+          },
+          "pooled_O": 23.216,
+          "pooled_B": 22.161,
+          "ratio_B_over_O": 0.9546
+        },
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "BMMB",
+          "source": "fixed-ab-20260915-131407",
+          "arms": "M = -t3mpTestNoMovementCoarse (exact loop), B = coarse default",
+          "values": {
+            "B": [
+              22.036,
+              22.231
+            ],
+            "M": [
+              20.684,
+              20.738
+            ]
+          },
+          "pooled_B": 22.134,
+          "pooled_M": 20.711,
+          "ratio_B_over_M": 1.0687
+        },
+        {
+          "effective_speed": 7.0,
+          "metric": "averageFps",
+          "warmup_ticks": 64,
+          "measured_ticks": 512,
+          "order": "VBBV",
+          "source": "fixed-ab-20260915-132435",
+          "values": {
+            "V": [
+              6.928,
+              6.847
+            ],
+            "B": [
+              16.034,
+              16.012
+            ]
+          },
+          "pooled_V": 6.888,
+          "pooled_B": 16.023,
+          "ratio_B_over_V": 2.3263
+        },
+        {
+          "effective_speed": 7.0,
+          "metric": "averageFps",
+          "warmup_ticks": 64,
+          "measured_ticks": 512,
+          "order": "OBBO",
+          "source": "fixed-ab-20260915-133210",
+          "values": {
+            "O": [
+              16.341,
+              16.32
+            ],
+            "B": [
+              15.796,
+              15.987
+            ]
+          },
+          "pooled_O": 16.331,
+          "pooled_B": 15.892,
+          "ratio_B_over_O": 0.9731
+        }
+      ],
+      "interpretation": "At x50 v1.2.2 reaches 1.503x the no-mod throughput on n10c (goal 1.5x met, with no margin) but stays 4.5% below the actual Workshop v1.1.7 (1.575x on the same idle machine). Coarse stepping accounts for 6.9% over the exact loop. At x7 the mod is 2.33x no-mod FPS and 2.7% below v1.1.7.",
+      "profile": "testlogs/tick-profile-v122-20260915-133818: with the tick profiler installed the movement guards fall back to the native loop (the profiler patches ReachedLastPathCorner/MoveAlongPath), so its WalkerMover share (43%) does not describe v1.2.2; use it only for the non-movement components.",
+      "limits": [
+        "Two runs per arm per block; the alternating orders give adjacent ratios within about 1% of the pooled ratio.",
+        "Six-scenario release verification and visual play test: see release-1.2.2 notes in HANDOFF."
+      ],
+      "visual_monitors": {
+        "scope": "Automated observers only (5 s / 10 s samples), not a play test; they detect frozen models and stale tube visitors, not every visual defect.",
+        "coarse_default": {
+          "source": "testlogs/visual-monitor-v122-20260915-151442 (x7, 300 s, -t3mpTestModelGap -t3mpTestTubeLights)",
+          "tube_lights": "30 samples: tubes=1987, lit 109-120, stuck=0, invalid/inconsistent visitor references=0, visualLitNoVisitor=0, errors=0",
+          "model_gap": "about 1300 moving of 1680 characters: gapOver2 205-307 per sample (one transient 47/116), maxGap 8.1-8.75, frozenModelWhileMoving 0-1, frozenTwice=0"
+        },
+        "exact_loop_same_dll": {
+          "source": "testlogs/visual-monitor-v122-exact-* (x7, 200 s, -t3mpTestNoMovementCoarse -t3mpTestModelGap)",
+          "model_gap": "gapOver2 314-406 per sample (transients 53/56/126/143), maxGap up to 10.69, frozenModelWhileMoving 0-5, frozenTwice=0"
+        },
+        "earlier_native_movement_reference": "testlogs/autoload-20260911-1248xx/1250xx (v1.2.0 on 1.1.2.0): x1.8 gapOver2 300-311 of 1155, maxGap about 10; x20.6 gapOver2 470-518, maxGap up to 50.",
+        "reading": "Coarse stepping shows smaller model/entity gaps and fewer frozen-model samples than the exact loop and the earlier native runs; no regression signal from these observers."
       }
     },
     {
-      "id": "legacy-n10c-reference",
-      "status": "historical_not_matched_to_current_build",
-      "native_tps": 17.95,
-      "t3mp_tps": 27.2,
-      "conditions": "Recorded 2026-07-03, rendered throughput ceiling; different version/run from current benchmarks.",
-      "source_name": "docs/optimization-attribution.md"
+      "id": "movement-substeps-20260915",
+      "status": "measured_experiment_build_not_shipped",
+      "summary": "PathFollower.MoveAlongPath keeps the walker position in a local across the 0.1-unit sub-steps instead of writing and re-reading Transform.position on each one. Same float operations in the same order; transform written before provider-capable GetMovementSpeed calls (and read back after), once after the loop, and on the exception path.",
+      "conditions": {
+        "game": "1.1.2.4-52e959e-sw",
+        "save": "n10c",
+        "save_sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4",
+        "baseline_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "trial_sha256": "B19AAE77616A5F3A528672486EE957340A84C0BDD3972C1F9022EAFC27846CB0",
+        "trial_build": "dotnet build src/T3MP/T3MP.csproj -c Release -p:MovementSubstepsExperiment=true (HEAD 0473a1c plus the uncommitted working tree of 2026-09-15); copy kept in testlogs/movement-substeps-20260915/Code.dll",
+        "driver_sha256": "F22B39BAD6F7D240178B83A2856E7FAF170E9DEB179290DF1C9A5B945ED30A22",
+        "display": "2560x1440;fullscreen=Windowed;quality=0;vsync=0;cap=-1;api=Direct3D11;cameras=Camera(Clone):(79.55857, 68.32016, 111.42244):(-0.5136854, 0.0152012063, -0.009103144, -0.8577957):35",
+        "matched_conditions": true,
+        "shell": "PowerShell 7.6.5 (codex-bundled pwsh.exe); Windows PowerShell 5.1 cannot run the script",
+        "external_load": "The PC was in interactive use during every accepted run (browser and other windows; last-input idle below one minute). External CPU was not sampled. Absolute ticks/s are therefore below the 19.3-19.9 ticks/s seen for the same DLLs earlier in the session; only the alternating B/P ratios are used."
+      },
+      "probe": {
+        "source": "testlogs/movement-probe-20260915-011615 (scripts/run_movement_probe.ps1, -t3mpTestMovementProbe, installed 86AD DLL, x50, six 20 s windows)",
+        "move_along_path_calls_per_tick": 550,
+        "substeps_per_call": 52,
+        "provider_calls_per_call": 5.6,
+        "inclusive_us_per_call_with_probe": 14.5,
+        "walker_transforms": "3000 samples per window: parent null in all, 40.2-40.4 descendants on average, max 44",
+        "round_trip": "9000 set->get checks per window, 0 mismatches, 0 restore mismatches",
+        "transform_position_ns": {
+          "get_in_situ": 7.6,
+          "set_in_situ": 53.0,
+          "root_set_no_children": 9.2,
+          "root_set_40_children": 51.2
+        },
+        "tick_profile": "testlogs/tick-profile-20260915-012039 (-t3mpTestTickProfile, profiler overhead included): WalkerMover 42.3% of component time, BehaviorManager 30.8%; MoveAlongPath inclusive 7.6 s of a 23.3 s window with ReachedLastPathCorner called 10.5 M times."
+      },
+      "validation": [
+        {
+          "source": "fixed-ab-20260915-013121",
+          "dll": "first experiment build",
+          "result": "validated=521088,mismatches=0,skipped=0"
+        },
+        {
+          "source": "fixed-ab-20260915-022249",
+          "dll": "B19AAE77 (after review fixes)",
+          "result": "validated=494096,mismatches=0,skipped=0",
+          "method": "native MoveAlongPath body kept; prefix replays the local loop on a scratch list with per-sub-step transform round-trip checks, restores transform bits and corner index; postfix compares every animated corner, the corner index and the final position bit for bit"
+        }
+      ],
+      "rejected_pairs": "fixed-ab-20260915-013417 (B 19.104 unfocused / P 19.883 focused), -014029 (B 19.292 / P 19.942, focus changed), -014640 (B 19.064 unfocused / P 19.360 focused): the script rejected them for differing focus; listed only to show the direction was the same.",
+      "blocks": [
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "pairs": [
+            {
+              "order": "BP",
+              "source": "fixed-ab-20260915-022450",
+              "B": 16.57904,
+              "P": 16.98347,
+              "adjacent_ratio": 1.0244
+            },
+            {
+              "order": "PB",
+              "source": "fixed-ab-20260915-023121",
+              "P": 17.31892,
+              "B": 16.7113,
+              "adjacent_ratio": 1.0364
+            }
+          ],
+          "pooled_B": 16.6452,
+          "pooled_P": 17.1512,
+          "throughput_ratio": 1.0304
+        },
+        {
+          "effective_speed": 7.0,
+          "metric": "averageFps",
+          "warmup_ticks": 64,
+          "measured_ticks": 512,
+          "pairs": [
+            {
+              "order": "BP",
+              "source": "fixed-ab-20260915-023808",
+              "B": 7.8822,
+              "P": 8.2916,
+              "adjacent_ratio": 1.0519
+            },
+            {
+              "order": "PB",
+              "source": "fixed-ab-20260915-024134",
+              "P": 8.2882,
+              "B": 8.1118,
+              "adjacent_ratio": 1.0217
+            }
+          ],
+          "pooled_B": 7.997,
+          "pooled_P": 8.2899,
+          "fps_ratio": 1.0366
+        }
+      ],
+      "trial_state": "Every P run: MovementSubsteps=True/Active=True, fallbacks=0, mismatches=0; calls=1,356,810-1,359,652 at x50 and 337,013-337,034 at x7. Every B run: absent.",
+      "review": "gpt-6-astra high read-only (testlogs/movement-substeps-20260915/movement-substeps-review-20260915.md): no arithmetic, fallback-transcription, guard-mechanics or script defects; three P2 findings, all addressed before the accepted runs: MoveInDirection and NavigationService.InStoppingProximity joined the ongoing guards, the transform is read back after a provider-capable GetMovementSpeed (also on its exception path), and validation skips after invalidation. Remaining validation limit: the replay calls the reviewed pure provider a second time per corner transition rather than replaying recorded results.",
+      "offline_tests": "tests/WalkerSpeedDelegates: all 8 scenarios pass after WalkerSpeedDelegates became a partial class; normal build without the experiment flag compiles unchanged.",
+      "limits": [
+        "Two alternating pairs per speed, all taken while the machine was in use; not a confidence interval. Re-measure on an idle machine before adoption.",
+        "Marginal effect on top of the installed v1.2.1 features; the probe's 3.3 us/call estimate for transform traffic is the mechanism, not a prediction to multiply.",
+        "Equivalence rests on the root-transform bit-exact round trip verified in this game build; a walker parented under a non-identity transform would not be exact. Guards fall back to the native helper sequence on foreign patches but do not detect a changed hierarchy.",
+        "Not shipped: the experiment file compiles only with -p:MovementSubstepsExperiment=true. No 6-scenario or visual play test of the trial DLL."
+      ],
+      "reproduce": "Validation: scripts/run_fixed_tick_ab.ps1 -Order P -ComparisonDll <trial> -ExpectedExperiment MovementSubsteps -MovementValidation -MatchedConditions -Speed 50 -WarmupTicks 64 -MeasuredTicks 768. Throughput: same with -Order BP / PB, -Speed 50 -WarmupTicks 256 -MeasuredTicks 2048; x7 with -Speed 7 -WarmupTicks 64 -MeasuredTicks 512. Run under pwsh 7 with the game window focused in every arm.",
+      "coarse_mode": {
+        "status": "measured_experiment_build_not_shipped; not bit-exact by design (user decision 2026-09-15)",
+        "summary": "-t3mpTestMovementCoarse: advance corner to corner in one MoveToward() step (MoveInDirection without MaxMovementStep) unless the segment's closest point to the path end lies inside the stopping proximity (SegmentTouchesEnd, a superset of the native 0.1-unit grid check); such segments keep native 0.1-unit stepping, so the stop rule and provider call positions/counts stay native. Changes low-order position bits and the number of animated corners.",
+        "trial_copy": "testlogs/movement-substeps-20260915/Code-coarse-v2.dll (review fixes; Code-coarse.dll is the first coarse build A02A258A used for the first audit and the first two pairs)",
+        "audit": {
+          "source": "fixed-ab-20260915-031331 (-MovementValidation -MovementCoarse, x50, 64+768 ticks)",
+          "validated_calls": 521566,
+          "index_diffs": 3,
+          "arrival_diffs": 0,
+          "max_position_delta": 0.00201416016,
+          "corner_count_diffs": 506918,
+          "position_diffs": 439228,
+          "index_diff_details": "all three: corner index off by one at a corner arrival, positions (102.500015 vs 102.499565), (237.4996 vs 237.5), (136.502014 vs 136.5)"
+        },
+        "blocks": [
+          {
+            "effective_speed": 50.0,
+            "metric": "ticksPerSecond",
+            "warmup_ticks": 256,
+            "measured_ticks": 2048,
+            "pairs": [
+              {
+                "order": "BP",
+                "source": "fixed-ab-20260915-031930",
+                "B": 15.3251,
+                "P": 17.7344,
+                "adjacent_ratio": 1.1572,
+                "note": "B below the session's other B runs; external load suspected"
+              },
+              {
+                "order": "PB",
+                "source": "fixed-ab-20260915-033838",
+                "P": 20.2298,
+                "B": 18.565,
+                "adjacent_ratio": 1.0897
+              },
+              {
+                "order": "PB",
+                "source": "fixed-ab-20260915-035903",
+                "dll": "AA333BE5 (review fixes)",
+                "P": 22.1462,
+                "B": 20.0961,
+                "adjacent_ratio": 1.102,
+                "note": "quietest B of the session"
+              }
+            ],
+            "pooled_B": 17.9954,
+            "pooled_P": 20.0368,
+            "throughput_ratio": 1.1134,
+            "rejected_pairs": "fixed-ab-20260915-032606 P 17.6335 / B 16.6876 (B unfocused, ratio 1.0567); -033237 P 20.0404 (unfocused) / B 18.8997 (ratio 1.0604); -031550 B focus changed",
+            "pairs_note": "Three valid pairs: adjacent ratios 1.157 (depressed B), 1.090, 1.102. Pooled over all three."
+          },
+          {
+            "effective_speed": 7.0,
+            "metric": "averageFps",
+            "warmup_ticks": 64,
+            "measured_ticks": 512,
+            "pairs": [
+              {
+                "order": "BP",
+                "source": "fixed-ab-20260915-034441",
+                "B": 10.9157,
+                "P": 12.4644,
+                "adjacent_ratio": 1.1419
+              },
+              {
+                "order": "PB",
+                "source": "fixed-ab-20260915-034755",
+                "P": 12.4347,
+                "B": 11.049,
+                "adjacent_ratio": 1.1254
+              }
+            ],
+            "pooled_B": 10.9824,
+            "pooled_P": 12.4496,
+            "fps_ratio": 1.1336
+          }
+        ],
+        "interpretation": "x50: two clean pairs give +9% and +10%, the pair with a depressed B gives +16%; x7 FPS +13% in both orders. Together with the bit-exact mode's +3% this is the first single change in the series that reaches the +9% needed for 1.5x on n10c. Absolute values vary with the machine's interactive use.",
+        "limits": [
+          "Not bit-exact with vanilla: positions differ in low-order bits (max 0.002 units in the audits); a corner arrival and its provider call can shift by one tick at tick edges (2-3 per 520,000 calls in the audits). Arrival state at the path end matched in every audited call.",
+          "Audits restart from native state on every call, so they bound per-call divergence, not cumulative drift over a long session.",
+          "Three valid pairs at x50 and two at x7, all on a machine in interactive use; re-measure idle before adoption.",
+          "No 6-scenario or visual play test; other mods that depend on 0.1-unit intermediate corners or per-sub-step MoveInDirection calls would see fewer calls."
+        ],
+        "reproduce": "Audit: run_fixed_tick_ab.ps1 -Order P -ComparisonDll <trial> -ExpectedExperiment MovementSubsteps -MovementValidation -MovementCoarse -MatchedConditions -Speed 50 -WarmupTicks 64 -MeasuredTicks 768. Throughput: -Order BP / PB -MovementCoarse -MatchedConditions -Speed 50 -WarmupTicks 256 -MeasuredTicks 2048; x7 with -Speed 7 -WarmupTicks 64 -MeasuredTicks 512.",
+        "trial_sha256_first": "A02A258A89BF25AE4AF2F95FA9646EC41CCCB6D05E18FD1CF4084A04A70ACE54",
+        "trial_sha256": "AA333BE53548E21D413475462C44CBFE13EA36AFC6DB2A17EBFC8F401F153515",
+        "review": "gpt-6-astra high read-only (testlogs/codex/movement-coarse-review-20260915.md): P1 SegmentTouchesEnd was not a strict superset of native stepping because native sub-step positions drift off the exact segment by rounding (float32 reproduction: grazing case inside for native, outside for the closest point); fixed by pulling the closest point 0.01 units toward the path end before the proximity test (TouchMargin). P2 the audit tolerance also accepted transform round-trip/restoration failures; fixed with a separate integrityFailures counter that the script never tolerates. P2 (accepted, documented): dropping intermediate steps skips the native RemainingTimeThreshold/RemainingDistanceThreshold decisions between 0.1-unit steps, so at tick edges (remaining time within about 1e-4 s of a step boundary) a corner arrival and its provider call can shift by one tick; this is part of the accepted non-exactness, not rounding. MoveToward, state, fallback, mirror/restoration and script routing were found correct.",
+        "audit_after_review": {
+          "source": "fixed-ab-20260915-035645 (-MovementValidation -MovementCoarse, x50, 64+768 ticks, DLL AA333BE5)",
+          "validated_calls": 520264,
+          "index_diffs": 2,
+          "arrival_diffs": 0,
+          "max_position_delta": 0.00178813934,
+          "corner_count_diffs": 505583,
+          "position_diffs": 438124,
+          "integrity_failures": 0,
+          "note": "The script threw on mismatches=2 because the integrity check had reset $Matches; the check order was fixed afterwards. Run state was restored normally."
+        }
+      },
+      "rejected_grid_skip": {
+        "summary": "SkipGridSteps: on a segment touching the stopping proximity, take the leading k 0.1-unit steps as one move of k*0.1 (grid-preserving in exact arithmetic), then step natively.",
+        "audit": {
+          "source": "fixed-ab-20260915-135145 (-MovementValidation, trial C938E830)",
+          "validated_calls": 522561,
+          "index_diffs": 6,
+          "arrival_diffs": 1,
+          "max_position_delta": 0.09999657,
+          "replay_steps": "fine 74996, coarse 2928702, skips 59686 covering 414951 fine steps"
+        },
+        "review": "testlogs/codex/movement-skip-review-20260915.md: P1 the combined addition changes the float grid, so a later proximity check can flip and the walker stops one grid point earlier or later (0.1 units; reproduced in the audit); P2 native RemainingTimeThreshold decisions skipped (fixed before the audit).",
+        "decision": "Not adopted: at most about 0.8 fewer loop iterations per call (the remaining iterations are corner transitions), estimated below 1%, against a 0.1-unit stop-position deviation. Code removed."
+      }
+    },
+    {
+      "id": "active-transition-guard-20260915",
+      "status": "shadow_prototype_rejected_no_product_change",
+      "question": "Can managed transition-entry guards make activeInHierarchy notification caching safe without thinning simulation?",
+      "conditions": "Steam 1.1.2.4 / Unity Mono. n10c loaded as paused host; only independent synthetic objects were cached and observed. No gameplay entity lookup was replaced. Every shadow read returned the native value.",
+      "identity": {
+        "current_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "driver_sha256": "E36C86B9EE17A89346D3963FCB18069517DE2E94397566B29A9D559E6A240EE4",
+        "source_sha256": "A56C79F96D1F3D5DFF277A62543205DE23849611A6FEB140FCC2CF328025BC8F"
+      },
+      "design": "Two policies, ten scenarios each. Both guard SetActive, SetParent, Destroy and DestroyImmediate with entry invalidation and in-flight native fallback. Policy 2 also marks scheduled-destroy descendants uncacheable and guards AnimationClip.SampleAnimation. Invalidation is scoped to tracked synthetic objects to prevent unrelated UI activity masking the test. Reader-before-observer callback order and guard entry counts are recorded; expected counts are asserted.",
+      "results": {
+        "notification_only_negative_controls": "2 stale reads in each policy; guards disabled for these controls.",
+        "managed_transition_cases": "Self, previously warmed caller, parent activation, reparent, nested callbacks, immediate destruction and zero-delay destruction: zero mismatches under both policies. Zero-delay destruction callback occurred inside the guard; this does not validate arbitrary delayed lifetimes.",
+        "explicit_animation_sampling": "Policy 1: one stale read, zero guard entries. Policy 2: zero stale reads, one guard entry.",
+        "automatic_animation_playback": "One stale read in each policy, zero guard entries, reader before observer. The native Animation player changes m_IsActive without entering the guarded managed APIs."
+      },
+      "decision": "Do not integrate this managed-transition cache into v1.2.1. Adding the explicit sampler hook repairs that call path but does not cover automatic native animation playback. No TPS/FPS A/B was run because correctness did not pass.",
+      "limits": "A synthetic callback-order counterexample, not an n10c gameplay bug reproduction or proof that all future lookup optimizations are impossible. Hierarchies excluded from caching and other native lifecycle paths have not been evaluated. The first exploratory run used global invalidation and could mask deferred comparisons; it is not acceptance evidence.",
+      "reproduce": "Build src/T3MPTestDriver/T3MPTestDriver.csproj with -p:ActiveTransitionExperiment=true; isolated autoload probe flag -t3mpTestActiveTransitionAudit. Ordinary driver builds exclude the prototype and its AnimationModule reference.",
+      "review": "gpt-6-astra/high/read-only: initial findings corrected. Follow-up review had only a run-identity evidence note because it received the previous log. The final source was then exercised in 20260915-003927 with cleanupCompleted=True and outer file/preference restoration. Reviews: testlogs/active-transition/review.txt and review-final.txt.",
+      "evidence": "testlogs/active-transition/20260915-003927/results.txt; raw autoload log and restoration.json beside it; prior automatic-player counterexample also recorded in 20260915-003744.",
+      "restoration": "Installed current DLL, Workshop DLL and original n10c save hashes unchanged; mod preferences restored; diagnostic driver and copied save removed from game directories. No commit/push."
+    },
+    {
+      "id": "version-gap-interaction-20260914",
+      "status": "measured_group_interactions_no_product_change",
+      "question": "What produces the v1.1.7 versus v1.2.1 speed gap, separately from which feature is largest inside legacy?",
+      "identity": {
+        "current_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "legacy_sha256": "825B95FA2DAEAFE82B9B54B4F94F4B3EFB02BCB98025EEF4AF1C3191320B16FD",
+        "save_sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4",
+        "driver_sha256": "A190129AF0F77BDE0C3909FFDA49D12727D60A25DBE7674B42BAD741FBF45474"
+      },
+      "conditions": "n10c / Steam 1.1.2.4 / same camera and graphics / matched effective speed / Shift+O and blackout OFF / fresh process per arm. Ten runs at x50 (warmup 256, measured 1024 ticks); ten at x7 (warmup 64, measured 512 ticks). FPS at x7 because TPS is speed-limited. Compare only within each speed/window.",
+      "design": {
+        "All": "Original legacy binary; all measured features on.",
+        "NoMirror": "Legacy with activeInHierarchy mirror and sentinel template injection off; flat dispatch and OldExtras on.",
+        "OldExtras": "Legacy with nine additional groups (37 flags) off; flat dispatch and Unity active-state mirror on.",
+        "OldExtrasNoMirror": "Union of OldExtras and NoMirror (39 flags off); flat dispatch remains on.",
+        "Current": "Installed v1.2.1; Frontier, event delegates, water-upload deduplication, walking delegate reuse, terrain visit optimization and tube fix. No experimental tick-port code.",
+        "order": "All, Current, OldExtras, OldExtrasNoMirror, NoMirror; then the reverse sequence. Two observations of each arm per speed."
+      },
+      "variant_definition": "Use scripts/LegacyVariants/groups.json for All, NoMirror and OldExtras. OldExtrasNoMirror is the deduplicated union of the latter two. scripts/LegacyVariants changes only audited true-to-false initializer bytes in a copy of the actual Workshop DLL; verify SHA256 and exact live settings, not retained MVID alone.",
+      "measurements": [
+        {
+          "effective_speed": 50,
+          "metric": "tps",
+          "pooled": {
+            "All": 21.80918972506967,
+            "NoMirror": 20.67626510448869,
+            "OldExtras": 20.06025640657322,
+            "OldExtrasNoMirror": 18.906226480159216,
+            "Current": 19.371160413493083
+          },
+          "samples": {
+            "All": [
+              21.79978974741454,
+              21.818597812683436
+            ],
+            "NoMirror": [
+              20.58692035306721,
+              20.76638872700806
+            ],
+            "OldExtras": [
+              19.953909236709208,
+              20.167743234849688
+            ],
+            "OldExtrasNoMirror": [
+              18.952944647010828,
+              18.859738063396893
+            ],
+            "Current": [
+              19.40797205612891,
+              19.334488149834623
+            ]
+          },
+          "conditional_enabled_gain": {
+            "mirror_with_extras": 0.05479348493819747,
+            "mirror_without_extras": 0.061039675348493194,
+            "extras_with_mirror": 0.08718399620871087,
+            "extras_without_mirror": 0.09362199411855165
+          },
+          "external_cpu_cores": {
+            "All": [
+              0.35495874929441645,
+              0.2957954981253721
+            ],
+            "NoMirror": [
+              0.36097332913054214,
+              0.2754849558014753
+            ],
+            "OldExtras": [
+              0.3281357890720284,
+              0.29599873238094376
+            ],
+            "OldExtrasNoMirror": [
+              0.30980140886678337,
+              0.30991743581417297
+            ],
+            "Current": [
+              0.2538615616260197,
+              0.2299954909929922
+            ]
+          }
+        },
+        {
+          "effective_speed": 7,
+          "metric": "fps",
+          "pooled": {
+            "All": 15.368881369165615,
+            "NoMirror": 14.049307410388762,
+            "OldExtras": 14.010586639446249,
+            "OldExtrasNoMirror": 12.978374760717942,
+            "Current": 13.408257274004127
+          },
+          "samples": {
+            "All": [
+              15.417162947581858,
+              15.32061570243426
+            ],
+            "NoMirror": [
+              14.130730258922238,
+              13.967768042579285
+            ],
+            "OldExtras": [
+              13.663610335987949,
+              14.35717831653191
+            ],
+            "OldExtrasNoMirror": [
+              12.98857418036891,
+              12.96817336915442
+            ],
+            "Current": [
+              13.291597898633999,
+              13.524959652783581
+            ]
+          },
+          "conditional_enabled_gain": {
+            "mirror_with_extras": 0.09392448469033399,
+            "mirror_without_extras": 0.0795332156575208,
+            "extras_with_mirror": 0.09694774135260986,
+            "extras_without_mirror": 0.0825166994647315
+          },
+          "external_cpu_cores": {
+            "All": [
+              0.3149442279630824,
+              0.354934964092741
+            ],
+            "NoMirror": [
+              0.3444555645744691,
+              0.5512323364182514
+            ],
+            "OldExtras": [
+              0.3450665004105189,
+              0.39348500288156296
+            ],
+            "OldExtrasNoMirror": [
+              0.31552642143673,
+              0.2757686980204495
+            ],
+            "Current": [
+              0.34449630490607164,
+              0.2757457519297495
+            ]
+          }
+        }
+      ],
+      "sources": [
+        {
+          "name": "version-gap-live-20260914-163442",
+          "index_sha256": "43B469DE3602CC32A9E84C2ABF3498B3CFDC36E68F970C59EA3F26AEE9089F39",
+          "summary_set_sha256": "5a775586cbb0e69981899d141240c4b6062732d8189f23ad4fa0a45d735cd52f"
+        },
+        {
+          "name": "version-gap-live-20260914-165210",
+          "index_sha256": "CCD5B5726F26A8BE7312C34C9B3AB772F415DE4C5097F575FF5C0D6E758B6C51",
+          "summary_set_sha256": "91a173a2dfef2cbab69cfd348242054e47310feb9bf3ddc371b4f3f80c56d905"
+        }
+      ],
+      "conclusions": [
+        "Legacy is faster than current in both measured conditions. This confirms throughput/FPS, not identical simulation decisions or game outcomes.",
+        "Keeping legacy flat dispatch but removing both Unity active-state tracking and the nine additional groups makes legacy slower than current in both conditions. These two feature sets together create the legacy advantage over this current configuration; flat dispatch alone does not explain the version gap.",
+        "Both feature sets have positive measured conditional effects with the other set on or off. Their percentages have different denominators and contexts; do not sum them or assign unique shares of the version gap.",
+        "Current Frontier already eliminates visits to entities with no enabled tickables, then uses native entity/component execution. Legacy flat dispatch uses consolidated arrays and Enabled bits, and optionally the Unity active-state mirror. They reduce some of the same dispatch work through different implementations.",
+        "The historical 13.4% flat contrast was NoMirror versus NoFlat within legacy, with active-state tracking off in both. It also changes Enabled-bit dispatch and per-entity cached-entry traversal; it was not a measured 13.4% addition to current Frontier.",
+        "OldExtras includes frame-based haul decision reuse and every-other-call district resource counting. Other groups include legitimate optimizations or overhead; the aggregate benefit does not mean every member is beneficial or safe to port.",
+        "Why the versions differ is now tested at these two interacting feature-set boundaries. A safe implementation that closes the gap, unique per-feature shares of the total gap, and whole-save outcome equivalence are not established by this experiment."
+      ],
+      "code_audit": {
+        "legacy_sha256": "825B95FA2DAEAFE82B9B54B4F94F4B3EFB02BCB98025EEF4AF1C3191320B16FD",
+        "flat_dispatch": "BucketSnapshot.Components/EnabledBits/Starts; TryTickAll flat branch, source lines 30671-30795. NoFlat arm also removes EnabledBits use and restores per-entity cached-entry iteration/live BaseComponent.Enabled. Thus the historical 13.4% contrast includes this machinery, not only elimination of method calls.",
+        "unity_active_lookup": "ActiveInHierarchySentinel.OnEnable/OnDisable publishes active bits (30201-30228); normal flat branch reads bit or native activeInHierarchy if no slot (30733-30748).",
+        "current_frontier": "src/T3MP/Runtime/TickFrontier.cs: NeedsVisit/NextIndex tracks nonempty entity groups; normal TickAllFast calls native entity.Tick. Actual installed 86AD source paths exclude all TICK_PORT_EXPERIMENT branches.",
+        "haul": "HaulNoActionFrameCache uses Time.frameCount and skips repeated no-action workplace Decide in that frame (15989-16023).",
+        "district": "DistrictResourceCounterThrottle increments a per-instance call count and executes only each second call (11527-11543). It is not a frame-key cache.",
+        "interpretation_limit": "Legacy timings measure actual tick/FPS throughput, not equal behavior decisions or equal game state outputs. OldExtras is 37 disabled flags in nine groups, not one feature or 37 independent measured contributions."
+      },
+      "validation": {
+        "live_checks": "Every result passed identity, expected flags, effective speed, graphics, focus, origin and completed tick checks. Post-analysis additionally compares game, source, driver, exact tick interval and display across separate invocations. All 20 must match within their speed cohort.",
+        "review": "gpt-6-astra high read-only review. Initial outer-runner default and cross-invocation condition-check findings corrected; retroactive post-analysis verifies the already-running x50 block, and the corrected outer runner additionally guards x7. Final review: None.",
+        "review_source": "testlogs/version-gap/review-fixed.txt",
+        "analysis_source": "testlogs/version-gap/analyze.py; testlogs/version-gap/summarize.py",
+        "analysis_sha256": "1B76F9FEDB1BC10FA79B99F291ADEEE683CB8E51A5A817E8BF5FB5AFF9F11D5D",
+        "summary_code_sha256": "EB70B2D7B2FDC06DC0A6F183C5DA90B6C36A0856B9A7DB6C8CC2B2C36E1F4A79"
+      },
+      "limits": [
+        "Two observations per arm; point estimates are not confidence intervals. Large order relationships repeat; do not force fine ranking of close values.",
+        "NoMirror changes both lookup and its sentinel injection. OldExtras is a bundle of nine groups, not one optimization. Current differs in additional runtime/loading implementation details, so OldExtrasNoMirror versus Current is not an isolated flat-versus-Frontier microbenchmark.",
+        "Legacy frame caches can change workload and behavior. Higher TPS does not prove the same decisions were executed.",
+        "Continuous play only; placement/selection UI and load time are not ranked here. Resource sampling every five seconds gives approximate external-load alignment."
+      ],
+      "restoration": "Original current DLL, Workshop DLL and source save verified unchanged; mod preferences restored; test driver removed. No product code changes, commit, push or Workshop upload in this investigation."
+    },
+    {
+      "id": "tick-component-dispatch-20260914",
+      "status": "component_dispatch_trial_not_adopted_active_lookup_not_adopted",
+      "implementation": "Consolidated ordered component arrays per bucket, exact Enabled setter tracking, existing Frontier eligibility index retained. Preserve live sorted membership, execution order, native Unity activeInHierarchy reads, metrics and exception scope. Disable new dispatch and Frontier skipping on guarded call-chain regeneration.",
+      "identity": {
+        "baseline_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "candidate_sha256": "CFB1A899011245F48CC590E76A76A50DF4FC0015134AADA355395FEC2A4195F9",
+        "candidate_mvid": "7a1d2543-c3d8-41a0-b964-d0d68aca3b86",
+        "save_sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4",
+        "driver_sha256": "A190129AF0F77BDE0C3909FFDA49D12727D60A25DBE7674B42BAD741FBF45474"
+      },
+      "conditions": "n10c / Steam 1.1.2.4 / D3D11 / matched graphics, camera and effective speed / Shift+O off / fresh process per arm. Equal tick windows and driver within each cohort. Final artifact high-load BPPB follows prototype high-load BPPB and normal-speed PBBP.",
+      "final_measurements": [
+        {
+          "order": "BPPB",
+          "speed": 50.0,
+          "warmup_ticks": 256,
+          "measured_ticks": 1024,
+          "tps": [
+            19.704191,
+            19.32586,
+            19.539859,
+            19.430425
+          ],
+          "fps": [
+            0.394298,
+            0.38694,
+            0.391592,
+            0.389126
+          ],
+          "external_cpu_cores": [
+            0.394,
+            0.361,
+            0.329,
+            0.362
+          ],
+          "summary": "testlogs/fixed-ab-20260914-135221/summary.json",
+          "summary_sha256": "0ace8aecaa223cdcf0aca50629ceae2cda9e4fada9d5e4af7bba04c2c15cf5ad"
+        }
+      ],
+      "final_pooled": [
+        {
+          "speed": 50.0,
+          "metric": "tps",
+          "baseline": 19.56635053364427,
+          "candidate": 19.432270430648867,
+          "ratio": 0.9931474138335173
+        }
+      ],
+      "prototype": {
+        "candidate_sha256": "51C5689BF3364EE5DB98DD31D0F64D9BB1A6621E5A9B265C25EC88026FDAC805",
+        "measurements": [
+          {
+            "order": "BPPB",
+            "speed": 50.0,
+            "warmup_ticks": 256,
+            "measured_ticks": 1024,
+            "tps": [
+              19.349639,
+              19.601608,
+              19.775489,
+              19.452738
+            ],
+            "fps": [
+              0.387432,
+              0.394394,
+              0.396213,
+              0.389388
+            ],
+            "external_cpu_cores": [
+              0.23,
+              0.329,
+              0.197,
+              0.231
+            ],
+            "summary": "testlogs/fixed-ab-20260914-131338/summary.json",
+            "summary_sha256": "f940d528a53c88d6a98d76cc2a90e12a49a0f4e079300e185c3fb2bfd26d5394"
+          },
+          {
+            "order": "PBBP",
+            "speed": 7.0,
+            "warmup_ticks": 64,
+            "measured_ticks": 512,
+            "tps": [
+              11.680975,
+              11.68517,
+              11.675695,
+              11.676843
+            ],
+            "fps": [
+              13.729716,
+              13.35516,
+              13.491703,
+              13.381903
+            ],
+            "external_cpu_cores": [
+              0.355,
+              0.355,
+              0.276,
+              0.276
+            ],
+            "summary": "testlogs/fixed-ab-20260914-132108/summary.json",
+            "summary_sha256": "f0a82500587e5fae36984cce36c979c024b6334f5cd5852727f3cc296d4e4d84"
+          }
+        ],
+        "pooled": [
+          {
+            "speed": 7.0,
+            "metric": "fps",
+            "baseline": 13.423491212439998,
+            "candidate": 13.555775965392227,
+            "ratio": 1.0098547204195014
+          },
+          {
+            "speed": 50.0,
+            "metric": "tps",
+            "baseline": 19.401051716614337,
+            "candidate": 19.6881642992,
+            "ratio": 1.0147988153827656
+          }
+        ],
+        "limit": "Precedes final native fallback bridge and observer-order compatibility corrections. Normal x7 adjacent comparisons reverse; no confirmed normal FPS gain. Prototype results do not identify the final product artifact."
+      },
+      "interpretation": "Final high-load mean is 0.69% below 86AD; adjacent pair directions reverse. Stable improvement is unconfirmed. The earlier prototype gain was not reproduced by the final artifact. Normal builds exclude the trial. The legacy flat-dispatch 13.4% contribution is not a prediction of incremental improvement over current Frontier; no new vanilla-relative multiplier is established.",
+      "validation": {
+        "coreclr": "Same final DLL against both game APIs: 20 synthetic component scenarios x 500 seeds (10000 distinct comparisons per API), plus before/after/during foreign hooks, hook return-false, warmed-loop and Frontier coexistence modes. Real game assemblies; offline Enable changes use actual Enabled setter, not Unity ComponentCache lifecycle methods.",
+        "coreclr_log": "testlogs/tick-port/tests-exact-release.txt",
+        "unity_integrated": "Final DLL: eight paired bucket scenarios using actual Unity objects and native Entity.Tick reference, plus late Entity.Tick/get_Enabled hooks: one late entity hook and three getter calls, including the all-disabled entity. Validation intentionally invalidates dispatch and is excluded from performance.",
+        "unity_integrated_summary": "testlogs/fixed-ab-20260914-135115/summary.json",
+        "unity_integrated_summary_sha256": "B460B3C8E6CEAB949FF8684B7BCC8D32232514F1C803D6EEDF89CAC57A485FD3",
+        "release_gate": "Same final DLL passed direct load, menu load and new game on both 1.0.13.1 and 1.1.2.4 (six scenarios); READY is a package/startup gate, not complete regression coverage.",
+        "release_summary": "testlogs/tick-port-release/summary.json",
+        "release_summary_sha256": "DF5303053D00E7059B54D2D1647CB898633F1702CA9E138A927DB1284BD90664",
+        "review": "codex exec -m gpt-6-astra -c model_reasoning_effort=high --sandbox read-only; final bounded correctness review: None. Findings from earlier passes fixed before final verification.",
+        "review_log": "testlogs/tick-port/review-final.txt",
+        "known_limit": "Preexisting Frontier assumes the private immutable component roster is not mutated in place by another mod. A new enabled component injected into an already skipped all-disabled entity can evade its index. Checks of visited array slots do not cover that unsupported mutation."
+      },
+      "active_lookup": {
+        "status": "comparison_only_excluded_from_normal_product",
+        "result": "Actual Unity test objects: a component callback preceding the observer saw a stale notification mirror in 4/4 activation/deactivation callbacks; reversed component order gave 0/4. Comparison code always returned the native value. This is a synthetic lifecycle counterexample, not an observed n10c gameplay defect.",
+        "source": "experiments/tick-port/ActiveStateLookup.cs",
+        "evidence_log": "testlogs/fixed-ab-20260914-131159/01-P/autoload-20260914-131159.log",
+        "reproduction": "Build with -p:TickPortExperiment=true and run the isolated driver flag -t3mpTestActiveLookupAudit. Notification-only mirror cannot drive simulation safely under the tested callback ordering. Reconsider only with a proven invalidation boundary before reads during transitions."
+      },
+      "reproduction": "Build with -p:TickPortExperiment=true. tests/TickPort/run.ps1 -CodeDll <candidate> -ManagedDirectories <1.1 Managed>,<1.0 Managed>. Unity component validation: run_fixed_tick_ab.ps1 -Order P -ExpectedExperiment TickComponentDispatch -ComparisonDll <candidate> -TickPortValidation -MatchedConditions. Trial dispatch off: -t3mpTestNoComponentCalls. Normal builds exclude the trial classes and integration.",
+      "restoration": "Probes restored the original DLL and mod preferences and removed the test driver and isolated save staging. Installed DLL remains 86AD; CFB1 trial was not adopted. Original n10c save and actual Workshop DLL unchanged. No commit, push or Workshop upload.",
+      "isolation": {
+        "status": "Normal build excludes trial classes and integration; installed 86AD unchanged.",
+        "trial_sha256": "18488D2C519352E10AB7BE8F66C81F34A29032FA0856B9E48ADF3FC3DDE99A42",
+        "checks": "Normal builds compile against both APIs. Preprocessed normal C# in all five integration files matches the prior staged source after excluding comments/whitespace. Rebuilt isolated trial passes the same CoreCLR suite on both APIs; testlogs/tick-port/tests-isolated-final.txt. Current tracked and nonignored source publication scan: no findings.",
+        "scope": "Isolation rebuilt the trial after the measured CFB1 artifact; game and performance results identify CFB1, not the isolated rebuild."
+      }
+    },
+    {
+      "id": "tick-dispatch-20260914",
+      "status": "not_adopted_normal_build_excludes_trial",
+      "implementation": "Expand MeteredTickableComponent.Enabled and Tick/StartAndTick at their original call sites; read the current Enabled field; retain enumerator, ordering, metering and outer exception wrapper. No active-state mirror or flat bucket dispatch was implemented.",
+      "identity": {
+        "installed_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "measured_trial_sha256": "7CA8161997D93249E45420EB11D64FFF8011E061E4FFE647DC089E6FC560BD53",
+        "isolated_build_sha256": "C6E46BD97C1BCD8B31A687719140AC00B852459F89CF5CF3C5FCC2FD2A4B77CD",
+        "save_sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4",
+        "driver_sha256": "593528C3FAF72021EB7F94BC5CEE9478526C450898F75C3D9B95BDCC50EF2590"
+      },
+      "conditions": "n10c / Steam 1.1.2.4 / D3D11 / identical camera and graphics / fresh process / matched effective speeds / Shift+O off. Final guarded trial: eight runs. Superseded variant measurements are not used for this decision.",
+      "measurements": [
+        {
+          "speed": 50.0,
+          "order": "BPPB",
+          "warmup_ticks": 256,
+          "measured_ticks": 1024,
+          "metric": "tps",
+          "values": [
+            19.441782,
+            18.774666,
+            19.13924,
+            18.953737
+          ],
+          "external_cpu_cores": [
+            0.362,
+            0.479,
+            0.367,
+            0.423
+          ],
+          "summary": "testlogs/fixed-ab-20260914-040909/summary.json",
+          "summary_sha256": "7d79291344695b09c27b5b11e86b58db26dd7a2b244426d44266c9b1236567ad"
+        },
+        {
+          "speed": 7.0,
+          "order": "PBBP",
+          "warmup_ticks": 64,
+          "measured_ticks": 512,
+          "metric": "fps",
+          "values": [
+            12.693458,
+            12.956236,
+            9.707089,
+            9.867595
+          ],
+          "external_cpu_cores": [
+            0.493,
+            0.394,
+            1.82,
+            1.378
+          ],
+          "summary": "testlogs/fixed-ab-20260914-041647/summary.json",
+          "summary_sha256": "ffcf9701d3f5b33a425c195653ccdd7d381ee0a4b304ba99ea295985f20a60d8"
+        }
+      ],
+      "pooled": [
+        {
+          "speed": 7.0,
+          "metric": "fps",
+          "baseline": 11.331296749773447,
+          "candidate": 11.279616557491998,
+          "ratio": 0.9954391634582792
+        },
+        {
+          "speed": 50.0,
+          "metric": "tps",
+          "baseline": 19.194657820813607,
+          "candidate": 18.955200141562766,
+          "ratio": 0.9875247747844098
+        }
+      ],
+      "conclusion": "No demonstrated improvement. High-load pooled ratio 0.9875; both speeds reversed adjacent-pair direction. Normal-speed external CPU rose to 1.82/1.38 cores in the last pair, so pooled FPS is not an attributable speedup or slowdown. One high-load trial also overlapped an index publication scan. Do not infer guard cost alone from these runs.",
+      "validation": {
+        "native_execution": "9000 ordered trace/exception/final-state cases per API on real 1.0.13.1 and 1.1.2.4 assemblies under CoreCLR with generated components/timers. Includes reentry, enable/disable, nulls, StartTickable, timer exceptions, metering/component mutation and immutable collection replacement.",
+        "compatibility": "13 additional scenarios per API: Frontier coexistence, pre-existing/late/mid-loop helper and base-getter patches, return-false getter, rollback and unknown IL. Exact late-hook counts use an unchanged Harmony observer on the reference to prevent CoreCLR pre-inlining; equivalence cases use unmodified reference bodies.",
+        "regression": "Earlier B990 variant bypassed a late BaseComponent.Enabled patch: 10 hook calls versus 30 expected, including end-state reads. Revised and isolated builds produce all 30 and honor return-false. The guard precedes wrapper JIT; expanded sites fall back immediately on later patches.",
+        "builds": "Normal and experimental builds compile against both APIs. Normal builds contain no TickDispatch type. Isolated trial reran native/compatibility cases. Game measurements belong to the measured trial hash above, before build-time isolation.",
+        "review": "gpt-6-astra high read-only review of final guard correction: no actionable findings.",
+        "tests_sha256": "2DF693B0F5A747E7A8C71ECB4176AC0B23293FD67882FBDB1682B767D0431DAC",
+        "review_sha256": "AB225A467A4466D3F180AE08BDFD155AF12C01CF27B4E15063A3C363C1CD5269",
+        "limits": "CoreCLR tests do not cover Unity activation callbacks. Final trial has Steam 1.1.2.4 measurements only; no new six-scenario READY or full visual regression is claimed. The superseded startup gate was deliberately stopped after discovery of the getter-hook defect."
+      },
+      "reproduce": "Build src/T3MP with -p:TickDispatchExperiment=true. tests/TickDispatch/run.ps1 takes CodeDll and ManagedDirectories. Game comparison: run_fixed_tick_ab.ps1 -MatchedConditions -Order BPPB -ExpectedExperiment TickDispatch -ComparisonDll <trial>. Raw evidence is ignored under testlogs.",
+      "restoration": "Installed 86AD DLL, source save, Workshop DLL and original mod preferences restored; test driver removed. No commit or push."
+    },
+    {
+      "id": "legacy-feature-attribution-20260914",
+      "status": "measured_no_product_change",
+      "conditions": "n10c / Steam 1.1.2.4; 32 matched high-load runs and 15 matched speed-7 runs. Two short wiring probes excluded. Shift+O and blackout OFF; identical camera/graphics and source save; fresh process per run.",
+      "identity": {
+        "current_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "legacy_sha256": "825B95FA2DAEAFE82B9B54B4F94F4B3EFB02BCB98025EEF4AF1C3191320B16FD",
+        "save_sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4",
+        "driver_sha256": "4908DFF5CECDC0A9D55EE14E04666CE80FD578AD6B47C300AD2EED68625CDBF5"
+      },
+      "method": "Legacy variants change only constant-true BenchmarkSettings initializer bytes to false. Every changed byte, loaded settings, module identity, mode, timing interval and restoration checked. MVID is retained; SHA256 plus live settings distinguish variants. All is the unchanged legacy DLL through the local trial slot; Workshop is the original package control. Current is the installed v1.2.1 DLL.",
+      "groups": "Exact disabled settings: scripts/LegacyVariants/groups.json. NoMirror disables active-state mirror and sentinel injection. NoFlat additionally disables flat dispatch; per-entity legacy dispatch remains. OldExtras disables the nine measured groups other than Tick and Events, including the old walking-delegate implementation. LoadVisuals disables PreparedEntityVisuals with its CLI flag; all runtime settings stay ON.",
+      "measurements": [
+        {
+          "effective_speed": 50,
+          "metric": "tps",
+          "warmup_ticks": 256,
+          "measured_ticks": 1024,
+          "groups": {
+            "Workshop": {
+              "samples": [
+                21.555759
+              ],
+              "pooled": 21.555759
+            },
+            "All": {
+              "samples": [
+                21.419581,
+                21.300791,
+                21.678308,
+                21.446308,
+                21.498441,
+                21.823384,
+                21.403533,
+                21.410766
+              ],
+              "pooled": 21.496469
+            },
+            "Current": {
+              "samples": [
+                19.120775,
+                19.173589,
+                19.201683
+              ],
+              "pooled": 19.16529
+            },
+            "Tick": {
+              "samples": [
+                15.74792
+              ],
+              "pooled": 15.74792
+            },
+            "Haul": {
+              "samples": [
+                20.700364,
+                20.85312
+              ],
+              "pooled": 20.776461
+            },
+            "Needs": {
+              "samples": [
+                21.56555
+              ],
+              "pooled": 21.56555
+            },
+            "Harvest": {
+              "samples": [
+                21.257581
+              ],
+              "pooled": 21.257581
+            },
+            "Navigation": {
+              "samples": [
+                20.96613
+              ],
+              "pooled": 20.96613
+            },
+            "Water": {
+              "samples": [
+                21.270223
+              ],
+              "pooled": 21.270223
+            },
+            "Inventory": {
+              "samples": [
+                22.297824,
+                22.05844
+              ],
+              "pooled": 22.177486
+            },
+            "Workers": {
+              "samples": [
+                21.600287
+              ],
+              "pooled": 21.600287
+            },
+            "Visuals": {
+              "samples": [
+                21.865746
+              ],
+              "pooled": 21.865746
+            },
+            "District": {
+              "samples": [
+                21.575231
+              ],
+              "pooled": 21.575231
+            },
+            "Events": {
+              "samples": [
+                21.0653
+              ],
+              "pooled": 21.0653
+            },
+            "NoMirror": {
+              "samples": [
+                20.180156,
+                20.173278
+              ],
+              "pooled": 20.176717
+            },
+            "NoFlat": {
+              "samples": [
+                17.83753,
+                17.745448
+              ],
+              "pooled": 17.79137
+            },
+            "OldExtras": {
+              "samples": [
+                19.741271,
+                19.640413
+              ],
+              "pooled": 19.690713
+            },
+            "LoadVisuals": {
+              "samples": [
+                21.514372
+              ],
+              "pooled": 21.514372
+            }
+          },
+          "external_cpu_cores_per_run_range": [
+            0.079,
+            0.461
+          ]
+        },
+        {
+          "effective_speed": 7,
+          "metric": "fps",
+          "warmup_ticks": 64,
+          "measured_ticks": 512,
+          "groups": {
+            "All": {
+              "samples": [
+                14.885938,
+                14.719163,
+                15.034473
+              ],
+              "pooled": 14.879878
+            },
+            "Current": {
+              "samples": [
+                13.118481,
+                13.384628
+              ],
+              "pooled": 13.251595
+            },
+            "NoMirror": {
+              "samples": [
+                13.555236,
+                13.014945
+              ],
+              "pooled": 13.284949
+            },
+            "NoFlat": {
+              "samples": [
+                10.828757,
+                10.526714
+              ],
+              "pooled": 10.677708
+            },
+            "OldExtras": {
+              "samples": [
+                13.775133,
+                13.596566
+              ],
+              "pooled": 13.685864
+            },
+            "Haul": {
+              "samples": [
+                14.843195,
+                14.768924
+              ],
+              "pooled": 14.806052
+            },
+            "LoadVisuals": {
+              "samples": [
+                14.739447,
+                14.691919
+              ],
+              "pooled": 14.715682
+            }
+          },
+          "external_cpu_cores_per_run_range": [
+            0.237,
+            0.867
+          ]
+        }
+      ],
+      "limits": [
+        "These are legacy counterfactual performance measurements, not proof of equivalent simulation work or safe portability. Frame caches can change decisions and workload.",
+        "Single-feature effects depend on the other enabled features. Do not add them or assign unique shares of the version gap; OldExtras measures the combined effect directly.",
+        "All vs NoFlat includes both flat dispatch and active-state tracking. Compare NoMirror vs NoFlat for flat dispatch with the mirror disabled in both.",
+        "Normal speed uses FPS because TPS reaches the requested-speed ceiling. Small effects with one sample are screening results, not a reliable fine ranking.",
+        "The two speeds use different fixed tick windows (65-577 and 257-1281). Comparisons within each speed are matched; differences between speeds cannot be attributed to speed alone.",
+        "No runtime code was ported or deployed by this investigation. Original current DLL, Workshop DLL, save and mod preferences restored/verified.",
+        "The second speed-7 NoMirror sample had higher external CPU load (0.867 cores versus 0.355 in the first). Both were slower than the bracketing all-ON controls; do not overstate the precise FPS percentage."
+      ],
+      "sources": [
+        {
+          "name": "legacy-attribution-live-20260914-020139",
+          "index_sha256": "55b8f861624f18af23e09a8d78dd3d87ade70d38c7f793a169a81387c5953580",
+          "summary_set_sha256": "d9a096049493627c3698e0bfe8070144e2c2569d5747fc00ba0337f5e51d631d"
+        },
+        {
+          "name": "legacy-attribution-live-20260914-023322",
+          "index_sha256": "0da6ff3ea61980a9522454839293ccbdace243ae531339a2936ebc2fb2df68d8",
+          "summary_set_sha256": "a0973caf2acb44301ae8394e1702026f0a66fe70d3a2c109ab3320ac8147bff5"
+        },
+        {
+          "name": "legacy-attribution-live-20260914-025715",
+          "index_sha256": "ebe56eb44be5bb50952e3e5ddc2daad83a6aa3f47ce7bd44d48fb79b7b112b03",
+          "summary_set_sha256": "505a57bce651e4a685b14578624b39a06b241ed9b9f621e226fba63c040ed143"
+        }
+      ],
+      "reproduce": "Build scripts/LegacyVariants from the audited original DLL into an ignored directory; build T3MPTestDriver; use run_fixed_tick_ab.ps1 -MatchedConditions -Order P -ExpectedExperiment LegacyRuntime -ComparisonDll <variant.dll> -LegacyVariantRecord <variants.json>. All/Current controls use P-All/B. Add -LegacyVisualPreparationBaseline for isolated P-All load-visual control.",
+      "conclusions": [
+        "Legacy tick dispatch is the largest measured legacy runtime contributor. Its flat component dispatch and activeInHierarchy mirror both contribute; current v1.2.1 uses Frontier instead.",
+        "At speed 50, pooled TPS: current 19.165290, legacy 21.496469, legacy with the nine OldExtras groups disabled 19.690713. At speed 7, pooled FPS: 13.251595, 14.879878 and 13.685864 respectively. Removing the combined extras substantially narrows the version gap; the residual is not a pure tick-implementation measurement.",
+        "Haul no-action caching gives a repeated speed-50 contribution; its speed-7 FPS contribution was not established. Navigation/events show small screening differences. Harvest, needs, water, district, worker and visual groups did not establish a large individual gain.",
+        "PreparedEntityVisuals OFF did not show a material steady-state TPS/FPS loss in this test. This does not assess placement/selection response.",
+        "The evidence supports investigating tick dispatch and active-state lookup with current behavior/compatibility preserved. Legacy result caches and whole-method replacement are not approved for reintroduction by these timings."
+      ]
+    },
+    {
+      "id": "runtime-feature-ranking-20260914",
+      "status": "measured_current_feature_ablation",
+      "conditions": {
+        "candidate_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "driver_sha256": "84A8A360DE4089AE83E74FBAF395FABF6B2E004E41D514A5CD98CF39F15D6E1F",
+        "save_sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4",
+        "display": "2560x1440;fullscreen=Windowed;quality=0;vsync=0;cap=-1;api=Direct3D11;cameras=Camera(Clone):(79.55857, 68.32016, 111.42244):(-0.5136854, 0.0152012063, -0.009103144, -0.8577957):35",
+        "game": "1.1.2.4-52e959e-sw",
+        "save": "n10c",
+        "scope": "Continuous runtime only. Current installed v1.2.1, same DLL in all 26 runs. Tube fix retained. Shift+O off. Loading, speed policy and UI optimizations are not ranked.",
+        "load_control": "PreparedEntityVisuals disabled in every arm and its installed state verified false, because removing Frontier changes its load compatibility checks. Other loading features remain enabled.",
+        "arms": {
+          "B": "all five runtime optimizations",
+          "F": "only TickFrontier off (includes its matching-key shortcut)",
+          "E": "only EventBusFastDelegates off",
+          "W": "only WaterTextureUpload off",
+          "D": "only WalkerSpeedDelegates off",
+          "S": "only TerrainNeighborVisits off"
+        }
+      },
+      "method": "Each speed: three all-on reference runs and two runs per disabled feature in reverse order. Matched effective speed, camera, graphics and simulation tick interval. x7 uses FPS because TPS is speed-limited; x50 uses TPS. For the descriptive point estimate, interpolate the bracketing all-on references by measurement midpoint and compute all_on/off - 1; combine the two ratios geometrically. This assumes smooth reference drift and is not a confidence interval. Bracketing baseline values and each raw OFF result are retained for sensitivity checks.",
+      "blocks": [
+        {
+          "effective_speed": 7.0,
+          "metric": "averageFps",
+          "order": "BFWEDSBSDEWFB",
+          "warmup_ticks": 64,
+          "measured_ticks": 512,
+          "baseline_values": [
+            12.296145618654078,
+            13.615436807599497,
+            13.279793078058484
+          ],
+          "baseline_external_cpu_cores": [
+            0.552,
+            0.345,
+            0.237
+          ],
+          "results": [
+            {
+              "feature": "TickFrontier",
+              "off_values": [
+                6.678058547200203,
+                7.3505677156017635
+              ],
+              "enabled_gain_percent_each": [
+                87.3094670645467,
+                81.37351569291673
+              ],
+              "enabled_gain_percent_geomean": 84.31759700056702,
+              "external_cpu_cores": [
+                0.395,
+                0.237
+              ]
+            },
+            {
+              "feature": "EventBusFastDelegates",
+              "off_values": [
+                10.542965951175638,
+                12.811737725869968
+              ],
+              "enabled_gain_percent_each": [
+                23.151457919707696,
+                4.9595888663304555
+              ],
+              "enabled_gain_percent_geomean": 13.692244201360172,
+              "external_cpu_cores": [
+                0.395,
+                0.395
+              ]
+            },
+            {
+              "feature": "WaterTextureUpload",
+              "off_values": [
+                11.935137193658951,
+                12.205369103927032
+              ],
+              "enabled_gain_percent_each": [
+                6.580695504310086,
+                9.7360239123071
+              ],
+              "enabled_gain_percent_geomean": 8.146852707100516,
+              "external_cpu_cores": [
+                0.473,
+                0.355
+              ]
+            },
+            {
+              "feature": "WalkerSpeedDelegates",
+              "off_values": [
+                12.121339355229914,
+                13.384744823425958
+              ],
+              "enabled_gain_percent_each": [
+                8.865217873164543,
+                0.9425421162388314
+              ],
+              "enabled_gain_percent_geomean": 4.82906009382813,
+              "external_cpu_cores": [
+                0.355,
+                0.395
+              ]
+            },
+            {
+              "feature": "TerrainNeighborVisits",
+              "off_values": [
+                13.458977450326467,
+                13.808402418349282
+              ],
+              "enabled_gain_percent_each": [
+                -0.37803145586380316,
+                -1.775998082369834
+              ],
+              "enabled_gain_percent_geomean": -1.0794842850214148,
+              "external_cpu_cores": [
+                0.345,
+                0.345
+              ]
+            }
+          ],
+          "source": {
+            "name": "fixed-ab-20260914-003847/summary.json",
+            "sha256": "cbab324dfb62cc590622bbcebaa057909d03dfc2f96dfc9f8e68d34dce929e5d"
+          },
+          "scene_load_ms_in_run_order": [
+            32647,
+            32715,
+            32740,
+            56418,
+            32485,
+            32749,
+            32209,
+            32562,
+            32300,
+            52463,
+            33385,
+            35118,
+            32020
+          ],
+          "baseline_spread_percent": 10.72930680768749
+        },
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "order": "BFWEDSBSDEWFB",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "baseline_values": [
+            19.729144680242438,
+            19.832142104936658,
+            19.599095355904492
+          ],
+          "baseline_external_cpu_cores": [
+            0.259,
+            0.302,
+            0.346
+          ],
+          "results": [
+            {
+              "feature": "TickFrontier",
+              "off_values": [
+                15.190194496852428,
+                15.271384652285567
+              ],
+              "enabled_gain_percent_each": [
+                29.999741026129655,
+                28.6005517492516
+              ],
+              "enabled_gain_percent_geomean": 29.298253751626866,
+              "external_cpu_cores": [
+                0.283,
+                0.251
+              ]
+            },
+            {
+              "feature": "WaterTextureUpload",
+              "off_values": [
+                19.20102415862734,
+                19.396083230528962
+              ],
+              "enabled_gain_percent_each": [
+                2.9383013857700924,
+                1.4653059008876035
+              ],
+              "enabled_gain_percent_geomean": 2.199149893846597,
+              "external_cpu_cores": [
+                0.279,
+                0.232
+              ]
+            },
+            {
+              "feature": "EventBusFastDelegates",
+              "off_values": [
+                19.53683631040615,
+                19.31477469874103
+              ],
+              "enabled_gain_percent_each": [
+                1.2635832660980784,
+                2.084961816007991
+              ],
+              "enabled_gain_percent_geomean": 1.6734430963748048,
+              "external_cpu_cores": [
+                0.325,
+                0.232
+              ]
+            },
+            {
+              "feature": "WalkerSpeedDelegates",
+              "off_values": [
+                19.740373946414653,
+                19.631912849567694
+              ],
+              "enabled_gain_percent_each": [
+                0.3017655728327906,
+                0.647224000257296
+              ],
+              "enabled_gain_percent_geomean": 0.47434631402285543,
+              "external_cpu_cores": [
+                0.284,
+                0.256
+              ]
+            },
+            {
+              "feature": "TerrainNeighborVisits",
+              "off_values": [
+                19.8799058575798,
+                19.623317034312883
+              ],
+              "enabled_gain_percent_each": [
+                -0.3215599969190519,
+                0.8780782248589691
+              ],
+              "enabled_gain_percent_geomean": 0.27646517484902766,
+              "external_cpu_cores": [
+                0.314,
+                0.302
+              ]
+            }
+          ],
+          "source": {
+            "name": "fixed-ab-20260914-005948/summary.json",
+            "sha256": "83e41a402f1097204636df4e2c3a0e3f5e3090f4f32276d9e5c2b6fc5976b7da"
+          },
+          "scene_load_ms_in_run_order": [
+            32153,
+            31967,
+            32248,
+            52713,
+            32336,
+            32180,
+            32080,
+            31975,
+            32272,
+            52217,
+            32123,
+            32144,
+            32395
+          ],
+          "baseline_spread_percent": 1.1890689075195304
+        }
+      ],
+      "interpretation": "Frontier is the clear largest contributor in both conditions. Event delegates and water uploads form the next candidate tier, especially for normal-speed FPS; their fine ordering is uncertain. Walker delegates and terrain visits have no established standalone throughput gain here. Tiny positive or negative estimates must not be interpreted as proof of benefit or harm.",
+      "limits": [
+        "Two samples per disabled feature; all-on references themselves vary, especially x7. No forced ranking of overlapping small effects.",
+        "These are marginal effects in the current combination, not independent shares of the total mod gain; do not add percentages or multiply factors.",
+        "Scope is this save and fixed post-load tick window, not a guarantee for other maps, populations, camera positions or longer steady-state play.",
+        "Scene load times are ancillary observations under the common visual-preparation control, not a ranking of all load optimizations.",
+        "External CPU sampled every five seconds; timed-window alignment is approximate. No unrelated process was stopped."
+      ],
+      "validation": "All runs validate speed, focus, camera/graphics, loaded product/driver MVID+hash, exact expected ON/OFF feature states, completed tick count, and absence of intrusive diagnostics. Test-driver build, PowerShell guard/syntax review and gpt-6-astra high read-only review pass.",
+      "reproduce": "scripts/run_fixed_tick_ab.ps1 -RuntimeAttribution -MatchedConditions -Order BFWEDSBSDEWFB; x7 WarmupTicks=64 MeasuredTicks=512, x50 WarmupTicks=256 MeasuredTicks=2048."
+    },
+    {
+      "id": "harvest-segment-index-20260914",
+      "status": "measured_experiments_not_enabled_in_product",
+      "conditions": {
+        "game": "1.1.2.4-52e959e-sw",
+        "save": "n10c",
+        "baseline_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "display_and_speed_control": "Same matched conditions as runtime-n10c-threeway-20260913; rendered, Shift+O off; effective x7/x50; no profiler or shadow validation during timing.",
+        "external_load": "5-second OS samples, approximate interior timing window; Python rounded mean zero. Two runs per arm per speed: descriptive estimates, not statistical proof.",
+        "offline": "CoreCLR .NET 8, tiered compilation disabled; eight alternating pairs using real n10c captured inputs. Excludes Unity/native path work and runtime integration overhead."
+      },
+      "variants": [
+        {
+          "name": "HarvestCandidateTree",
+          "scope": "Final selection only: native closest-per-good reduction retained; replace SortedSet ordering with a reusable segment tree.",
+          "offline": {
+            "snapshots": 512,
+            "group_histogram": {
+              "1": 325,
+              "2": 31,
+              "0": 143,
+              "3": 8,
+              "5": 1,
+              "4": 4
+            },
+            "game_assembly_mvid": "492e648d-393f-4f72-a8c3-3d8cc7f33c90",
+            "comparisons": "All ordered identities, then first-candidate selection timing; buffers reused; actual game comparator and collection extension; CoreCLR",
+            "queries_per_arm_per_pair": 1024000,
+            "sorted_set_ms": [
+              42.3514,
+              40.9644,
+              40.9602,
+              41.0745,
+              40.8131,
+              42.281,
+              40.9666,
+              41.4387
+            ],
+            "segment_tree_ms": [
+              27.9695,
+              27.8987,
+              27.8413,
+              27.8571,
+              27.9852,
+              28.3546,
+              27.9488,
+              28.3933
+            ],
+            "time_ratio": 0.6777952781608821
+          },
+          "validation": {
+            "summary": "calls=1584,validated=1584,farm=811,forestry=489,groups0to8plus=474/976/98/28/7/1/0/0/0",
+            "trial_sha256": "077BAC6F32B4DCF272A7DB9CCCC692A363AAFDE187FB4D7BDE28BA987435936B",
+            "source": {
+              "name": "fixed-ab-20260913-231241/summary.json",
+              "sha256": "1d5a780c97476028ad293a12d0a7418a899a26a494b4e131d401ef271db712a2"
+            }
+          },
+          "game": [
+            {
+              "speed": 7.0,
+              "order": "BPPB",
+              "warmup_ticks": 64,
+              "measured_ticks": 512,
+              "trial_sha256": "077BAC6F32B4DCF272A7DB9CCCC692A363AAFDE187FB4D7BDE28BA987435936B",
+              "driver_sha256": "CFA27F68C3AF43B684CBA51453DC17E580104B4596CDB6AE783C729A4860ABAE",
+              "source": {
+                "name": "fixed-ab-20260913-231521/summary.json",
+                "sha256": "76ad09b40631b9ecd00098ecd908128c72c9065ccc9bcaabff96ae0c6790eff8"
+              },
+              "metric": "fps",
+              "baseline": [
+                12.769457220012272,
+                12.683311066428631
+              ],
+              "trial": [
+                12.759337770430392,
+                12.927235276287279
+              ],
+              "pooled_baseline": 12.72639302132679,
+              "pooled_trial": 12.843335303707407,
+              "ratio": 1.0091889573255082,
+              "adjacent_ratios": [
+                0.9992075270383441,
+                1.0192319031348438
+              ],
+              "external_cpu_cores_in_run_order": [
+                0.553,
+                0.631,
+                0.445,
+                0.592
+              ]
+            },
+            {
+              "speed": 50.0,
+              "order": "PBBP",
+              "warmup_ticks": 256,
+              "measured_ticks": 2048,
+              "trial_sha256": "077BAC6F32B4DCF272A7DB9CCCC692A363AAFDE187FB4D7BDE28BA987435936B",
+              "driver_sha256": "CFA27F68C3AF43B684CBA51453DC17E580104B4596CDB6AE783C729A4860ABAE",
+              "source": {
+                "name": "fixed-ab-20260913-232131/summary.json",
+                "sha256": "69c10e33dac7187d1f79e88df5e26d94a07d789c90fec04598349e9dc92e4295"
+              },
+              "metric": "tps",
+              "baseline": [
+                19.392700538278113,
+                19.38428473519815
+              ],
+              "trial": [
+                19.515853117232435,
+                19.362263189747875
+              ],
+              "pooled_baseline": 19.388491723493576,
+              "pooled_trial": 19.43875477117556,
+              "ratio": 1.0025924165942768,
+              "adjacent_ratios": [
+                1.0063504605101925,
+                0.9988639485154545
+              ],
+              "external_cpu_cores_in_run_order": [
+                0.534,
+                0.465,
+                0.488,
+                0.511
+              ]
+            }
+          ],
+          "conclusion": "No demonstrated practical gain: adjacent comparisons reverse; not adopted."
+        },
+        {
+          "name": "HarvestIndex",
+          "scope": "Nearest-per-good tree shared by farms and lumberjacks, persisted weakly per receiving Inventory. Every query still executes native reachability, live eligibility and enumeration; numeric index synchronized before selecting winners. Count/good-order changes rebuild; distance changes update leaves.",
+          "offline": {
+            "snapshots": 256,
+            "finders": 38,
+            "inputs": 33001,
+            "queries_per_pair": 256000,
+            "native_ms": [
+              278.7917,
+              262.5476,
+              269.4662,
+              262.459,
+              265.0635,
+              271.1266,
+              270.5784,
+              272.696
+            ],
+            "index_ms": [
+              305.1403,
+              305.3651,
+              304.9835,
+              304.3269,
+              309.0308,
+              323.7288,
+              318.7416,
+              322.4583
+            ],
+            "time_ratio": 1.1584250967028364
+          },
+          "validation": {
+            "summary": "calls=1578,validated=1578,farm=799,forestry=490,inputs=193924,rebuilds=514,pointUpdates=1291",
+            "trial_sha256": "7236EA45370D06F15307C7E2CE206260BBAC677AF976286DB6EF64A1143B6A69",
+            "source": {
+              "name": "fixed-ab-20260914-000910/summary.json",
+              "sha256": "07d59a93ac013fd3e937c4d711641b3454fbb8599ea68133398afde639d29214"
+            }
+          },
+          "game": [
+            {
+              "speed": 7.0,
+              "order": "BPPB",
+              "warmup_ticks": 64,
+              "measured_ticks": 512,
+              "trial_sha256": "7236EA45370D06F15307C7E2CE206260BBAC677AF976286DB6EF64A1143B6A69",
+              "driver_sha256": "95139428A380E4AEDBD2CE648AEA7E216EA4753BD916BFDF147D9F3B4E416B8C",
+              "source": {
+                "name": "fixed-ab-20260914-001111/summary.json",
+                "sha256": "32bf98515e8730e81dbcbf9461beab869635b0cee729b0bd700f0a192a1b40da"
+              },
+              "metric": "fps",
+              "baseline": [
+                12.350665614765052,
+                12.213161019872407
+              ],
+              "trial": [
+                12.119120398448871,
+                12.119276473889466
+              ],
+              "pooled_baseline": 12.281912543355123,
+              "pooled_trial": 12.11919843566667,
+              "ratio": 0.9867517288440157,
+              "adjacent_ratios": [
+                0.9812524099074165,
+                0.9923128381071715
+              ],
+              "external_cpu_cores_in_run_order": [
+                0.513,
+                0.641,
+                0.867,
+                0.553
+              ]
+            },
+            {
+              "speed": 50.0,
+              "order": "PBBP",
+              "warmup_ticks": 256,
+              "measured_ticks": 2048,
+              "trial_sha256": "7236EA45370D06F15307C7E2CE206260BBAC677AF976286DB6EF64A1143B6A69",
+              "driver_sha256": "95139428A380E4AEDBD2CE648AEA7E216EA4753BD916BFDF147D9F3B4E416B8C",
+              "source": {
+                "name": "fixed-ab-20260914-001726/summary.json",
+                "sha256": "7fa58342f88cbd9de1cc230c9e44a8ee6c7d45b4972d7a14395a7df1248025c6"
+              },
+              "metric": "tps",
+              "baseline": [
+                19.059988469600412,
+                19.22885683558843
+              ],
+              "trial": [
+                17.444111625899225,
+                19.333071506779405
+              ],
+              "pooled_baseline": 19.144050265743836,
+              "pooled_trial": 18.34008092566977,
+              "ratio": 0.9580042191221844,
+              "adjacent_ratios": [
+                0.9152215203971179,
+                1.0054197018617401
+              ],
+              "external_cpu_cores_in_run_order": [
+                1.513,
+                0.685,
+                0.735,
+                0.534
+              ]
+            }
+          ],
+          "conclusion": "Offline reduction is slower. Live x50 adjacent comparisons reverse and the slower trial has higher external CPU load: no stable improvement demonstrated; pooled slowdown cannot be attributed solely to the index. Not adopted."
+        }
+      ],
+      "correctness": "10,000 final-order cases; 20,000 sequential nearest-index cases including insert/remove/reorder, NaN/infinities and ties. Actual game reducer hook fixtures verify identity, exception restoration, repeated reentry, per-workplace isolation and scope restoration. Both API builds pass. Live shadow checks include farm and forestry. This is not a full visual/other-mod/long-run regression.",
+      "review": "gpt-6-astra high read-only: diagnostic results explicitly excluded from performance, reentry fixes applied; final index review no actionable defects.",
+      "decision_boundary": "A segment tree does not remove candidate enumeration/path checks. Reconsider only with evidence that a complete fresh-state index can be maintained more cheaply; do not restore old frame-key caches or infer overall speedup from CoreCLR reduction timing.",
+      "reproduction": "experiments/harvest-index/README.md"
+    },
+    {
+      "id": "runtime-n10c-threeway-20260913",
+      "status": "measured_current_and_workshop_legacy_with_matched_conditions",
+      "conditions": {
+        "game": "1.1.2.4-52e959e-sw",
+        "save": "n10c",
+        "current_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "legacy_version": "1.1.7",
+        "legacy_sha256": "825B95FA2DAEAFE82B9B54B4F94F4B3EFB02BCB98025EEF4AF1C3191320B16FD",
+        "driver_sha256": "40C201883F2ADCB21F3CABB58EE9E4703976BD6519023995295B9D3A6517D219",
+        "display": "2560x1440;fullscreen=Windowed;quality=0;vsync=0;cap=-1;api=Direct3D11;cameras=Camera(Clone):(79.55857, 68.32016, 111.42244):(-0.5136854, 0.0152012063, -0.009103144, -0.8577957):35",
+        "speed_control": "Test-only ScaleSpeed postfix retains native execution and normalizes effective timeScale equally in V/B/O. VSync=0 and cap=-1 set once at timing boundary. Population-policy effects are excluded.",
+        "modes": "Rendered and focused; legacy Optimized with active TickDispatch, blackout off and smooth off; current Shift+O off.",
+        "arms": {
+          "V": "No T3MP, common Harmony and test driver retained",
+          "B": "Installed v1.2.1",
+          "O": "Actual Workshop v1.1.7"
+        }
+      },
+      "blocks": [
+        {
+          "effective_time_scale": 7,
+          "order": "VBOOBV",
+          "warmup_ticks": 64,
+          "measured_ticks_per_run": 512,
+          "runs": [
+            {
+              "arm": "V",
+              "seconds": 43.69580379999999,
+              "ticks_per_second": 11.717372275458635,
+              "fps": 5.734672862994459,
+              "external_cpu_cores": 0.513
+            },
+            {
+              "arm": "B",
+              "seconds": 43.8249995,
+              "ticks_per_second": 11.682829568543408,
+              "fps": 13.051966521280715,
+              "external_cpu_cores": 0.543
+            },
+            {
+              "arm": "O",
+              "seconds": 43.78712300000001,
+              "ticks_per_second": 11.692935386506209,
+              "fps": 15.279609663065779,
+              "external_cpu_cores": 0.631
+            },
+            {
+              "arm": "O",
+              "seconds": 43.7859662,
+              "ticks_per_second": 11.693244307122313,
+              "fps": 15.141574499231764,
+              "external_cpu_cores": 0.592
+            },
+            {
+              "arm": "B",
+              "seconds": 43.828319799999996,
+              "ticks_per_second": 11.681944512963057,
+              "fps": 12.938400528821234,
+              "external_cpu_cores": 0.593
+            },
+            {
+              "arm": "V",
+              "seconds": 43.6205489,
+              "ticks_per_second": 11.737587281942707,
+              "fps": 5.584830319329497,
+              "external_cpu_cores": 0.434
+            }
+          ],
+          "pooled": {
+            "V": {
+              "fps": 5.659823621137037,
+              "tps": 11.727471067398353,
+              "fps_ratio_to_vanilla": 1.0,
+              "tps_ratio_to_vanilla": 1.0
+            },
+            "B": {
+              "fps": 12.995185114760417,
+              "tps": 11.682387023990318,
+              "fps_ratio_to_vanilla": 2.296040651554745,
+              "tps_ratio_to_vanilla": 0.996155689223283
+            },
+            "O": {
+              "fps": 15.21059027352263,
+              "tps": 11.693089844773914,
+              "fps_ratio_to_vanilla": 2.6874671883267767,
+              "tps_ratio_to_vanilla": 0.9970683174209641
+            }
+          }
+        },
+        {
+          "effective_time_scale": 50,
+          "order": "OBVVBO",
+          "warmup_ticks": 128,
+          "measured_ticks_per_run": 1024,
+          "runs": [
+            {
+              "arm": "O",
+              "seconds": 47.4049871,
+              "ticks_per_second": 21.601102808864596,
+              "fps": 0.4328331236022398,
+              "external_cpu_cores": 0.394
+            },
+            {
+              "arm": "B",
+              "seconds": 52.4750928,
+              "ticks_per_second": 19.514019801790614,
+              "fps": 0.3911032214640452,
+              "external_cpu_cores": 0.494
+            },
+            {
+              "arm": "V",
+              "seconds": 72.58644299999999,
+              "ticks_per_second": 14.107317533110145,
+              "fps": 0.28272209720628044,
+              "external_cpu_cores": 0.454
+            },
+            {
+              "arm": "V",
+              "seconds": 73.1347428,
+              "ticks_per_second": 14.001553308258849,
+              "fps": 0.28015185894857053,
+              "external_cpu_cores": 0.556
+            },
+            {
+              "arm": "B",
+              "seconds": 53.506049000000004,
+              "ticks_per_second": 19.13802306726105,
+              "fps": 0.3834697752986568,
+              "external_cpu_cores": 0.508
+            },
+            {
+              "arm": "O",
+              "seconds": 47.015148100000005,
+              "ticks_per_second": 21.78021427949091,
+              "fps": 0.4365108529027678,
+              "external_cpu_cores": 0.494
+            }
+          ],
+          "pooled": {
+            "V": {
+              "fps": 0.28143110986782977,
+              "tps": 14.054236443085546,
+              "fps_ratio_to_vanilla": 1.0,
+              "tps_ratio_to_vanilla": 1.0
+            },
+            "B": {
+              "fps": 0.387248884431082,
+              "tps": 19.324192636694164,
+              "fps_ratio_to_vanilla": 1.3759988531934089,
+              "tps_ratio_to_vanilla": 1.3749727859603038
+            },
+            "O": {
+              "fps": 0.4346642089998871,
+              "tps": 21.69028878916496,
+              "fps_ratio_to_vanilla": 1.5444781822593143,
+              "tps_ratio_to_vanilla": 1.5433274427253731
+            }
+          }
+        }
+      ],
+      "validation": "All 12 raw results passed display/speed/focus/tick boundaries, loaded MVID, active patch and legacy state checks. Two x7 legacy logs were revalidated after the parser rejected failed=False or normal per-entity fallback counters; original failure summaries remain with raw evidence.",
+      "limits": "Two runs per arm per speed, one save/camera. x7 reaches the speed ceiling: compare FPS, not TPS ratio. x50 is below 1 FPS: compare throughput, not normal-play smoothness. External CPU load remained nonzero; sampled Python CPU was zero. Old-version performance does not establish equivalent simulation or absence of its known bugs.",
+      "sources": [
+        {
+          "name": "fixed-ab-20260913-221841/summary.json",
+          "sha256": "4624a3c2b852e3fe88707e114a2cd1d318355317bfd451a6df6d42540c72f2f0"
+        },
+        {
+          "name": "fixed-ab-20260913-222424/summary.json",
+          "sha256": "9f816d6079ba823572e39a82a168afeae504a648da0706d3b97c3b04e168a6c4"
+        },
+        {
+          "name": "fixed-ab-20260913-222620/summary.json",
+          "sha256": "c03c2ff13488b3ba423781a490473e15ff7f0a538f9d93fcf906963c44c89a00"
+        },
+        {
+          "name": "fixed-ab-20260913-223001/summary.json",
+          "sha256": "d9f215a5dc3bc671543cd580647d6f311476e4bef1f3cce9944b4ae4d8fa497f"
+        },
+        {
+          "name": "fixed-ab-20260913-221841/03-O/autoload-20260913-222224.log",
+          "sha256": "c7e8a5d00cc09fbfa29a299518d253fcaed07b4bd30629e440af6f8f2a640389"
+        },
+        {
+          "name": "fixed-ab-20260913-222424/01-O/autoload-20260913-222424.log",
+          "sha256": "e7f614bc5f11fa4138ec2994bb1fd416afd8cf31d2703b349be751e7d01a4aed"
+        }
+      ]
     },
     {
       "id": "load-steam-1124",
@@ -301,7 +2279,7 @@
     },
     {
       "id": "frontier-search-early-exit",
-      "status": "source_candidate_offline_verified",
+      "status": "integrated_deployed",
       "conditions": "Current NextIndex method extracted verbatim into a CoreCLR fixture with the unused entity value type replaced by int. No game launch or installed DLL replacement.",
       "correctness": {
         "assertions": 909375,
@@ -331,8 +2309,497 @@
         }
       },
       "reproduce": "python tests/FrontierSearch.py --benchmark",
-      "limits": "Synthetic search-only timings do not establish Unity Mono speedup, n10c throughput, or FPS improvement. Current A32 playtest DLL is unchanged; whole-game adoption remains unvalidated."
+      "limits": "Synthetic search-only timing predates deployment and does not establish Unity Mono speedup, n10c throughput or FPS improvement."
+    },
+    {
+      "id": "walker-speed-delegates",
+      "status": "integrated_deployed_effect_inconclusive",
+      "source": "src/T3MP/Runtime/WalkerSpeedDelegates.cs",
+      "validation": "Harmony 2.4.1 / CoreCLR fixtures use the linked production implementation and helpers; only fixture fingerprint acceptance is substituted. Unknown-IL rejection uses the real fingerprint check.",
+      "scenarios": [
+        "plain/live speed/weak lifetime/null/exception/reload",
+        "unknown-version",
+        "foreign-before",
+        "late-provider",
+        "late-along",
+        "late-limit",
+        "late-speed",
+        "changed-stream",
+        "install-failure rollback",
+        "runtime-baseline -t3mpTestRuntimeBaseline",
+        "feature-disabled -t3mpTestNoWalkerDelegates",
+        "downstream-stream (explicit Harmony after ordering)"
+      ],
+      "native_il": "Production transpiler checked against both game API assemblies: 21 Move instructions, only ldftn/newobj changed to call/nop; branch/exception metadata retained. No game methods executed.",
+      "builds": [
+        "1.1.2.4 API: 0 warnings, 0 errors",
+        "1.0.13.1 API: 0 warnings, 0 errors"
+      ],
+      "coreclr_allocation": {
+        "bindings_after_warmup": 100000,
+        "original_bytes": 6400000,
+        "reused_bytes": 0
+      },
+      "reproduce": "dotnet run --project tests/WalkerSpeedDelegates -c Release -- <scenario>",
+      "disable": "-t3mpTestNoWalkerDelegates",
+      "limits": "Offline CoreCLR allocation result is not Unity Mono throughput. Historical D/B measurement restored A32 afterward; current installation is identified by playtest. No visual regression coverage for the current DLL.",
+      "review": "gpt-6-astra / high: no remaining findings.",
+      "game_measurement": {
+        "game": "1.1.2.4-52e959e-sw",
+        "save": "n10c",
+        "candidate_sha256": "5CCC264A46EB6C3E376C971E4D21296A06EDCA46A9EF5D58D9B9BCB39C195D30",
+        "comparison": "Same candidate DLL; D disables only WalkerSpeedDelegates, B enables it. Frontier early-exit is common to both. Not MOD versus vanilla.",
+        "warmup_ticks": 256,
+        "measured_ticks": 2048,
+        "order": "DBBD",
+        "display": "2560x1440 windowed, quality 0, D3D11, vsync 0, uncapped; same camera and focus",
+        "series": [
+          {
+            "speed": 7,
+            "ticks_per_second": [
+              10.886313,
+              11.664526,
+              11.66633,
+              11.66625
+            ],
+            "fps": [
+              6.6299,
+              13.2626,
+              13.3538,
+              13.0675
+            ],
+            "external_cpu_cores": [
+              1.233,
+              0.432,
+              0.405,
+              0.588
+            ],
+            "gpu_utilization_percent": [
+              45.7,
+              6.3,
+              6.5,
+              8.4
+            ],
+            "telemetry_scope": "10-second samples in approximate UTC measurement interior, excluding 20 seconds at either end; not exact tick profiling.",
+            "valid_engine_windows": 4,
+            "source": {
+              "runs": "testlogs/fixed-ab-20260913-190637/runs.json",
+              "runs_sha256": "6d5cbcc83d25c5fc329d24863c1bee7d322501fe5dc935b1c5d2f54b2656c4ff",
+              "resources": "testlogs/walker-delegates/measurement-20260913-190637/resources.jsonl",
+              "resources_sha256": "a4fda408268700cb7f53e60d11d930b239043f9d5c664dfb8faa481c9617df0a"
+            },
+            "interpretation": "D1 excluded from effect attribution because external workload ceased before B1. Remaining runs are speed-capped."
+          },
+          {
+            "speed": 50,
+            "ticks_per_second": [
+              19.603322,
+              16.041212,
+              16.095212,
+              14.22911
+            ],
+            "fps": [
+              0.3924,
+              0.3246,
+              0.3208,
+              0.2869
+            ],
+            "external_cpu_cores": [
+              0.59,
+              1.277,
+              1.285,
+              1.281
+            ],
+            "gpu_utilization_percent": [
+              4.5,
+              54.8,
+              62.3,
+              38.7
+            ],
+            "telemetry_scope": "10-second samples in approximate UTC measurement interior, excluding 20 seconds at either end; not exact tick profiling.",
+            "valid_engine_windows": 4,
+            "source": {
+              "runs": "testlogs/fixed-ab-20260913-192341/runs.json",
+              "runs_sha256": "e1412cb935be2cc3ff11c926db622adebae45056bac5fbd186638f3adffcb5a8",
+              "resources": "testlogs/walker-delegates/measurement-20260913-192341/resources.jsonl",
+              "resources_sha256": "8d84b4afc6550c2712b712f10e7111f85b158adee7930c96699239db85ab06a5"
+            },
+            "interpretation": "D1 is low external load; B1/B2/D2 overlap external Python/GPU work. Adjacent B/D ratios 0.8183 and 1.1311 are not an established effect."
+          }
+        ],
+        "conclusion": "Inconclusive: x7 reaches its speed ceiling under low external load. x50 adjacent ratios reverse sign amid external CPU/GPU variation; neither pooled nor selected-pair speedup is accepted. Repeat D/B when external computation is idle.",
+        "restored_playtest_sha256": "A32B9D93AE73FD58FA9B522E1087CE6B4B08600C73F50CBE3DF545F975A51CD6"
+      }
+    },
+    {
+      "id": "terrain-single-lookup",
+      "status": "integrated_deployed",
+      "source": "src/T3MP/Runtime/TerrainNeighborVisits.cs",
+      "limits": "Runtime adds per-neighbor compatibility checks and collection-method guards; prototype search-only timing is not its performance result. Current runtime whole-game effect and Unity Mono visual behavior unmeasured.",
+      "review": "gpt-6-astra / high: no remaining findings after collection-operation guards and semantic regression tests.",
+      "prototype_conditions": "Actual native/copy-rewritten TerrainReachabilityService. Replaces Contains plus Add with Add result; custom comparer retains native path. 64x64 four-neighbor unit-cost grid, range 5, 200000 searches per sample, six alternating pairs; .NET 8 CoreCLR, DOTNET_TieredCompilation=0.",
+      "prototype_correctness": "5014 cases per game version: random weighted/cyclic/duplicate-edge graphs, live graph and restriction changes, repeated queries, ordered output appended to caller list, exception and remaining queue/set state, custom comparer calls and throws.",
+      "prototype_versions": [
+        {
+          "game": "1.1.2.4",
+          "input_sha256": "65139131DFD0D633F578F0601ED6F9D8DE8D752CA9260CF4078D938B5099ED27",
+          "candidate_sha256": "9CDAA8B987EEE3DF7F50E7E189923F6AF2584115A5748BAC1AB2EE9DD931874E",
+          "cases": 5014,
+          "mismatches": 0,
+          "search_throughput_ratio": 1.077678,
+          "pair_ratio_range": [
+            1.074215,
+            1.080285
+          ],
+          "result_sha256": "ae192675b92b5549ef917ab00d0903de236f88ae698af54859d142e599144902"
+        },
+        {
+          "game": "1.0.13.1",
+          "input_sha256": "5B4E275A0592A8F6F25A1D6612C7BA8E6056FE17EF0EDA785F8E701CCF74A442",
+          "candidate_sha256": "63E2CD27C1AA69485202B1A944DCF3070C1302F43C8F7500F48A6B9497990237",
+          "cases": 5014,
+          "mismatches": 0,
+          "search_throughput_ratio": 1.087238,
+          "pair_ratio_range": [
+            1.078278,
+            1.102911
+          ],
+          "result_sha256": "7649c95ca512dd01c5c289044d9dd239f44f25d7677fff120794502517a4630e"
+        }
+      ],
+      "runtime": {
+        "disable": "-t3mpTestNoTerrainVisits",
+        "benchmark_arm": "S/B in scripts/run_fixed_tick_ab.ps1",
+        "fixture_modes_passed": 24,
+        "native_execution_cases_per_version": 5000,
+        "native_versions": [
+          "1.1.2.4",
+          "1.0.13.1"
+        ],
+        "validation": "Production installer/fingerprints/helper and Harmony executed against actual game assemblies under CoreCLR; only Unity logging suppressed. Ordered results, exceptions and remaining queue/set state compared. Fixture modes cover before/after patches, changed Add return values, throwing Contains, custom comparers, graph-read reentrancy, unknown IL, rollback and disable flags.",
+        "builds": "Both APIs: 0 warnings, 0 errors",
+        "v10_dll_sha256": "EE8AD5F53EAECA34C7B3026116058332406CE08F746AFC58A4C3BD842C7BF155",
+        "installed_binary_cross_api": "The installed 1.1-built DLL also passed 5000 real-game-assembly comparisons against the 1.0 API under CoreCLR."
+      }
+    },
+    {
+      "id": "runtime-local-candidates-20260913",
+      "status": "not_adopted_no_demonstrated_speedup",
+      "conditions": {
+        "game_api": "1.1.2.4",
+        "execution": "Actual game assemblies and production trial patch, Harmony 2.4.1, CoreCLR net8; Unity logging suppressed",
+        "tiered_compilation": false,
+        "alternating_pairs": 8,
+        "ratio": "Median native_ms / optimized_ms; below 1 means slower"
+      },
+      "trials": [
+        {
+          "candidate": "StockCounter/CapacityCounter ContainsKey plus indexer read merged into TryGetValue; exact default-comparer Dictionary only, dependency patch guards",
+          "dll_sha256": "8E694A0B3C1D674B213A6B8C582CB82EE4552A799952677A3FC165D8FBD47DA7",
+          "equivalence_cases": 20046,
+          "mismatches": 0,
+          "workload": "2,000,000 additions per run; 64 existing Resource-N keys; both counter methods",
+          "throughput_ratio": 0.9616857759,
+          "source_name": "resource-lookups/bench-v11.log"
+        },
+        {
+          "candidate": "NodeIdService.IdToGrid valid-index array read separated from native exception/diagnostic path",
+          "dll_sha256": "9297580CCF3EC6CAC9F18831249E6FDA4919A717FFCC82BA3E95FB597FFE5FB9",
+          "equivalence_cases": 4185,
+          "mismatches": 0,
+          "workload": "10,000,000 reads per run across 65,536 coordinates",
+          "throughput_ratio": 0.7518292958,
+          "source_name": "node-coordinates/bench-v11.log"
+        }
+      ],
+      "decision": "Both trial patches ran on n10c in Unity Mono. Neither demonstrated a whole-game throughput improvement. Trial sources remain removed; original installed DLL restored after measurement.",
+      "limits": "Synthetic CoreCLR results are primitive timings, not whole-game predictions. Live n10c results use timeScale 50 at about 0.4 FPS, not normal-play FPS; two measurements per variant and variable external CPU load do not establish a precise causal slowdown or visual correctness.",
+      "live": {
+        "game": "1.1.2.4",
+        "save": "n10c",
+        "save_sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4",
+        "baseline_sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
+        "driver_sha256": "C464853578CF3DD92ADFF3C10056D412A418AC4ABC671F1EF9FA0D79670C3D31",
+        "time_scale": 50,
+        "warmup_ticks": 256,
+        "measured_ticks": 2048,
+        "total_runs": 8,
+        "display": "2560x1440;fullscreen=Windowed;quality=0;vsync=0;cap=-1;api=Direct3D11;cameras=Camera(Clone):(79.55857, 68.32016, 111.42244):(-0.5136854, 0.0152012063, -0.009103144, -0.8577957):35",
+        "validation": "All eight runs valid: same save hash, tick origin, measured ticks, timeScale, display/camera and focus; expected patch Installed/Active state and per-run DLL hash; no detected uncaught exceptions. Original save, DLL and mod preferences restored; test driver removed.",
+        "external_load_method": "5-second OS samples; approximate interior timed windows aligned from completion polling, excluding 10 seconds at each end. Python CPU rounded mean was 0.000 cores throughout; other external load varied.",
+        "review": "Trial code and benchmark harness: gpt-6-astra high, no findings. FixedTickWindow tests pass.",
+        "results": [
+          {
+            "feature": "ResourceCounterLookups",
+            "order": "BPPB",
+            "baseline_tps": [
+              20.0856826781409,
+              19.505494772642162
+            ],
+            "trial_tps": [
+              19.478659184326528,
+              19.651184131659605
+            ],
+            "pooled_baseline_tps": 19.791337550920836,
+            "pooled_trial_tps": 19.5645413235101,
+            "throughput_ratio": 0.9885406316360773,
+            "adjacent_pair_ratios": [
+              0.9697782991227383,
+              1.0074691445008501
+            ],
+            "external_loads_in_run_order": [
+              {
+                "external_cpu_cores": 0.222,
+                "python_cpu_cores": 0.0
+              },
+              {
+                "external_cpu_cores": 0.444,
+                "python_cpu_cores": 0.0
+              },
+              {
+                "external_cpu_cores": 0.519,
+                "python_cpu_cores": 0.0
+              },
+              {
+                "external_cpu_cores": 0.453,
+                "python_cpu_cores": 0.0
+              }
+            ],
+            "source_name": "fixed-ab-20260913-211814/summary.json",
+            "source_sha256": "de9278f772c9930a1cbc2c5f3ccd025b57b5b522eca40d182cb470b3fcf91adc"
+          },
+          {
+            "feature": "NodeCoordinateLookup",
+            "order": "PBBP",
+            "baseline_tps": [
+              19.308724161371504,
+              19.529255459760954
+            ],
+            "trial_tps": [
+              19.15487120126648,
+              19.435948632461837
+            ],
+            "pooled_baseline_tps": 19.418363695947967,
+            "pooled_trial_tps": 19.294386298777425,
+            "throughput_ratio": 0.9936154560130928,
+            "adjacent_pair_ratios": [
+              0.9920319458282584,
+              0.9952222025314088
+            ],
+            "external_loads_in_run_order": [
+              {
+                "external_cpu_cores": 0.709,
+                "python_cpu_cores": 0.0
+              },
+              {
+                "external_cpu_cores": 0.546,
+                "python_cpu_cores": 0.0
+              },
+              {
+                "external_cpu_cores": 0.511,
+                "python_cpu_cores": 0.0
+              },
+              {
+                "external_cpu_cores": 0.488,
+                "python_cpu_cores": 0.0
+              }
+            ],
+            "source_name": "fixed-ab-20260913-212915/summary.json",
+            "source_sha256": "8aafa22503f5e96fe0d2d878b86bbd799863cf97f01286446a07a62d17048992"
+          }
+        ]
+      }
+    },
+    {
+      "id": "yielder-reachability-skip-20260916",
+      "status": "adopted_in_v1.2.3_installed",
+      "summary": "YielderFinder.FindLivingYielderWithoutAccessible / FindYielderWithAccessible fused with ClosestYielderFinder's loop so the navigation path query (RegularYielderAsReachable / AccessibleYielderAsReachable) is skipped for a candidate that cannot change the result: not yielding and (the in-range flag is already true, or the candidate is not a living resource, or it is dead). The first candidate is always queried (flow-field fill side effect kept), candidates are lifetime-checked before any property read, order/insertions/selection unchanged. src/T3MP/Runtime/YielderReachabilitySkip.cs, -t3mpTestNoYielderReachabilitySkip, 15 observed guards.",
+      "origin": "User request 2026-09-16 (farms, forestry, many looping paths: find algorithmic waste without thinning logic); n10c2 tick profile showed FindPathUnlimitedRange 866 ms per 250 ticks over 483k calls, most from yielder searches that project every candidate through a path query",
+      "conditions": {
+        "game": "1.1.2.4-52e959e-sw",
+        "save": "n10c",
+        "machine": "idle",
+        "baseline_sha256": "CAA2B508 (installed v1.2.2)",
+        "trial_sha256": "995E8819 (after review fixes)",
+        "matched_conditions": true
+      },
+      "blocks": [
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "BPPB",
+          "source": "fixed-ab-20260916-014347",
+          "values": {
+            "B": [
+              21.785,
+              22.111
+            ],
+            "P": [
+              22.069,
+              22.023
+            ]
+          },
+          "pooled_B": 21.948,
+          "pooled_P": 22.046,
+          "ratio": 1.0045,
+          "adjacent_ratios": [
+            1.013,
+            0.996
+          ]
+        }
+      ],
+      "review": "gpt-6-astra high read-only (testlogs/codex/yielder-skip-review-20260916.md): P1 wrong FindYielder/3 fingerprint fixed (FEA78222...); P2 early property reads fixed (lifetime check first, null-safe LivingNaturalResource.IsDead instead of YielderExtensions.IsAlive); P2 cache-fill side effect addressed by always querying the first candidate; P2 guard coverage extended (get_Yield, get_CenterPosition, get_IsDead, Accessible.FindTerrainPath overloads); the Boolean rule table was confirmed exact for valid candidates.",
+      "decision": "Within noise (+0.45%, one block). Shipped in v1.2.3 because the user asked for the finding to be implemented after review regardless of the measured gain; the exactness argument, not the speed, is the basis. Re-measure on n10c2 (more beavers, more yielder searches) before attributing any gain."
+    },
+    {
+      "id": "diagnostic-separation-20260916",
+      "status": "rules_in_force",
+      "summary": "Diagnostic code separated from the product and the separation enforced by a gate. Product (src/T3MP, src/Shared) keeps features, guards, native fallback and feature-off switches only; validation/replay/probe/profiler code lives in src/T3MPTestDriver and reaches the product through reflection. Removed from the product: 28 #if *_EXPERIMENT blocks (TickFrontier, LoadPatches, RuntimePatches, LoadPatchBridge, ModSettings), four experiment build properties in T3MP.csproj, and the movement replay validation (Replay/ValidateBefore/ValidateAfter/Mirror, audit counters, -t3mpTestMovementValidate). Added: src/T3MPTestDriver/MovementValidation.cs (same audit, driver-side, reflection delegate to WalkerSpeedDelegates.RunSubsteps), scripts/check_product_purity.ps1 (source, csproj, mod/, DLL string heaps, package), scripts/measure.ps1 (one-switch measurement entry), docs/DIAGNOSTICS.md (rules).",
+      "origin": "User instruction 2026-09-16: measurement code must never mix into the product again (v1.1.6 shipped a benchmark asset bundle and crashed on game 1.0); measurement must be one switch; codex review",
+      "product_effect": "Behavior unchanged by design: the removed blocks compiled to nothing without their symbols, and validation code only ran under a diagnostic switch. Final product build: Code.dll 59BA3069 (v1.2.3; B71E4317 was the same build before YielderReachabilitySkip.Summary() was added on codex's P3 finding). Gate passes on sources, the built DLL, the release package and the deployed folder; it rejects the driver DLL (341 findings) as a negative check.",
+      "validation_mode_change": "Movement validation is now a driver patch installed after the product: the product's observe transpiler sees a second generation and keeps the native body (MovementSubstepsActive=False, WalkerDelegatesReusing=False for that run). run_fixed_tick_ab.ps1 expectations updated; validation runs remain non-performance runs.",
+      "frozen_debt": "Loading-time product switches from v1.1.x (-t3mpTestProductionBlockValidate, -t3mpTestNavShapeValidate, -t3mpTestTransputRoutingValidate, InitialNav parallel/sequential, visual/carried preparation opt-ins) stay on the gate's frozen list; moving them to the driver needs the six startup scenarios again.",
+      "experiments_note": "experiments/product-hooks-removed-20260916.md records the removed hook code; tick-port/tick-dispatch/harvest-tree/harvest-index can no longer be built into the product by a property, by design.",
+      "fixture_test": "tests/WalkerSpeedDelegates (compiles WalkerSpeedDelegates.cs without MOVEMENT_SUBSTEPS against fixtures): PASS 15 checks after stubbing AllowedGoodRows and YielderReachabilitySkip; it had been failing since the 2026-09-15 AllowedGoodRows addition.",
+      "review": "gpt-6-astra high read-only (testlogs/codex/separation-review-20260916.md). Fixed: P1 gate call placed after verify_release's exit (moved next to package assembly); P1 deploy.ps1 benchmark-bundle copy path (removed, deployed folder gated as a package); P2 replay not input-preserving for arbitrary providers (replay only for WalkerSpeedManager.GetWalkerSpeedAtCurrentPosition, counted as unsupported otherwise; loop start position captured after the initial speed calls); P2 DLL identifier scan skipped adjacent names (lookahead boundary); P2 measure.ps1 gated sources only (now gates the installed DLL and the candidate); P2 custom -Order vs -Arm attribution (derived from the effective order); P3 FullTickCounter installed without any flag (now requires a -t3mpTest* argument); P3 rules wording (counters vs probes, profiler kinds without matched conditions); P3 write-only yielder counters (Summary() added, reported by the driver)."
+    },
+    {
+      "id": "n10c2-baseline-20260916",
+      "status": "partial_one_pair_rerun_pending",
+      "summary": "First no-mod comparison on n10c2 (the user's larger-population variant of n10c, Saves/n10c/n10c2.timber) with v1.2.3 B71E4317 through scripts/measure.ps1 -Kind nomod -Save n10c2.",
+      "conditions": {
+        "game": "1.1.2.4-52e959e-sw",
+        "save": "n10c2",
+        "machine": "idle",
+        "product_sha256": "B71E4317",
+        "matched_conditions": true
+      },
+      "blocks": [
+        {
+          "effective_speed": 50.0,
+          "metric": "ticksPerSecond",
+          "warmup_ticks": 256,
+          "measured_ticks": 2048,
+          "order": "VBBV (stopped after the third arm)",
+          "source": "fixed-ab-20260916-021337",
+          "values": {
+            "V": [
+              13.558
+            ],
+            "B": [
+              20.828
+            ]
+          },
+          "ratio_B_over_V": 1.536,
+          "invalid_arm": "03-B rejected: focusChanged=True (20.459 ticks/s not counted). Cause: console processes (purity gate, dotnet build) started from the assistant's shell during the arm took foreground focus. Rule recorded: no process-spawning commands while an arm measures."
+        }
+      ],
+      "note": "n10c2 is heavier than n10c (no-mod 13.56 vs 14.74 ticks/s; median frame 3.7 s at x50). One pair only; the full VBBV was rerun on the final build below.",
+      "final_block": {
+        "effective_speed": 50.0,
+        "metric": "ticksPerSecond",
+        "warmup_ticks": 256,
+        "measured_ticks": 2048,
+        "order": "VBBV",
+        "source": "fixed-ab-20260916-023240",
+        "product_sha256": "59BA3069",
+        "values": {
+          "V": [
+            13.602,
+            13.548
+          ],
+          "B": [
+            20.583,
+            21.001
+          ]
+        },
+        "pooled_V": 13.575,
+        "pooled_B": 20.792,
+        "ratio_B_over_V": 1.5316,
+        "yielder_skip_counters_per_arm": "B: queried=300656/310875, skipped=2569128/2553746, nativeSearches=0 over 2304 ticks (89% of candidate path queries skipped; the n10c gain was still within noise, so the skipped queries were mostly cheap cached flow-field lookups)"
+      }
+    },
+    {
+      "id": "release-1.2.3-20260916",
+      "status": "installed_locally_release_gate_ready",
+      "summary": "v1.2.3 = v1.2.2 (CAA2B508) plus YielderReachabilitySkip and the diagnostic/production separation (no product behavior change from the separation). Code.dll 59BA3069, manifest 1.2.3; backup of the installed v1.2.2 at testlogs/release-1.2.3/backup-Code-1.2.2-CAA2.dll.",
+      "conditions": {
+        "game_v11": "1.1.2.4-52e959e-sw",
+        "game_v10": "1.0.13.1",
+        "product_sha256": "59BA3069FCAD0F2056F94CA27B65B57488D3892C2D4062FFF49036D03DAD3F17",
+        "driver_sha256": "563BDADA84B47C60"
+      },
+      "release_gate": {
+        "source": "testlogs/release-20260916-022413-8fbafbba",
+        "result": "READY: purity gate PASS on the package, six startup scenarios PASS (v11/v10 x LaunchArgs/MenuLoad/NewGame), no exceptions, restoration clean",
+        "earlier_run": "testlogs/release-20260916-020522-f8290f60 on B71E4317 also READY 6/6 (its gate call was unreachable at the time; the same package was gated separately afterwards)"
+      },
+      "performance": "n10c x50 unchanged within noise versus v1.2.2 (yielder-reachability-skip-20260916: 1.0045). n10c2 first pair 1.536x no-mod (n10c2-baseline-20260916); full VBBV rerun on this build pending.",
+      "not_verified": "No play-test of this build yet; Workshop upload and git push only on the user's request.",
+      "progress_bar_only": {
+        "change": "On the user's request (2026-09-16 early morning) the load progress panel (700x380 native window with heading, status, phase rows and note, plus the compatibility log observer) was replaced by a single text-free progress bar: 360x14, bottom centre of the game window, shown only during a world load (an entity phase started, or the service phase running longer than 2 s), hidden the moment LoadAll returns; main-menu loads never show it. Phase hooks and the one wall-time log line per load are unchanged.",
+        "product_sha256": "527F3B71E6BEE76C9654FFBCE2007E88BCA5595CF4E4543D15FB2FEDD095B60C",
+        "release_gate": "testlogs/release-20260916-042015-5761677d: purity PASS on the package, READY 6/6 (an intermediate bar build 1AB6B30A without the 2 s rule was also READY 6/6 in testlogs/release-20260916-041228-d8e0de0c)",
+        "installed": "Mods/T3MP/Code.dll 527F3B71 (replaces 59BA3069); manifest 1.2.3 unchanged"
+      }
+    },
+    {
+      "id": "n10c2-hotspots-20260916",
+      "status": "analysis_recorded_no_implementation",
+      "summary": "Where n10c2 (larger population) spends tick time with v1.2.3, and which items admit an output-identical rewrite. Sources: tick profile testlogs/tick-profile-n10c2-20260916-014013 (window 4, 250 ticks, profiler-inflated), hot counts testlogs/hot-counts-n10c2-20260916-024709 (400-tick windows), subsystem profile testlogs/subsystem-profile-n10c2-20260916-025043 (400-tick windows; per-call hook overhead ~0.2-0.3 us inflates every count-heavy item).",
+      "baseline": "no-mod 13.575 vs v1.2.3 20.792 ticks/s at x50 (1.532x, n10c2-baseline-20260916); median frame 2.4 s with the mod, 3.7 s without.",
+      "hot_counts_per_tick": {
+        "StorableGoodRegistry.GetAmount": "10.3k (n10c: 7.6k before AllowedGoodRows); callers other than the fill calculator remain unattributed",
+        "MechanicalNode/Graph.get_PowerEfficiency": "7.1k",
+        "NeedManager.GetNeed": "4.7k",
+        "Appraiser.AppraiseEffects": "1.6k",
+        "RangedEffect.GetEfficiency": "1.4-2.7k",
+        "ModularShaftAnimator.UpdateAnimation": "1.5k (avg 3.56 animators)"
+      },
+      "items": [
+        {
+          "what": "DistrictNeedBehaviorService.PickShortestAction (need behavior choice)",
+          "cost": "1.59 s inclusive per 250 ticks in the tick profile (~6 ms/tick profiled); ActionDurationCalculator.DurationWithReturnInHours 454k calls/250 ticks = ~1.8k/tick, each two cached flow-field queries (FindPathUnlimitedRange ~1.2-3 us) plus Walker.CalculateTravelTimeInHours",
+          "algorithm": "for each appraised group (by points) iterate every need behavior (building) computing travel(current->action)+travel(action->return)+0.3h and keep the strict minimum; first group with a feasible action wins",
+          "exact_option": "prune a candidate before its two path queries when a valid lower bound of its duration is >= the current best (strict '<' means it could never win; feasibility check is per candidate). The bound must account for node snapping: two positions in one cell give path distance 0 while their Euclidean distance is up to ~1.4, so a plain Euclidean bound is NOT valid. Needs NavigationService's snapping/heuristic rules (HeuristicDistance is used when no path exists) to derive distance >= euclid - snap slack, converted with the walker's base speed and the same SecondsToHours arithmetic. Estimated gain 2-4% if most far candidates prune; unimplemented.",
+          "risk": "a wrong bound changes decisions; validate with a replay audit in the driver (compare pruned decision with the unpruned minimum for every call) before any A/B"
+        },
+        {
+          "what": "DistrictHaulCandidates.GetWorkplaceBehaviorsOrdered",
+          "cost": "1.3 ms/call, 421 calls/250 ticks (~2.2 ms/tick, ~4%)",
+          "algorithm": "every hauler decision walks all haul candidates in the district, each provider computes weights from input/output fill percentages, then List.Sort by weight (introsort, unstable: any replacement must call the same sort)",
+          "exact_option": "none without caching across ticks (forbidden). Fill percentages already use AllowedGoodRows. Only micro-work left (allocation of WeightedBehavior structs is free). Not worth a trial."
+        },
+        {
+          "what": "DistrictResourceCounter.UpdateCounters (per district, every tick)",
+          "cost": "1.2 ms/call, 1 call/tick per district (~2.5%)",
+          "algorithm": "rebuilds stock and capacity dictionaries from all district inventories each tick: per inventory Stock enumeration, Gives() = OutputGoods.Contains, dictionary ContainsKey+indexer per good",
+          "exact_option": "output-identical micro rewrite (single TryGetValue instead of ContainsKey+two indexer calls; GetCapacity already optimized). Expected <1%. Event-driven incremental counting would be a logic change (ordering of updates within a tick) and is not proposed."
+        },
+        {
+          "what": "DwellerHomeAssigner.Tick (singleton)",
+          "cost": "1.0 ms/tick (~2%)",
+          "algorithm": "GetStalest rotates the dwelling list until one has a free slot, then scans the district population (LINQ Concat of adults/children) calling GetComponent<Dweller>, IsLookingForBetterHome, CanAssignDweller (GetComponent<Child> inside) until one moves in; with no mover the whole population is scanned every tick",
+          "exact_option": "the per-beaver cost is component lookups; an exact rewrite could only cache Dweller/Child components per Beaver (ConditionalWeakTable) - allowed (identity, not state) but small; expected ~1%. Low priority."
+        },
+        {
+          "what": "Movement (PathFollower.MoveAlongPath)",
+          "cost": "still the largest component share; profiled 49.5% is inflated by the profiler's fallback (hooks on PathFollower helpers)",
+          "exact_option": "already replaced (MovementSubsteps); no further exact idea"
+        }
+      ],
+      "conclusion": "One algorithmic candidate remains on n10c2 with a plausible 2-4%: lower-bound pruning in PickShortestAction, conditional on a provably valid distance bound under node snapping. Everything else is <1% or requires caching/decision changes the user has excluded."
     }
   ],
-  "source_identification": "source_name and source hashes identify the measurement summarized in each record; they are provenance labels, not file links."
+  "source_identification": "source_name and source hashes identify the measurement summarized in each record; they are provenance labels, not file links.",
+  "visual_baseline": {
+    "version": "1.2.1",
+    "sha256": "A32B9D93AE73FD58FA9B522E1087CE6B4B08600C73F50CBE3DF545F975A51CD6",
+    "mvid": "802f93a6-d651-4bda-822f-342d0e0d83f6",
+    "observation": "User reports no animation/display anomalies while playing.",
+    "automated_checks": "Both supported API builds; speed-controller and meter offline tests; code review.",
+    "limits": "No full current-DLL automated regression or performance comparison after speed-policy/Shift+O restoration."
+  }
 }

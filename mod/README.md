@@ -1,9 +1,9 @@
 # More More More Performance! (T3MP)
 
-Version 1.2.1 — local playtest build. Workshop release is pending.
+Version 1.2.3.
 
 T3MP reduces repeated work during save loading and simulation. Its runtime
-optimizations preserve simulation updates and their order. Performance depends
+optimizations preserve simulation decisions and their order. Performance depends
 on the colony, game version and other enabled mods.
 
 ## Features
@@ -24,10 +24,18 @@ on the colony, game version and other enabled mods.
   shows zero. These values describe the running game; they do not measure
   speedup against a separate unmodded run.
 - **Save loading.** Entity construction, initialization, event delivery and
-  navigation setup use fewer repeated lookups on supported game builds.
+  navigation setup use fewer repeated lookups on supported game builds. A thin
+  progress bar at the bottom of the window shows the load phases of a world load.
 - **Simulation overhead.** Typed event delegates reduce reflection calls.
   Frontier avoids empty entity visits when all tickable components are disabled.
   Water texture layers with identical bytes avoid a redundant GPU upload.
+  Walker speed callbacks are reused instead of re-created every tick, terrain
+  path searches skip duplicate neighbor visits, inventories read allowed-good
+  amounts directly, and harvest searches skip path queries for trees and crops
+  that cannot change the result.
+- **Movement.** Characters move corner to corner along their path instead of
+  0.1-unit sub-steps. Stop rules and path choices are unchanged; positions can
+  differ from vanilla in the last decimals.
 - **Tube lighting repair.** Clears stale tube visitor registration when a
   character enters a building immediately after passing through a tube, so
   lighting reflects the remaining visitors.
@@ -40,17 +48,16 @@ method checks and checks for conflicting patches retain native execution
 when an optimization cannot safely apply.
 
 The older frame-based simulation caches, animation snapping and render suppression
-have been removed. Tube lighting
-repair does not change movement animation.
+have been removed. Tube lighting repair does not change movement animation.
 
 ---
 
 # 日本語
 
-バージョン1.2.1のローカル試遊版です。Workshop公開前の候補です。
+バージョン1.2.3。
 
 T3MPはセーブのロードとシミュレーション中の重複処理を減らします。
-ランタイムの最適化はシミュレーションの更新と順序を維持します。
+ランタイムの最適化はシミュレーションの判断と順序を維持します。
 高速化の効果は集落、ゲームの版、併用MODによって変わります。
 
 ## 機能
@@ -67,9 +74,13 @@ T3MPはセーブのロードとシミュレーション中の重複処理を減�
   `UPS`は実時間1秒あたりのシミュレーションtick数です。約2秒の実測を毎秒4回更新し、
   一時停止では0を表示します。現在のゲームの速度を示すもので、MODなしとの比較倍率ではありません。
 - **セーブのロード。** 対応するゲーム版で、エンティティ生成・初期化・イベント配信・
-  経路網構築の重複した検索を減らします。
+  経路網構築の重複した検索を減らします。ワールドのロード中は画面下部に細いプログレスバーを表示します。
 - **本編ループの軽量化。** 型付きdelegateによるイベント配信、tick部品がすべて無効な
   エンティティの空の走査の省略、同じbyte列の水テクスチャのGPU再送抑制を行います。
+  歩行者の速度コールバックの再利用、地形経路探索の重複した隣接探索の省略、
+  在庫の許可品目の直接参照、結果を変えない木や作物への経路照会の省略も行います。
+- **移動処理。** キャラクターは0.1マス刻みではなく経路のコーナー単位で進みます。
+  停止規則と経路の選択は変わりません。座標の下位桁はバニラと一致しないことがあります。
 - **配管照明の修正。** 配管を通過した直後に建物へ入ったキャラクターの古い訪問登録を解除し、
   残っている訪問者に合わせて照明を更新します。
 
@@ -80,4 +91,4 @@ Harmonyが必要です。対応対象はWindowsのTimberborn 1.1.2.4と1.0.13.1�
 安全に適用できない最適化は元の処理を使います。
 
 旧版のフレーム基準のシミュレーションキャッシュ、モデルのスナップ、描画抑制は削除しました。
-今回の配管照明修正は移動アニメーションを変更しません。
+配管照明修正は移動アニメーションを変更しません。

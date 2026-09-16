@@ -19,6 +19,8 @@ public sealed class FixedTickBenchmark : MonoBehaviour
     private SpeedManager _speed = null!;
     private string _initialDisplay = "";
     private string _initialPatches = "";
+    private string _initialLegacy = "absent";
+    private string _initialLegacySettings = "absent";
     private float _initialTimeScale;
     private bool _displayChanged, _speedChanged;
     private bool _focused, _focusChanged;
@@ -41,7 +43,7 @@ public sealed class FixedTickBenchmark : MonoBehaviour
             throw new InvalidOperationException("Fixed benchmark cannot run with frontier positions validation");
         if (BoolInliningExperiment.Validate || BoolInliningExperiment.Synthetic) throw new InvalidOperationException("Fixed benchmark cannot run with bool validation");
         if (RoadReachabilityExperiment.Validate || RoadReachabilityExperiment.Synthetic) throw new InvalidOperationException("Fixed benchmark cannot run with road validation");
-        if (new[] { "-t3mpTestTickProfile", "-t3mpTestModelGap", "-t3mpTestTubeLights", "-t3mpTestLoadRouting", "-t3mpTestEventDelegates", "-t3mpTestWaterUpload" }.Any(flag => args.Contains(flag, StringComparer.OrdinalIgnoreCase)))
+        if (new[] { "-t3mpTestTickProfile", "-t3mpTestMovementProbe", "-t3mpTestHotCounts", "-t3mpTestSubsystemProfile", "-t3mpTestModelGap", "-t3mpTestTubeLights", "-t3mpTestLoadRouting", "-t3mpTestEventDelegates", "-t3mpTestWaterUpload" }.Any(flag => args.Contains(flag, StringComparer.OrdinalIgnoreCase)))
             throw new InvalidOperationException("Fixed benchmark cannot run with intrusive diagnostics");
         _warmup = ReadInt(args, "-t3mpTestBenchmarkWarmup", 256, 1);
         _measured = ReadInt(args, "-t3mpTestBenchmarkTicks", 0, 1);
@@ -74,6 +76,17 @@ public sealed class FixedTickBenchmark : MonoBehaviour
         else if (!active._window.Complete)
         {
             var started = active._window.Started;
+            if (!started && MatchedBenchmarkConditions.Requested && tick >= active._origin + active._warmup)
+            {
+                MatchedBenchmarkConditions.PrepareTiming();
+                active._initialDisplay = active.Display();
+                active._initialPatches = Patches();
+                active._initialLegacy = MatchedBenchmarkConditions.LegacyState();
+                active._initialLegacySettings = MatchedBenchmarkConditions.LegacySettings();
+                active._initialTimeScale = Time.timeScale;
+                active._focused = Application.isFocused;
+                active._displayChanged = active._speedChanged = active._focusChanged = false;
+            }
             active._window.Tick(tick, Now);
             if (!started && active._window.Started) active._startFrame = Time.frameCount;
             if (active._window.Complete) active._endFrame = Time.frameCount;
@@ -85,6 +98,7 @@ public sealed class FixedTickBenchmark : MonoBehaviour
         if (_window == null) return;
         var now = Now;
         _window.Frame(now);
+        if (MatchedBenchmarkConditions.Requested && !_window.Started) return;
         // Cheap live checks. Full camera/quality snapshots are outside the interval.
         _speedChanged |= Time.timeScale != _initialTimeScale;
         _focusChanged |= Application.isFocused != _focused;
@@ -110,18 +124,31 @@ public sealed class FixedTickBenchmark : MonoBehaviour
         var finalPatches = Patches();
         var valid = frames.Length > 0 && elapsed > 0 && !_speedChanged && !_displayChanged && !_focusChanged &&
             finalDisplay == _initialDisplay && finalPatches == _initialPatches &&
+            (!MatchedBenchmarkConditions.Requested || (MatchedBenchmarkConditions.LegacyState() == _initialLegacy &&
+                MatchedBenchmarkConditions.LegacySettings() == _initialLegacySettings)) &&
             _window.StartTick == _origin + _warmup && _window.EndTick - _window.StartTick == _measured;
+        var harvestValidation = Environment.GetCommandLineArgs().Any(a=>string.Equals(a,"-t3mpTestHarvestTreeValidate",StringComparison.OrdinalIgnoreCase)||string.Equals(a,"-t3mpTestHarvestIndexValidate",StringComparison.OrdinalIgnoreCase));
+        var tickPortValidation = TickPortValidation.Requested || ActiveLookupValidation.Requested;
+        var movementValidation = MovementValidation.Requested;
+        var validation = harvestValidation || tickPortValidation || movementValidation;
         Debug.Log("[T3MPTEST] Fixed benchmark result " + JsonUtility.ToJson(new ResultReport {
+            performanceValid = valid && !validation, validationMode = harvestValidation ? "harvest-order" : tickPortValidation ? "tick-port" : movementValidation ? "movement" : "none",
             valid = valid, originTick = _origin, startTick = _window.StartTick, endTick = _window.EndTick,
-            elapsedSeconds = elapsed, ticksPerSecond = _measured / elapsed, frames = frames.Length,
-            frameSeconds = sum, averageFps = sum > 0 ? frames.Length / sum : 0,
+            startSeconds = _window.StartSeconds, endSeconds = _window.EndSeconds,
+            elapsedSeconds = elapsed, ticksPerSecond = validation ? 0 : _measured / elapsed, frames = frames.Length,
+            frameSeconds = sum, averageFps = !validation && sum > 0 ? frames.Length / sum : 0,
             medianFrameMs = frames.Length > 0 ? 1000 * FixedTickWindow.Percentile(frames, 0.5) : 0,
             p95FrameMs = frames.Length > 0 ? 1000 * FixedTickWindow.Percentile(frames, 0.95) : 0,
             p99FrameMs = frames.Length > 0 ? 1000 * FixedTickWindow.Percentile(frames, 0.99) : 0,
             framesOver100Ms = over100, framesOver250Ms = over250,
             nativeFrames = _endFrame - _startFrame, focused = _focused, focusChanged = _focusChanged,
             speedChanged = _speedChanged, displayChanged = _displayChanged || finalDisplay != _initialDisplay,
-            display = finalDisplay, timeScale = _initialTimeScale, patches = finalPatches
+            display = finalDisplay, timeScale = _initialTimeScale, patches = finalPatches,
+            matchedConditions = MatchedBenchmarkConditions.Installed, legacy = _initialLegacy,
+            legacySettings = _initialLegacySettings,
+            productMvid = MatchedBenchmarkConditions.ProductMvid(), driverMvid = typeof(FixedTickBenchmark).Assembly.ManifestModule.ModuleVersionId.ToString("D"),
+            harvestTree = HarvestSummary(), movementSubsteps = MovementSummary(), movementValidation = MovementValidation.Summary(),
+            yielderSkip = ProductSummary("T3MP.Runtime.YielderReachabilitySkip")
         }));
         RoadReachabilityExperiment.Report();
         _speed.ChangeSpeed(0f);
@@ -141,12 +168,31 @@ public sealed class FixedTickBenchmark : MonoBehaviour
     private static string Patches()
     {
         const BindingFlags flags = BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
-        return string.Join(",", new[] { "EventBusFastDelegates", "TickEntityFast", "WaterTextureUpload", "TickFrontier", "TubeVisitFix" }.Select(name => {
+        var walker = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.WalkerSpeedDelegates")).FirstOrDefault(t => t != null);
+        var terrain = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.TerrainNeighborVisits")).FirstOrDefault(t => t != null);
+        var visuals = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Loading.PreparedEntityVisuals")).FirstOrDefault(t => t != null);
+        return string.Join(",", new[] { "EventBusFastDelegates", "TickEntityFast", "WaterTextureUpload", "TickFrontier", "TickDispatch", "TubeVisitFix", "WalkerSpeedDelegates", "TerrainNeighborVisits", "ResourceCounterLookups", "NodeCoordinateLookup", "HarvestCandidateTree", "HarvestIndex", "TickComponentDispatch", "MovementSubsteps", "NonlinearSpeedMemo", "AllowedGoodRows", "NeedUpdateInline", "ShaftEfficiencyOnce", "PathEdgeSingleScan", "NeedAppraisalLookup", "YielderReachabilitySkip" }.Select(name => {
             var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime." + name)).FirstOrDefault(t => t != null);
             return name + "=" + (type?.GetProperty("Installed", flags)?.GetValue(null)?.ToString() ?? "absent");
-        })) + ",RoadCacheInstalled=" + RoadReachabilityExperiment.Installed + ",RoadCacheEnabled=" + RoadReachabilityExperiment.Enabled +
+        })) + ",WalkerDelegatesReusing=" + (walker?.GetProperty("Reusing", flags)?.GetValue(null)?.ToString() ?? "absent") +
+            ",TerrainVisitsActive=" + (terrain?.GetProperty("Active", flags)?.GetValue(null)?.ToString() ?? "absent") +
+            ",VisualPreparationInstalled=" + (visuals?.GetProperty("Installed", flags)?.GetValue(null)?.ToString() ?? "absent") +
+            "," + string.Join(",", new[] { "ResourceCounterLookups", "NodeCoordinateLookup", "HarvestCandidateTree", "HarvestIndex", "TickDispatch", "TickComponentDispatch", "MovementSubsteps", "NonlinearSpeedMemo", "AllowedGoodRows", "NeedUpdateInline", "ShaftEfficiencyOnce", "PathEdgeSingleScan", "NeedAppraisalLookup", "YielderReachabilitySkip" }.Select(name => {
+                var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime." + name)).FirstOrDefault(t => t != null);
+                return name + "Active=" + (type?.GetProperty("Active", flags)?.GetValue(null)?.ToString() ?? "absent");
+            })) +
+            ",RoadCacheInstalled=" + RoadReachabilityExperiment.Installed + ",RoadCacheEnabled=" + RoadReachabilityExperiment.Enabled +
             ",BoolInlineInstalled=" + BoolInliningExperiment.Installed + ",BoolInlineEnabled=" + BoolInliningExperiment.Enabled;
     }
+
+    private static string HarvestSummary() => AppDomain.CurrentDomain.GetAssemblies().Select(a=>a.GetType("T3MP.Runtime.HarvestIndex")??a.GetType("T3MP.Runtime.HarvestCandidateTree"))
+        .FirstOrDefault(t=>t!=null)?.GetMethod("Summary",BindingFlags.Static|BindingFlags.NonPublic)?.Invoke(null,null)?.ToString() ?? "absent";
+
+    private static string MovementSummary() => ProductSummary("T3MP.Runtime.MovementSubsteps");
+
+    // Product state strings are read by reflection only (docs/DIAGNOSTICS.md).
+    private static string ProductSummary(string typeName) => AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(typeName))
+        .FirstOrDefault(t => t != null)?.GetMethod("Summary", BindingFlags.Static | BindingFlags.NonPublic)?.Invoke(null, null)?.ToString() ?? "absent";
 
     private static int ReadInt(string[] args, string flag, int fallback, int minimum)
     {
@@ -168,9 +214,18 @@ public sealed class FixedTickBenchmark : MonoBehaviour
     }
     [Serializable] private sealed class ResultReport
     {
-        public bool valid, speedChanged, displayChanged, focused, focusChanged;
+        public bool valid, speedChanged, displayChanged, focused, focusChanged, matchedConditions;
+        public string legacy = "absent";
+        public string legacySettings = "absent";
+        public string productMvid = "", driverMvid = "";
+        public string harvestTree = "absent";
+        public string movementSubsteps = "absent";
+        public string movementValidation = "disabled";
+        public string yielderSkip = "absent";
+        public bool performanceValid;
+        public string validationMode = "none";
         public long originTick, startTick, endTick;
-        public double elapsedSeconds, ticksPerSecond, frameSeconds, averageFps, medianFrameMs, p95FrameMs, p99FrameMs;
+        public double startSeconds, endSeconds, elapsedSeconds, ticksPerSecond, frameSeconds, averageFps, medianFrameMs, p95FrameMs, p99FrameMs;
         public int frames, framesOver100Ms, framesOver250Ms, nativeFrames;
         public string display = "", patches = "";
         public float timeScale;

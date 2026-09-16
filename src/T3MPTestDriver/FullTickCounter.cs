@@ -22,6 +22,8 @@ internal static class FullTickCounter
     internal static void Install()
     {
         if (_installed) return;
+        // A stray driver install without any -t3mpTest* argument patches nothing.
+        if (!Environment.GetCommandLineArgs().Any(a => a.StartsWith("-t3mpTest", StringComparison.OrdinalIgnoreCase))) return;
         _installed = true;
         try
         {
