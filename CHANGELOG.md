@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.4 — runtime inline limit (2026-09-18)
+
+- Raises the Mono JIT inline size limit from 20 to 300 IL bytes in memory after the mod's own patches are installed. The variable is located through the runtime's own MONO_INLINELIMIT reader and written only when the complete instruction template of the supported runtimes matches. Off switch `-t3mpTestNoInlineLimit`; a user-set `MONO_INLINELIMIT` wins.
+- Measured on a 3,700-character colony: +4.4% simulation throughput (the environment variable itself gives +5%); load time unchanged.
+
 ## v1.2.3 — Workshop release (2026-09-16)
 
 - Harvest searches (lumberjacks, farms, gatherers) skip the path query for candidates that cannot change the result; the first candidate is always queried so cached flow fields fill as before.

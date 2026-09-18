@@ -1,21 +1,16 @@
 {
   "schema": 1,
-  "as_of": "2026-09-16",
+  "as_of": "2026-09-18",
   "purpose": "Selected evidence needed for decisions; operation logs and superseded drafts are omitted.",
   "save": {
     "name": "n10c",
     "sha256": "BC97689D7B95B8CB708CBB45542E4AACA9C9ED043A56C0C73A39A25179323BF4"
   },
   "playtest": {
-    "version": "1.2.3",
-    "sha256": "527F3B71E6BEE76C9654FFBCE2007E88BCA5595CF4E4543D15FB2FEDD095B60C",
-    "status": "installed_locally_and_published_to_workshop_2026-09-16",
-    "note": "Current install and release gate: record release-1.2.3-20260916 (progress_bar_only). The 1.2.1 playtest entry it replaces (86AD2537) is retained in the records as history.",
-    "previous": {
-      "version": "1.2.1",
-      "sha256": "86AD253787AF8C8F198D3957372D0BD9EB6DF55CE541DCEA3229E5A84B53F006",
-      "mvid": "3183ecfe-e4be-44e0-9c04-f63e8f3908f1"
-    }
+    "version": "1.2.4",
+    "sha256": "384BE7143A974FAADC5BF210D35056493599EEF50F372FEA8CB8A4E81B5AB861",
+    "status": "installed_locally_2026-09-18_not_published",
+    "note": "Workshop has 1.2.3 (527F3B71). Current install and gate: record release-1.2.4-20260918."
   },
   "records": [
     {
@@ -2791,6 +2786,310 @@
         }
       ],
       "conclusion": "One algorithmic candidate remains on n10c2 with a plausible 2-4%: lower-bound pruning in PickShortestAction, conditional on a provably valid distance bound under node snapping. Everything else is <1% or requires caching/decision changes the user has excluded."
+    },
+    {
+      "id": "n10c2-large-20260917",
+      "status": "measured",
+      "summary": "The user re-saved n10c2 on 2026-09-17 19:13 as a much larger colony (3.57 MB, about 3,630 ticking characters; save SHA256 E70AFCDB10EC...). Simulation speed and load time with and without v1.2.3 (527F3B71) through scripts/measure.ps1 -Kind nomod -Save n10c2. Load time is a new driver metric (LoadTimeline: driver mod start to game PostLoad, identical in both arms).",
+      "conditions": {
+        "game": "1.1.2.4",
+        "save": "n10c2 (2026-09-17 re-save)",
+        "product_sha256": "527F3B71",
+        "matched_conditions": true,
+        "source": "testlogs/fixed-ab-20260917-201035"
+      },
+      "simulation_x50_ticks_per_second": {
+        "V": [
+          7.576
+        ],
+        "B": [
+          10.149,
+          10.164
+        ],
+        "ratio_B_over_V": 1.341,
+        "invalid_arm": "04-V focusChanged=True (7.558, consistent with arm 1; not counted)"
+      },
+      "load_seconds": {
+        "V": [
+          123.1,
+          121.6
+        ],
+        "B": [
+          41.7,
+          41.5
+        ],
+        "ratio": 2.94,
+        "mod_phases_seconds": {
+          "LoadSingletons": 6.5,
+          "InstantiateEntities": 9.6,
+          "PreInitialize": 0.35,
+          "Initialize": 2.1,
+          "PostInitialize": 10.1,
+          "EventBus.PostLoad": 5.3,
+          "NavigationSynchronizer.PostLoad": 1.5,
+          "LoadAll_total": 42.4
+        }
+      },
+      "tick_profile": {
+        "source": "testlogs/tick-profile-n10c2-20260917-*, 200-tick windows, profiler-inflated (movement runs the native fallback under the profiler)",
+        "shares": "WalkerMover 31.7% (inflated), BehaviorManager 31.2%, RangedEffectSubject 6.5%, ContaminationApplier 5.1%, NeedManager 5.0%, Walker 3.1%, Worker 3.1%, LifeProgressor 2.7%, DistrictResourceCounter 1.8%; singletons WaterRenderer 3.2 ms, WaterObjectService 1.8 ms, ThreadSafeWaterMap 1.3 ms, ModularShaftAnimatorUpdater 1.2 ms per tick",
+        "behavior_methods_ms_per_200_ticks": {
+          "NeederRootBehavior.Decide(incl)": 2141,
+          "PickShortestAction(incl)": 1617,
+          "DurationWithReturnInHours(incl, 406k calls)": 1119,
+          "FindPathUnlimitedRange(865k+13k calls)": 1475,
+          "WanderRootBehavior.Decide(incl)": 823,
+          "DistrictHaulCandidates.GetWorkplaceBehaviorsOrdered": 547,
+          "LumberjackFlagWorkplaceBehavior.Decide (553 us/call)": 311,
+          "FillInputWorkplaceBehavior.Decide": 250
+        }
+      },
+      "reading": "The mod's advantage shrinks with colony size (1.53x on the smaller n10c2 of 09-16, 1.34x here): need-behavior selection scales with beavers x buildings and the per-character maintenance components scale with population, and neither is touched by the mod. The profile is flat: no single item above about 8%. Load remains the area with the largest untouched blocks (PostInitialize 10 s, InstantiateEntities 9.6 s, LoadSingletons 6.5 s, EventBus.PostLoad 5.3 s)."
+    },
+    {
+      "id": "native-kernel-bench-20260917",
+      "status": "experiment_measured_not_a_product_change",
+      "summary": "Microbenchmark of the travel-distance query behind need-behavior selection on the large n10c2 (paused game, real characters, real candidate positions, real cached flow fields; src/T3MPTestDriver/NativeKernelBench.cs, experiments/native-kernel/kernel.c built with mingw gcc -O2). Three implementations of the cache-answered part of PathfindingService.FindPathUncached (steps 1-4), compared bit for bit.",
+      "source": "testlogs/native-kernel-20260917-215932",
+      "workload": "75 of 3,711 characters x 541 need behaviors = 32,701 pairs, 65,402 legs; 61.3% answered from cached road/terrain flow fields",
+      "results_ns_per_cache_answered_leg": {
+        "A_game_managed_dictionaries": 448.9,
+        "B_flat_open_addressing_arrays_mono": 79.4,
+        "C_same_arrays_native_c": 27.3,
+        "speedup_B": 5.66,
+        "speedup_C": 16.42,
+        "mismatches": 0
+      },
+      "mirror_cost": "1,472 road + 71 terrain fields, 3.68M entries, 104 MB, 74 ms to build from scratch (would need incremental sync on every fill / nav mesh change)",
+      "caveat": "The other 38.7% of legs cost 443 us each in managed code, but they come from the synthetic pairing (characters of every district against the largest district's buildings, return leg to the character position), not from real play: the in-game profile averages about 1.3 us per query including profiler overhead, so uncached searches are rare there.",
+      "reading": "Data layout gives 5.7x inside Mono; leaving Mono gives a further 2.9x. At about 4,300 legs per tick this kernel is roughly 1.9 ms of a 98 ms tick (2%), so either variant buys about 2% of whole-game speed. The profiler's 8% share for this area was inflated by per-call hook overhead on sub-microsecond calls. No single kernel is large enough for approach 4 to pay on its own."
+    },
+    {
+      "id": "mono-inline-limit-20260917",
+      "status": "adopted_as_in_memory_setting_in_v1.2.4",
+      "summary": "Effect of the Mono JIT inline size limit (environment variable MONO_INLINELIMIT, default 20 IL bytes; the game's mono-2.0-bdwgc.dll reads it) on simulation throughput with v1.2.3 (527F3B71) on the large n10c2. Single-arm runs of scripts/run_fixed_tick_ab.ps1 -Order B (x50, 128+1024 ticks), alternating plain and variant, the variable set only in the launching process. Approximate: the user was playing another game on the machine and Timberborn was unfocused in two runs.",
+      "source": "testlogs/fixed-ab-20260917-2213xx .. 2237xx (nine runs)",
+      "ticks_per_second": {
+        "plain": [
+          9.882,
+          9.598,
+          9.822,
+          9.857
+        ],
+        "MONO_INLINELIMIT=100": [
+          10.225,
+          10.337,
+          10.296
+        ],
+        "MONO_INLINELIMIT=300": [
+          10.462,
+          10.447
+        ]
+      },
+      "means": {
+        "plain": 9.79,
+        "inline100": 10.286,
+        "inline300": 10.455
+      },
+      "ratio_vs_plain": {
+        "inline100": 1.051,
+        "inline300": 1.068
+      },
+      "load_seconds": "43.1-44.2 in every run (no visible JIT cost at load)",
+      "notes": "All T3MP features reported installed and active in every run. Risk: more callees are inlined into callers compiled before a late Harmony patch, so mods that patch small methods after game load could silently miss call sites. Delivery needs a launch-time environment variable (Steam launch option) because Mono reads the limit before mods load.",
+      "grid_search": {
+        "method": "30 single-arm runs in four blocks (x50, 128+1024 ticks, n10c2 large, v1.2.3 527F3B71), plain runs interleaved; one duplicated log line excluded; machine in use by the user (run-to-run sd about 0.15 ticks/s, 1.5%)",
+        "ticks_per_second": {
+          "plain(20)": [
+            9.88,
+            9.6,
+            9.82,
+            9.86,
+            9.84,
+            9.66,
+            9.82,
+            9.59,
+            9.59,
+            9.94
+          ],
+          "50": [
+            9.95
+          ],
+          "100": [
+            10.22,
+            10.34,
+            10.3,
+            10.12,
+            10.03,
+            10.44
+          ],
+          "200": [
+            9.94
+          ],
+          "300": [
+            10.46,
+            10.45,
+            10.04,
+            10.2,
+            10.44
+          ],
+          "500": [
+            10.1
+          ],
+          "1000": [
+            10.13,
+            10.23,
+            10.23
+          ],
+          "2000": [
+            10.06
+          ],
+          "5000": [
+            10.02
+          ]
+        },
+        "means": {
+          "plain": 9.759,
+          "100": 10.241,
+          "300": 10.317,
+          "1000": 10.197
+        },
+        "ratio_vs_plain": {
+          "50": 1.019,
+          "100": 1.049,
+          "200": 1.019,
+          "300": 1.057,
+          "500": 1.035,
+          "1000": 1.045,
+          "2000": 1.031,
+          "5000": 1.027
+        },
+        "reading": "Plateau from about 100 to 1000 (+4.5% to +5.7%, differences inside the noise); smaller gains at 50 and declining gains above 2000. 300 has the best mean and sits mid-plateau. A ranking inside the plateau needs an idle machine."
+      },
+      "env_options_test": {
+        "source": "eight single-arm runs 2026-09-18 01:1x-01:4x",
+        "ticks_per_second": {
+          "plain": [
+            9.576,
+            9.746
+          ],
+          "MONO_ENV_OPTIONS=--optimize=-inline": [
+            9.687,
+            9.605
+          ],
+          "MONO_INLINELIMIT=300": [
+            10.091,
+            10.166
+          ],
+          "300 + MONO_ENV_OPTIONS=--optimize=abcrem": [
+            10.008,
+            10.154
+          ]
+        },
+        "reading": "Disabling inlining through MONO_ENV_OPTIONS changes nothing and abcrem adds nothing: the embedded runtime does not parse MONO_ENV_OPTIONS. The inline limit is the only launch-time JIT setting that takes effect.",
+        "gc": "gcCollections=0 in every 1,024-tick window (about 100 s); managed heap 4.4 -> 6.0 GB (about 1.6 MB allocated per tick). GC pauses are not part of the measured throughput."
+      },
+      "in_memory_delivery": {
+        "what": "src/T3MP/Runtime/MonoInlineLimit.cs writes 300 into the runtime's inline_limit static at mod start, after T3MP's own patches; located through the complete instruction template of the MONO_INLINELIMIT reader (limit RVA 0x744C60 / flag 0x744C14 in 1.1.2.4, 0x743C40 / 0x743BF4 in 1.0.13.1)",
+        "ab_vs_installed_1.2.3": [
+          {
+            "order": "BPPB",
+            "source": "fixed-ab-20260918-020114",
+            "candidate": "72A73D79",
+            "B": [
+              9.263,
+              9.151
+            ],
+            "P": [
+              9.641,
+              9.59
+            ],
+            "ratio": 1.044
+          },
+          {
+            "order": "PBBP",
+            "source": "fixed-ab-20260918-022344",
+            "candidate": "384BE714 (v1.2.4 final)",
+            "B": [
+              9.244,
+              9.217
+            ],
+            "P": [
+              9.606,
+              9.616
+            ],
+            "ratio": 1.041
+          }
+        ],
+        "pooled_four_pairs": {
+          "B": 9.219,
+          "P": 9.613,
+          "ratio": 1.043
+        },
+        "review": "gpt-6-astra high, two passes (testlogs/codex/inline-limit-review-20260918.md, inline-limit-review2-20260918.md): P1 loose opcode scan -> complete template with branch-target and cross-reference checks; P2 install order -> after all T3MP patches; P2 PE/AMD64 validation, bounded reads, VirtualQuery before the write; second pass: no remaining findings"
+      }
+    },
+    {
+      "id": "release-1.2.4-20260918",
+      "status": "installed_locally_release_gate_ready_not_published",
+      "summary": "v1.2.4 = v1.2.3 (527F3B71) plus MonoInlineLimit. Code.dll 384BE714, manifest 1.2.4; backup of v1.2.3 at testlogs/release-1.2.4/. Workshop still has 1.2.3; no commit, push or upload.",
+      "release_gate": "testlogs/release-20260918-024456-d4de64e4: purity PASS on the package, READY 6/6; log line '[T3MP] Mono inline limit: 20 -> 300' on both 1.1.2.4 and 1.0.13.1",
+      "movement_audit_after_install": {
+        "source": "fixed-ab-20260918-025448 (measure.ps1 -Kind validate, n10c2 large, 64+512 ticks)",
+        "result": "validated=705201, indexDiffs=14, arrivalDiffs=0, maxPositionDelta=0.00183, integrityFailures=0, skipped=0, unsupported=0; the driver's late Harmony patch on PathFollower.MoveAlongPath intercepted every call with the raised inline limit active"
+      },
+      "performance_x50": {
+        "note": "another game was running on the machine (user's instruction to treat it as idle); absolute values are lower than the idle runs of 09-15/16, ratios are within-run",
+        "n10c2_large": {
+          "source": "fixed-ab-20260918-025701",
+          "V": [
+            6.759,
+            6.815
+          ],
+          "B": [
+            9.663,
+            9.605
+          ],
+          "ratio": 1.419,
+          "load_seconds": {
+            "V": [
+              126.7,
+              125.5
+            ],
+            "B": [
+              43.8,
+              44.0
+            ],
+            "ratio": 2.87
+          },
+          "previous_v1.2.3": "1.341 (n10c2-large-20260917)"
+        },
+        "n10c": {
+          "source": "fixed-ab-20260918-032303",
+          "V": [
+            13.51,
+            13.553
+          ],
+          "B": [
+            21.396,
+            21.454
+          ],
+          "ratio": 1.584,
+          "load_seconds": {
+            "V": [
+              72.9,
+              72.1
+            ],
+            "B": [
+              30.3,
+              30.4
+            ],
+            "ratio": 2.39
+          },
+          "previous": "1.503 with v1.2.2 on an idle machine (release-1.2.2-20260915)"
+        }
+      },
+      "not_verified": "No play-test of this build. Mods that patch small methods after a save has loaded were not tested against the raised limit."
     }
   ],
   "source_identification": "source_name and source hashes identify the measurement summarized in each record; they are provenance labels, not file links.",

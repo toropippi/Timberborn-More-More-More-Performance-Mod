@@ -1,6 +1,6 @@
 # More More More Performance! (T3MP)
 
-Version 1.2.3.
+Version 1.2.4.
 
 T3MP reduces repeated work during save loading and simulation. Its runtime
 optimizations preserve simulation decisions and their order. Performance depends
@@ -36,6 +36,14 @@ on the colony, game version and other enabled mods.
 - **Movement.** Characters move corner to corner along their path instead of
   0.1-unit sub-steps. Stop rules and path choices are unchanged; positions can
   differ from vanilla in the last decimals.
+- **Runtime tuning.** At startup the mod raises the Mono JIT's inline size limit
+  from 20 to 300 IL bytes in memory, so the game's many small methods are inlined
+  when they are compiled. No file is changed and nothing is left behind; the
+  setting lasts until the game exits. It is skipped when the runtime does not
+  match the supported builds or when you set `MONO_INLINELIMIT` yourself. Add
+  `-t3mpTestNoInlineLimit` to the Steam launch options to turn it off. A mod that
+  patches a small method only after a save has loaded may miss call sites that
+  were compiled earlier.
 - **Tube lighting repair.** Clears stale tube visitor registration when a
   character enters a building immediately after passing through a tube, so
   lighting reflects the remaining visitors.
@@ -54,7 +62,7 @@ have been removed. Tube lighting repair does not change movement animation.
 
 # 日本語
 
-バージョン1.2.3。
+バージョン1.2.4。
 
 T3MPはセーブのロードとシミュレーション中の重複処理を減らします。
 ランタイムの最適化はシミュレーションの判断と順序を維持します。
@@ -81,6 +89,11 @@ T3MPはセーブのロードとシミュレーション中の重複処理を減�
   在庫の許可品目の直接参照、結果を変えない木や作物への経路照会の省略も行います。
 - **移動処理。** キャラクターは0.1マス刻みではなく経路のコーナー単位で進みます。
   停止規則と経路の選択は変わりません。座標の下位桁はバニラと一致しないことがあります。
+- **ランタイムの調整。** 起動時に、Monoの関数展開の上限をメモリ上で20から300バイトへ引き上げます。
+  ゲームに多い小さな関数が、機械語へ変換されるときに呼び出し元へ展開されます。ファイルは変更せず、
+  効果はゲーム終了まで。対応版のランタイムと一致しない場合や、自分で`MONO_INLINELIMIT`を設定している場合は
+  何もしません。無効にするにはSteamの起動オプションに`-t3mpTestNoInlineLimit`を追加します。
+  セーブのロード後に小さな関数をパッチするMODは、先に変換済みの呼び出し元に効かない場合があります。
 - **配管照明の修正。** 配管を通過した直後に建物へ入ったキャラクターの古い訪問登録を解除し、
   残っている訪問者に合わせて照明を更新します。
 

@@ -30,6 +30,7 @@ public sealed class TestDriverModStarter : IModStarter
     public void StartMod(IModEnvironment modEnvironment)
     {
         Debug.Log("[T3MPTEST] Test driver loaded. " + TestArguments.Describe());
+        LoadTimeline.StartModSeconds = Time.realtimeSinceStartupAsDouble;
         ReleaseIdentity.ReportIfRequested();
         FullTickCounter.Install();
         MatchedBenchmarkConditions.Install();
@@ -44,6 +45,15 @@ public sealed class TestDriverModStarter : IModStarter
         SearchProfiler.Install();
         if (TestArguments.LoadRoutingRequested) LoadRoutingTestDriver.Configure();
     }
+}
+
+// Wall time from the driver's mod start (engine and mods are up, menu not yet
+// shown) to the game scene's PostLoad. Works without T3MP, so both arms of a
+// comparison report the same quantity. Includes the menu skip of LaunchArgs.
+internal static class LoadTimeline
+{
+    internal static double StartModSeconds, PostLoadSeconds;
+    internal static double LoadSeconds => PostLoadSeconds > 0 ? PostLoadSeconds - StartModSeconds : 0;
 }
 
 internal static class TestArguments
@@ -254,6 +264,10 @@ public sealed class GameTestDriver : IPostLoadableSingleton
 
     public void PostLoad()
     {
+        LoadTimeline.PostLoadSeconds = Time.realtimeSinceStartupAsDouble;
+        Debug.Log("[T3MPTEST] Load timeline startMod=" + LoadTimeline.StartModSeconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) +
+                  " postLoad=" + LoadTimeline.PostLoadSeconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) +
+                  " loadSeconds=" + LoadTimeline.LoadSeconds.ToString("F3", System.Globalization.CultureInfo.InvariantCulture));
         // After the product installed its patches at mod start: the audit's
         // prefix/postfix must be the later generation (docs/DIAGNOSTICS.md).
         MovementValidation.Install();
@@ -288,6 +302,8 @@ public sealed class GameTestDriver : IPostLoadableSingleton
         {
             new GameObject("T3MPTEST.TubeLights").AddComponent<TubeLightMonitor>().Initialize(_entityRegistry, _container);
         }
+        if (NativeKernelBench.Requested)
+            new GameObject("T3MPTEST.NativeKernel").AddComponent<NativeKernelBench>().Initialize(_container, _entityRegistry, _speedManager);
         if (TestArguments.LoadRoutingRequested)
         {
             _speedManager.ChangeSpeed(0f);

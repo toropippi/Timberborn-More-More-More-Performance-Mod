@@ -29,7 +29,7 @@ param(
     [string] $LegacyModDir = '',
     [string] $ComparisonDll = '',
     # ProductVariant: P is a build of the shipped feature set (no experiment patches), compared against the installed DLL.
-    [ValidateSet('', 'ProductVariant', 'ResourceCounterLookups', 'NodeCoordinateLookup', 'HarvestCandidateTree', 'HarvestIndex', 'LegacyRuntime', 'TickDispatch', 'TickComponentDispatch', 'NonlinearSpeedMemo', 'AllowedGoodRows', 'ExactBatch', 'YielderReachabilitySkip')][string] $ExpectedExperiment = '',
+    [ValidateSet('', 'ProductVariant', 'ResourceCounterLookups', 'NodeCoordinateLookup', 'HarvestCandidateTree', 'HarvestIndex', 'LegacyRuntime', 'TickDispatch', 'TickComponentDispatch', 'NonlinearSpeedMemo', 'AllowedGoodRows', 'ExactBatch', 'YielderReachabilitySkip', 'MonoInlineLimit')][string] $ExpectedExperiment = '',
     [switch] $TickPortValidation,
     [string] $LegacyVariantRecord = '',
     [switch] $LegacyVisualPreparationBaseline,
@@ -194,14 +194,14 @@ try {
         } elseif($MovementValidation) {
             if($result.performanceValid -or $result.validationMode -ne 'movement') {throw 'Movement validation was classified as performance'}
         } elseif(-not $result.performanceValid -or $result.validationMode -ne 'none') {throw 'Diagnostics contaminated performance'}
-        # AllowedGoodRows ships since the 2026-09-15 evening build, YielderReachabilitySkip since v1.2.3 (product features, absent without T3MP).
-        foreach ($name in @('EventBusFastDelegates','TickEntityFast','WaterTextureUpload','TickFrontier','TubeVisitFix','AllowedGoodRows','YielderReachabilitySkip')) {
+        # AllowedGoodRows ships since the 2026-09-15 evening build, YielderReachabilitySkip since v1.2.3, MonoInlineLimit since v1.2.4 (product features, absent without T3MP).
+        foreach ($name in @('EventBusFastDelegates','TickEntityFast','WaterTextureUpload','TickFrontier','TubeVisitFix','AllowedGoodRows','YielderReachabilitySkip','MonoInlineLimit')) {
             $expected = if ($arm -eq 'V' -or $legacyArm -or $name -eq 'TickEntityFast') { 'absent' } else { 'True' }
             if (($arm -eq 'E' -and $name -eq 'EventBusFastDelegates') -or ($arm -eq 'W' -and $name -eq 'WaterTextureUpload') -or ($arm -eq 'F' -and $name -eq 'TickFrontier')) { $expected='False' }
             if (($result.patches -split ',') -cnotcontains "$name=$expected") { throw "Unexpected patch state for $arm : $($result.patches)" }
         }
         $rowsExpected = if ($arm -eq 'V' -or $legacyArm) { 'absent' } else { 'True' }
-        foreach ($name in @('AllowedGoodRowsActive', 'YielderReachabilitySkipActive')) {
+        foreach ($name in @('AllowedGoodRowsActive', 'YielderReachabilitySkipActive', 'MonoInlineLimitActive')) {
             if (($result.patches -split ',') -cnotcontains "$name=$rowsExpected") { throw "Unexpected product feature state for $arm : $($result.patches)" }
         }
         $walkerExpected = if ($arm -eq 'V' -or $legacyArm) { 'absent' } elseif ($arm -eq 'D') { 'False' } else { 'True' }
@@ -310,7 +310,7 @@ try {
         $results += $result
         $results | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $output 'runs.json') -Encoding utf8
         if($HarvestTreeValidation) {Write-Host ("Validation only: "+$result.harvestTree)}
-        else {Write-Host ("arm {0}: {1:F3} ticks/s, {2:F2} FPS, p99 {3:F1} ms" -f $arm, $result.ticksPerSecond, $result.averageFps, $result.p99FrameMs)}
+        else {Write-Host ("arm {0}: {1:F3} ticks/s, {2:F2} FPS, p99 {3:F1} ms, load {4:F1} s" -f $arm, $result.ticksPerSecond, $result.averageFps, $result.p99FrameMs, $result.loadSeconds)}
     }
 } catch {
     $failure = $_.ToString()

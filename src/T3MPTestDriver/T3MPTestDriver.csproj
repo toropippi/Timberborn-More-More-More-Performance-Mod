@@ -87,6 +87,10 @@
     <PackageReference Include="Krafs.Publicizer" Version="2.2.1" PrivateAssets="all" />
     <Publicize Include="Timberborn.Navigation" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.CharacterMovementSystem" IncludeCompilerGeneratedMembers="false" />
+    <Reference Include="Timberborn.NeedSystem"><HintPath>$(TimberbornManagedDir)/Timberborn.NeedSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.NeedBehaviorSystem"><HintPath>$(TimberbornManagedDir)/Timberborn.NeedBehaviorSystem.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Timberborn.BehaviorSystem"><HintPath>$(TimberbornManagedDir)/Timberborn.BehaviorSystem.dll</HintPath><Private>false</Private></Reference>
+    <Publicize Include="Timberborn.NeedBehaviorSystem" IncludeCompilerGeneratedMembers="false" />
     <Publicize Include="Timberborn.PrefabOptimization" IncludeCompilerGeneratedMembers="false" />
     <Reference Include="Timberborn.PrefabOptimization">
       <HintPath>$(TimberbornManagedDir)\Timberborn.PrefabOptimization.dll</HintPath>

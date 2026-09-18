@@ -1,7 +1,7 @@
 # More More More Performance! (T3MP)
 
 Timberbornのロードとシミュレーションの重複処理を減らすMOD。
-現行はv1.2.3（Workshop公開版）。対応対象はWindowsの1.1.2.4／1.0.13.1、Harmonyが必要です。
+現行ソースはv1.2.4（ローカル導入・検証済み、Workshop公開版は1.2.3）。対応対象はWindowsの1.1.2.4／1.0.13.1、Harmonyが必要です。
 配布物（`Code.dll`）に計測・検証コードを入れない規約とゲート：[docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md)。計測は`scripts/measure.ps1`から。
 
 - 遊ぶ人向けの機能・操作説明：[mod/README.md](mod/README.md)

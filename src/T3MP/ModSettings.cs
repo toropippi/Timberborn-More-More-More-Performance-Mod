@@ -8,7 +8,7 @@ namespace T3MP;
 // test driver, never here: see docs/DIAGNOSTICS.md.
 internal static class ModSettings
 {
-    public const string Version = "1.2.3";
+    public const string Version = "1.2.4";
 
     // Runtime patches: typed EventBus delegates, sparse bucket traversal,
     // reusable walking delegates, de-duplicated water uploads and tube-visit repair.
@@ -33,6 +33,9 @@ internal static class ModSettings
     public static readonly bool EnableAllowedGoodRows = !HasCommandLineFlag("-t3mpTestNoAllowedGoodRows");
     // Trial (2026-09-16): yielder searches skip the path query for candidates that cannot contribute.
     public static readonly bool EnableYielderReachabilitySkip = !HasCommandLineFlag("-t3mpTestNoYielderReachabilitySkip");
+
+    // Mono JIT inline limit raised in memory at mod start (v1.2.4); see Runtime/MonoInlineLimit.cs.
+    public static readonly bool EnableMonoInlineLimit = !HasCommandLineFlag("-t3mpTestNoInlineLimit");
 
     // Load patches (Loading/, Shared/).
     public static readonly bool EnableLoadEventRouting = true;

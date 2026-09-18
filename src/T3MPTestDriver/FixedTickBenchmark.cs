@@ -24,7 +24,8 @@ public sealed class FixedTickBenchmark : MonoBehaviour
     private float _initialTimeScale;
     private bool _displayChanged, _speedChanged;
     private bool _focused, _focusChanged;
-    private int _startFrame, _endFrame;
+    private int _startFrame, _endFrame, _startGc, _endGc;
+    private long _startHeap, _endHeap;
     private double _nextProgress;
     private long _origin;
     private int _warmup, _measured;
@@ -88,8 +89,8 @@ public sealed class FixedTickBenchmark : MonoBehaviour
                 active._displayChanged = active._speedChanged = active._focusChanged = false;
             }
             active._window.Tick(tick, Now);
-            if (!started && active._window.Started) active._startFrame = Time.frameCount;
-            if (active._window.Complete) active._endFrame = Time.frameCount;
+            if (!started && active._window.Started) { active._startFrame = Time.frameCount; active._startGc = GC.CollectionCount(0); active._startHeap = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong(); }
+            if (active._window.Complete) { active._endFrame = Time.frameCount; active._endGc = GC.CollectionCount(0); active._endHeap = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong(); }
         }
     }
 
@@ -148,7 +149,8 @@ public sealed class FixedTickBenchmark : MonoBehaviour
             legacySettings = _initialLegacySettings,
             productMvid = MatchedBenchmarkConditions.ProductMvid(), driverMvid = typeof(FixedTickBenchmark).Assembly.ManifestModule.ModuleVersionId.ToString("D"),
             harvestTree = HarvestSummary(), movementSubsteps = MovementSummary(), movementValidation = MovementValidation.Summary(),
-            yielderSkip = ProductSummary("T3MP.Runtime.YielderReachabilitySkip")
+            yielderSkip = ProductSummary("T3MP.Runtime.YielderReachabilitySkip"), inlineLimit = ProductSummary("T3MP.Runtime.MonoInlineLimit"), loadSeconds = LoadTimeline.LoadSeconds,
+            gcCollections = _endGc - _startGc, monoUsedStartMB = _startHeap / 1048576.0, monoUsedEndMB = _endHeap / 1048576.0
         }));
         RoadReachabilityExperiment.Report();
         _speed.ChangeSpeed(0f);
@@ -171,13 +173,13 @@ public sealed class FixedTickBenchmark : MonoBehaviour
         var walker = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.WalkerSpeedDelegates")).FirstOrDefault(t => t != null);
         var terrain = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime.TerrainNeighborVisits")).FirstOrDefault(t => t != null);
         var visuals = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Loading.PreparedEntityVisuals")).FirstOrDefault(t => t != null);
-        return string.Join(",", new[] { "EventBusFastDelegates", "TickEntityFast", "WaterTextureUpload", "TickFrontier", "TickDispatch", "TubeVisitFix", "WalkerSpeedDelegates", "TerrainNeighborVisits", "ResourceCounterLookups", "NodeCoordinateLookup", "HarvestCandidateTree", "HarvestIndex", "TickComponentDispatch", "MovementSubsteps", "NonlinearSpeedMemo", "AllowedGoodRows", "NeedUpdateInline", "ShaftEfficiencyOnce", "PathEdgeSingleScan", "NeedAppraisalLookup", "YielderReachabilitySkip" }.Select(name => {
+        return string.Join(",", new[] { "EventBusFastDelegates", "TickEntityFast", "WaterTextureUpload", "TickFrontier", "TickDispatch", "TubeVisitFix", "WalkerSpeedDelegates", "TerrainNeighborVisits", "ResourceCounterLookups", "NodeCoordinateLookup", "HarvestCandidateTree", "HarvestIndex", "TickComponentDispatch", "MovementSubsteps", "NonlinearSpeedMemo", "AllowedGoodRows", "NeedUpdateInline", "ShaftEfficiencyOnce", "PathEdgeSingleScan", "NeedAppraisalLookup", "YielderReachabilitySkip", "MonoInlineLimit" }.Select(name => {
             var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime." + name)).FirstOrDefault(t => t != null);
             return name + "=" + (type?.GetProperty("Installed", flags)?.GetValue(null)?.ToString() ?? "absent");
         })) + ",WalkerDelegatesReusing=" + (walker?.GetProperty("Reusing", flags)?.GetValue(null)?.ToString() ?? "absent") +
             ",TerrainVisitsActive=" + (terrain?.GetProperty("Active", flags)?.GetValue(null)?.ToString() ?? "absent") +
             ",VisualPreparationInstalled=" + (visuals?.GetProperty("Installed", flags)?.GetValue(null)?.ToString() ?? "absent") +
-            "," + string.Join(",", new[] { "ResourceCounterLookups", "NodeCoordinateLookup", "HarvestCandidateTree", "HarvestIndex", "TickDispatch", "TickComponentDispatch", "MovementSubsteps", "NonlinearSpeedMemo", "AllowedGoodRows", "NeedUpdateInline", "ShaftEfficiencyOnce", "PathEdgeSingleScan", "NeedAppraisalLookup", "YielderReachabilitySkip" }.Select(name => {
+            "," + string.Join(",", new[] { "ResourceCounterLookups", "NodeCoordinateLookup", "HarvestCandidateTree", "HarvestIndex", "TickDispatch", "TickComponentDispatch", "MovementSubsteps", "NonlinearSpeedMemo", "AllowedGoodRows", "NeedUpdateInline", "ShaftEfficiencyOnce", "PathEdgeSingleScan", "NeedAppraisalLookup", "YielderReachabilitySkip", "MonoInlineLimit" }.Select(name => {
                 var type = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("T3MP.Runtime." + name)).FirstOrDefault(t => t != null);
                 return name + "Active=" + (type?.GetProperty("Active", flags)?.GetValue(null)?.ToString() ?? "absent");
             })) +
@@ -222,6 +224,9 @@ public sealed class FixedTickBenchmark : MonoBehaviour
         public string movementSubsteps = "absent";
         public string movementValidation = "disabled";
         public string yielderSkip = "absent";
+        public string inlineLimit = "absent";
+        public double loadSeconds, monoUsedStartMB, monoUsedEndMB;
+        public int gcCollections;
         public bool performanceValid;
         public string validationMode = "none";
         public long originTick, startTick, endTick;
