@@ -25,11 +25,7 @@ internal static class AtlasPixelsLoad
         .Concat(typeof(Texture2D).GetMethods(All|BindingFlags.DeclaredOnly).Where(m=>m.Name=="GetPixels32"||m.Name=="SetPixels32"||m.Name=="Apply"))
         .Concat(typeof(Material).GetMethods(All|BindingFlags.DeclaredOnly).Where(m=>m.Name.StartsWith("Get")))
         .Concat(new[]{typeof(Timberborn.BlueprintSystem.AssetRef<Material>).GetProperty("Asset",All)!.GetMethod!}).Cast<MethodBase>().ToArray();
-    private static bool Reviewed()=>LoadCompatibility.Reviewed(
-        "Timberborn.PrefabOptimization|0c0517bf-185a-46c6-ab97-00a8a5e74af7",
-        "Timberborn.TextureOperations|90b26ce4-8697-429b-9b5f-1e15ab552e8d",
-        "Timberborn.BlueprintSystem|41363a54-def1-40c7-9ff3-f884cf81cf81",
-        "UnityEngine.CoreModule|61dee272-fd45-47db-9c13-40fe43fbdc1a");
+    private static bool Reviewed()=>LoadCompatibility.Reviewed(LoadBodies.AtlasPixels);
     private static bool Compatible()=>Reviewed()&&LoadCompatibility.Unmodified(Protected,Owner);
     internal static void Install()
     {

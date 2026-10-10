@@ -15,6 +15,7 @@ namespace T3MP.Loading;
 
 internal static partial class ComponentConstructionPlans
 {
+    private static bool Reviewed() => ConstructionPlans.Reviewed() && LoadCompatibility.Reviewed(LoadBodies.ComponentConstruction);
     private const string PatchId = "t3mp.load.component-recipes";
     internal static bool Installed { get; private set; }
     private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
@@ -58,7 +59,7 @@ internal static partial class ComponentConstructionPlans
     internal static void Install()
     {
         if (Installed || Environment.GetCommandLineArgs().Contains("-t3mpTestConstructionBaseline")) return;
-        if (!ConstructionPlans.Reviewed()) { Debug.Log("[T3MPCOMPONENTRECIPE] native fallback: unreviewed modules"); return; }
+        if (!Reviewed()) { Debug.Log("[T3MPCOMPONENTRECIPE] native fallback: unreviewed modules"); return; }
         _harmonyType = Find("HarmonyLib.Harmony"); var hm = Find("HarmonyLib.HarmonyMethod");
         var harmony = Activator.CreateInstance(_harmonyType, PatchId);
         var patch = _harmonyType.GetMethods().Single(m => m.Name == "Patch" && m.GetParameters().Length == 5);
@@ -97,7 +98,7 @@ internal static partial class ComponentConstructionPlans
 
     private static bool CheckCompatibility()
     {
-        if (!ConstructionPlans.Reviewed()) return false;
+        if (!Reviewed()) return false;
         var get = _harmonyType.GetMethod("GetPatchInfo", All)!;
         foreach (var method in _protectedMethods)
         {

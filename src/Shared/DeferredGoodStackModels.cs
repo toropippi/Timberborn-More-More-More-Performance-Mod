@@ -126,18 +126,7 @@ internal static class DeferredGoodStackModels
             Debug.LogWarning("[T3MPLAZYSTACK] disabled: " + e.GetBaseException().Message);
         }
     }
-    private static bool Reviewed() => LoadCompatibility.Reviewed(
-        "Timberborn.GoodStackSystem|253feb51-a590-49c2-ba69-4b6b941c6bc8",
-        "Timberborn.Rendering|03c679ef-24e9-4bac-90dc-b2cd3e78aef9",
-        "Timberborn.BaseComponentSystem|c0f7b920-5694-4612-bdd5-b736144e1f02",
-        "Timberborn.BlockObjectModelSystem|a1669a88-0ece-4f14-95d1-bc59fe5e6eaa",
-        "Timberborn.NaturalResourcesModelSystem|4b988987-94dd-4862-b337-5e31b1b44423",
-        "Timberborn.ForestryEffects|f24d9580-3f86-4f8e-9d28-83f62a3a290a",
-        "Timberborn.Common|88d60edf-d568-470b-af44-77abc48c8bd0",
-        "Timberborn.SlotSystem|b38ee034-1457-4300-a8ea-68cb033266f9",
-        "Timberborn.SelectionSystem|306a9bc7-0918-47a0-96f0-1efe1a97d3a2",
-        "Timberborn.InventorySystem|f7d5c441-f4f7-42ed-8497-887e776da98a",
-        "UnityEngine.CoreModule|61dee272-fd45-47db-9c13-40fe43fbdc1a");
+    private static bool Reviewed() => LoadCompatibility.Reviewed(LoadBodies.GoodStacks);
     private static bool SafeOwner(BaseComponent owner)
     {
         if (!_production) return true;

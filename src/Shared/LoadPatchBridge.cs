@@ -9,7 +9,10 @@ namespace T3MP.Loading;
 internal static class LoadPatchBridge
 {
     internal const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
-    internal static Type Find(string name) => AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).First(t => t != null)!;
+    internal static Type Find(string name) => AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).FirstOrDefault(t => t != null)
+        ?? throw new InvalidOperationException(name.StartsWith("HarmonyLib.", StringComparison.Ordinal)
+            ? "T3MP: Harmony is not loaded. Enable the Harmony mod in the mod manager."
+            : "T3MP: type " + name + " was not found.");
     internal static MethodInfo Create(string name, MethodInfo generic)
     {
         var instruction = Find("HarmonyLib.CodeInstruction");

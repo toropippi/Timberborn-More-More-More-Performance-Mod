@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
-using System.Threading;
 using Timberborn.CharacterMovementSystem;
 using Timberborn.Navigation;
 using UnityEngine;
@@ -17,13 +15,13 @@ namespace T3MP.Runtime;
 // objects and the set->get round trip is bit-exact, so the same float
 // operations in the same order on a local yield identical corners, corner
 // index, provider calls and final position. The transform is written before
-// every speed-provider call (it reads the current position), once after the
-// loop, and on an exception path exactly where the native loop last wrote it.
+// every speed-provider call (it reads the current position) and once after the
+// loop.
 // Coarse mode (default) additionally advances corner to corner where the
 // segment cannot touch the stopping proximity of the path end; it is not
 // bit-exact with vanilla (low-order position bits, fewer animated corners, a
 // corner arrival can shift by one tick at a tick edge). Shares the
-// walker-delegate owner, fingerprints, shape guards and invalidation.
+// walker-delegate owner.
 // -t3mpTestNoMovementCoarse keeps the exact loop; -t3mpTestNoMovementSubsteps
 // keeps the native body. The replay audit against the native body lives in
 // the test driver (MovementValidation), which calls RunSubsteps through
@@ -31,140 +29,34 @@ namespace T3MP.Runtime;
 internal static class MovementSubsteps
 {
     internal static bool Installed => WalkerSpeedDelegates.SubstepsInstalled;
-    internal static bool Active => WalkerSpeedDelegates.Substepping;
     internal static string Summary() => WalkerSpeedDelegates.SubstepSummary();
 }
 
 internal static partial class WalkerSpeedDelegates
 {
-    private static bool _substepsEnabled, _coarse;
-    // Plain call counters for the driver's state report; no timing, no audit.
-    private static long _substepCalls, _substepFallbacks;
-    internal static bool SubstepsInstalled => Installed && _substepsEnabled;
-    internal static bool Substepping => SubstepsInstalled && Volatile.Read(ref _invalidated) == 0;
-    internal static string SubstepSummary() => !_substepsEnabled ? "disabled" :
-        "calls=" + _substepCalls + ",fallbacks=" + _substepFallbacks + ",coarse=" + _coarse;
+    private static bool _substepsInstalled, _coarse;
+    // Plain call counter for the driver's state report; no timing, no audit.
+    private static long _substepCalls;
+    internal static bool SubstepsInstalled => _substepsInstalled;
+    internal static string SubstepSummary() => !_substepsInstalled ? "disabled" : "calls=" + _substepCalls + ",coarse=" + _coarse;
 
-    // Reviewed raw-IL fingerprints, identical in the 1.1.2.4 and 1.0.13.1 APIs.
-    // Returns the helper methods that the local loop no longer calls; their
-    // observe transpilers join the shared guard chain. Any failure keeps the
-    // delegate feature and only disables the sub-step replacement.
-    private static MethodInfo[] PrepareSubsteps(Type harmonyType, MethodInfo along)
+    private static void InstallSubsteps(Func<MethodBase, string?, string?, string?, string?, object?> apply)
     {
-        _substepsEnabled = false;
-        if (!ModSettings.EnableMovementSubsteps) return Array.Empty<MethodInfo>();
-        try
-        {
-            MethodInfo Find(string name) => typeof(PathFollower).GetMethod(name, RuntimePatches.All | BindingFlags.DeclaredOnly)
-                ?? throw new MissingMethodException(typeof(PathFollower).FullName, name);
-            var reached = Find("ReachedLastPathCorner");
-            var add = Find("AddAnimatedPathCorner");
-            var direction = Find("MoveInDirection");
-            var proximity = typeof(NavigationService).GetMethod("InStoppingProximity", RuntimePatches.All | BindingFlags.DeclaredOnly)
-                ?? throw new MissingMethodException(typeof(NavigationService).FullName, "InStoppingProximity");
-            var checks = new (MethodInfo Method, string[] Hashes)[]
-            {
-                (reached, new[] { "998A113F56CA8629F9529B6CD279715F9D13D5D0D694FB61818530A099319B4B" }),
-                (add, new[] { "061B1D84724C171ABBEAF9BDA1CA67E1F4A591E1FCD2794194F69FFF95E3F1B8" }),
-                (direction, new[] { "13B40AE1B731C22F8F2248ADB766718D03E89FBCEEAF5475C036EBD8C582A077" }),
-                (Find("GetRemainingDistance"), new[] { "AC7CC077007B61EF4693FA834DE2769C68F04EB7A27E7AFF7CD3C45D58CC8ACB" }),
-                (Find("GetTimeFromLastPathPoint"), new[] { "F4B417B338A6D290ACE03AECA7CD031E68DF21BD3EBD80C8C9C03975B7E4B9D6" }),
-                (Find("AddSmoothingAnimatedPathCorner"), new[] { "BDF04CBC81D7AB2BD7793CDAFEFAD26A27FBF131C7E644FBB59E0C492489E8FF" }),
-                (Find("NotifyAfterMovement"), new[] { "BB54FA46D093E1FF52731432C908F20F8278B80CFC9241E6416EC9411CD30DC1" }),
-                // 1.1.2.4 and 1.0.13.1 bodies.
-                (proximity, new[] { "7FC025D3E2F263BAF78B3C6BAC2A8E6BD190940506F46A4848A72FBC4EA6F91E", "B615D3A9F70691E3B118D102AEFCDD5DFD887F14585125BC823E6AD320DA9945" }),
-            };
-            foreach (var (method, hashes) in checks)
-                if (!RuntimePatches.ReviewedBody(method, hashes)) throw new InvalidOperationException(method.Name + " is not a reviewed build");
-            if (along.GetMethodBody()!.ExceptionHandlingClauses.Count != 0) throw new InvalidOperationException("unexpected movement body shape");
-            foreach (var field in new[] { "_navigationService", "_movementAnimator", "_transform", "_animatedPathCorners", "_pathCorners", "_nextCornerIndex", "_movedAlongPath", "RemainingTimeThreshold" })
-                if (typeof(PathFollower).GetField(field, RuntimePatches.All) == null) throw new MissingFieldException(typeof(PathFollower).FullName, field);
-            foreach (var (method, _) in checks)
-                if (RuntimePatches.ForeignPatched(harmonyType, method, Owner, false))
-                    throw new InvalidOperationException("another mod patches PathFollower." + method.Name);
-            _coarse = ModSettings.CoarseMovementSubsteps;
-            _substepsEnabled = true;
-            // Bypassed helpers, plus the two callees that observe sub-step
-            // positions while the transform is not yet written.
-            return new[] { reached, add, direction, proximity };
-        }
-        catch (Exception exception)
-        {
-            Debug.LogWarning("[T3MP] Movement sub-steps disabled: " + exception.GetBaseException().Message);
-            return Array.Empty<MethodInfo>();
-        }
+        if (!ModSettings.EnableMovementSubsteps) return;
+        _coarse = ModSettings.CoarseMovementSubsteps;
+        apply(RuntimePatches.Find(typeof(PathFollower), "MoveAlongPath"), null, null, nameof(RewriteAlong), null);
+        _substepsInstalled = true;
+        Debug.Log("[T3MP] Movement sub-steps installed.");
     }
 
-    private static IEnumerable<T> ObserveReached<T>(IEnumerable<T> instructions) => Observe(instructions, 4);
-    private static IEnumerable<T> ObserveAdd<T>(IEnumerable<T> instructions) => Observe(instructions, 5);
-    private static IEnumerable<T> ObserveDirection<T>(IEnumerable<T> instructions) => Observe(instructions, 6);
-    private static IEnumerable<T> ObserveProximity<T>(IEnumerable<T> instructions) => Observe(instructions, 7);
-
-    // Transpiler body for MoveAlongPath: observe the shape like every other
-    // guarded method, then replace the body.
-    private static IEnumerable<T> ObserveAlongSubsteps<T>(IEnumerable<T> instructions)
-    {
-        var list = new List<T>(instructions);
-        var guard = _guards[0];
-        if (Interlocked.Increment(ref guard.Generations) != 1 ||
-            !RuntimePatches.SameShape(guard.Shape, RuntimePatches.DescribeShape(list)))
-        {
-            Interlocked.Exchange(ref _invalidated, 1);
-            return list;
-        }
-        if (!_substepsEnabled) return list;
-        return RuntimePatches.CallAndReturn<T>(typeof(WalkerSpeedDelegates).GetMethod(nameof(MoveAlongPath), RuntimePatches.All)!, 4);
-    }
+    private static IEnumerable<T> RewriteAlong<T>(IEnumerable<T> instructions) =>
+        RuntimePatches.CallAndReturn<T>(typeof(WalkerSpeedDelegates).GetMethod(nameof(MoveAlongPath), RuntimePatches.All)!, 4);
 
     // Replacement body. The live state is read on entry; nothing is cached.
-    // Only the reviewed, guarded NavigationService may observe sub-step
-    // positions; any other injected INavigationService keeps the native sequence.
     private static void MoveAlongPath(PathFollower self, float tickDeltaTime, string animationName, Func<float> movementSpeedProvider)
     {
-        if (Substepping && self._navigationService?.GetType() == typeof(NavigationService)) { _substepCalls++; MoveLocally(self, tickDeltaTime, animationName, movementSpeedProvider); }
-        else { _substepFallbacks++; MoveNatively(self, tickDeltaTime, animationName, movementSpeedProvider); }
-    }
-
-    // Native sequence through the original helpers, used once a guarded helper
-    // gained another patch. Differs from the local loop only in reading and
-    // writing the transform through PathFollower's own methods.
-    private static void MoveNatively(PathFollower self, float tickDeltaTime, string animationName, Func<float> movementSpeedProvider)
-    {
-        float? speedLimitIfCloseToTarget = self.GetSpeedLimitIfCloseToTarget(tickDeltaTime, movementSpeedProvider);
-        float num = speedLimitIfCloseToTarget ?? self.GetMovementSpeed(movementSpeedProvider);
-        int groupId = self._pathCorners[self._nextCornerIndex - 1].GroupId;
-        float remainingTime = tickDeltaTime;
-        bool reachedTarget = false;
-        float timeFromLastPathPoint = self.GetTimeFromLastPathPoint();
-        self._animatedPathCorners.Clear();
-        self.AddAnimatedPathCorner(self._transform.position, timeFromLastPathPoint, num, groupId);
-        while (remainingTime > PathFollower.RemainingTimeThreshold && !self.ReachedLastPathCorner())
-        {
-            if (reachedTarget)
-            {
-                self._nextCornerIndex = ((self._nextCornerIndex + 1 < self._pathCorners.Count) ? (self._nextCornerIndex + 1) : self._nextCornerIndex);
-                num = speedLimitIfCloseToTarget ?? self.GetMovementSpeed(movementSpeedProvider);
-            }
-            int groupId2 = self._pathCorners[self._nextCornerIndex - 1].GroupId;
-            if (num < float.MaxValue)
-            {
-                Vector3 position = self._pathCorners[self._nextCornerIndex].Position;
-                Vector3 position2 = PathFollower.MoveInDirection(self._transform.position, position, num, ref remainingTime, out reachedTarget);
-                float time = timeFromLastPathPoint + tickDeltaTime - remainingTime;
-                self.AddAnimatedPathCorner(position2, time, num, groupId2);
-            }
-            else
-            {
-                Vector3 position3 = self._pathCorners[self._nextCornerIndex].Position;
-                float time2 = timeFromLastPathPoint + tickDeltaTime - remainingTime;
-                self.AddAnimatedPathCorner(position3, time2, num, groupId2);
-                reachedTarget = true;
-            }
-        }
-        self.AddSmoothingAnimatedPathCorner(tickDeltaTime, reachedTarget, timeFromLastPathPoint, num);
-        self._movementAnimator.AnimateMovementAlongPath(self._animatedPathCorners, animationName);
-        self._movedAlongPath = true;
-        self.NotifyAfterMovement();
+        _substepCalls++;
+        MoveLocally(self, tickDeltaTime, animationName, movementSpeedProvider);
     }
 
     private static void MoveLocally(PathFollower self, float tickDeltaTime, string animationName, Func<float> movementSpeedProvider)
@@ -179,17 +71,9 @@ internal static partial class WalkerSpeedDelegates
         corners.Clear();
         var transform = self._transform;
         var position = transform.position;
-        try
-        {
-            RunSubsteps(self, transform, corners, ref position, tickDeltaTime, movementSpeedProvider, speedLimitIfCloseToTarget,
-                ref num, timeFromLastPathPoint, ref remainingTime, ref reachedTarget, groupId, _coarse);
-        }
-        finally
-        {
-            // Normal exit and the exception path both leave the transform where
-            // the native loop last wrote it.
-            transform.position = position;
-        }
+        RunSubsteps(self, transform, corners, ref position, tickDeltaTime, movementSpeedProvider, speedLimitIfCloseToTarget,
+            ref num, timeFromLastPathPoint, ref remainingTime, ref reachedTarget, groupId, _coarse);
+        transform.position = position;
         self.AddSmoothingAnimatedPathCorner(tickDeltaTime, reachedTarget, timeFromLastPathPoint, num);
         self._movementAnimator.AnimateMovementAlongPath(corners, animationName);
         self._movedAlongPath = true;
@@ -211,12 +95,9 @@ internal static partial class WalkerSpeedDelegates
                 self._nextCornerIndex = ((self._nextCornerIndex + 1 < self._pathCorners.Count) ? (self._nextCornerIndex + 1) : self._nextCornerIndex);
                 if (speedLimitIfCloseToTarget == null)
                 {
-                    // GetMovementSpeed may invoke the provider, which reads the
-                    // transform and, for an arbitrary callback, may write it. The
-                    // native loop continues from the transform, so read it back.
+                    // The speed provider reads the walker's position from the transform.
                     transform.position = position;
-                    try { num = self.GetMovementSpeed(movementSpeedProvider); }
-                    finally { position = transform.position; }
+                    num = self.GetMovementSpeed(movementSpeedProvider);
                 }
                 else
                 {

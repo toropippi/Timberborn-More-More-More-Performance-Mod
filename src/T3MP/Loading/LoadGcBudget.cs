@@ -80,10 +80,7 @@ internal static class LoadGcBudget
         }
     }
 
-    private static bool Reviewed() => LoadCompatibility.Reviewed(
-        "Timberborn.SingletonSystem|962512a9-30fb-4e42-b29f-b0115c9e9015",
-        "Timberborn.WorldPersistence|322e064a-da3b-4021-9703-113b13123a6f",
-        "UnityEngine.CoreModule|61dee272-fd45-47db-9c13-40fe43fbdc1a");
+    private static bool Reviewed() => LoadCompatibility.Reviewed(LoadBodies.GcBudget);
 
     private static ulong AvailableMemory()
     {

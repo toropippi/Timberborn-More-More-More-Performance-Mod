@@ -9,10 +9,8 @@
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
-  <!-- Movement sub-steps ship in the product (Runtime/MovementSubsteps.cs). The
-       symbol keeps tests/WalkerSpeedDelegates, which compiles WalkerSpeedDelegates.cs
-       against fixtures, on the delegate-only code path. It is the only symbol the
-       product may define; experiment symbols and experiment sources never enter
+  <!-- Movement sub-steps ship in the product (Runtime/MovementSubsteps.cs).
+       It is the only symbol the product may define; experiment symbols and experiment sources never enter
        this project (docs/DIAGNOSTICS.md, scripts/check_product_purity.ps1). -->
   <PropertyGroup><DefineConstants>$(DefineConstants);MOVEMENT_SUBSTEPS</DefineConstants></PropertyGroup>
 
@@ -297,6 +295,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../Shared/LoadCompatibility.cs" Link="Loading/LoadCompatibility.cs" />
+    <Compile Include="../Shared/MethodFingerprint.cs" Link="Loading/MethodFingerprint.cs" />
+    <Compile Include="../Shared/LoadBodies.cs" Link="Loading/LoadBodies.cs" />
     <Compile Include="../Shared/TransputLoadRouting.cs" Link="Loading/TransputLoadRouting.cs" />
     <Compile Include="../Shared/LoadPatchBridge.cs" Link="Loading/LoadPatchBridge.cs" />
   </ItemGroup>

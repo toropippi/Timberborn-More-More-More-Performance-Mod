@@ -116,19 +116,9 @@ internal static class PreparedEntityVisuals
             typeof(PreparedEntityVisuals).GetMethod(nameof(RewriteActivation), All)!.MakeGenericMethod(instruction)));
         return created.GetMethod("Transpile")!;
     }
-    private static bool ReviewedModules()
-    {
-        var rows = new[] {
-            "Timberborn.BaseComponentSystem|c0f7b920-5694-4612-bdd5-b736144e1f02|e1c14a06-f064-460c-be91-3d6a2fee5cd2",
-            "Timberborn.BlockObjectModelSystem|a1669a88-0ece-4f14-95d1-bc59fe5e6eaa|a2906a09-7142-48d6-8c2d-e7318606e86b",
-            "Timberborn.NaturalResourcesModelSystem|4b988987-94dd-4862-b337-5e31b1b44423|5f3ffcae-b6cf-43ba-80ce-05a5581e364d",
-            "Timberborn.NaturalResourcesLifecycleModelSystem|2b446b61-6908-4ba8-8122-cf46a872471e|09658cf5-48bb-4af6-a3fc-a2c4272edfe4",
-            "Timberborn.Buildings|67e23e56-01c7-4200-bfa4-b735eaa5f28a|a0cdc4e9-c72b-4716-8f12-f30761f12159",
-            "UnityEngine.CoreModule|61dee272-fd45-47db-9c13-40fe43fbdc1a|4a34e92e-a25e-4043-a947-f7ae39562b49" };
-        // 1.0 passed model/world comparison but changed 155 native ray records.
-        // Keep native activation there until physics equivalence is established.
-        return LoadCompatibility.Reviewed(rows.Select(row => string.Join("|", row.Split('|').Take(2))).ToArray());
-    }
+    // 1.0 passed model/world comparison but changed 155 native ray records; its
+    // bodies differ, so native activation stays there.
+    private static bool ReviewedModules() => LoadCompatibility.Reviewed(LoadBodies.EntityVisuals);
     private static bool SafeComponent(Type type)
     {
         if (ComponentSafety.TryGetValue(type, out var safe)) return safe;

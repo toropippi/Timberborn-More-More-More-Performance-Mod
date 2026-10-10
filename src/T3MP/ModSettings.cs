@@ -8,7 +8,7 @@ namespace T3MP;
 // test driver, never here: see docs/DIAGNOSTICS.md.
 internal static class ModSettings
 {
-    public const string Version = "1.2.4";
+    public const string Version = "1.2.5";
 
     // Runtime patches: typed EventBus delegates, sparse bucket traversal,
     // reusable walking delegates, de-duplicated water uploads and tube-visit repair.

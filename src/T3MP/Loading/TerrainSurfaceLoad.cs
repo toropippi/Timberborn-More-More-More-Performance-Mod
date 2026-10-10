@@ -34,12 +34,7 @@ internal static class TerrainSurfaceLoad
         typeof(MapIndexService).GetMethod("CoordinatesToIndex3D",All)!
     }.Concat(typeof(Sizing).GetMethods(All).Where(m=>m.Name=="SizeContains"))
         .Concat(typeof(VectorExtensions).GetMethods(All).Where(m=>m.Name=="Below"||m.Name=="XY")).ToArray();
-    private static bool Reviewed()=>LoadCompatibility.Reviewed(
-        "Timberborn.TerrainSystemRendering|db00dee5-7277-4b2d-aec5-67cf8e8703e4",
-        "Timberborn.TerrainSystem|271afb68-a1c7-4cdf-8752-b795e0a3c178",
-        "Timberborn.MapStateSystem|5902be72-b557-4f7c-87cc-b71eb2e5aa72",
-        "Timberborn.MapIndexSystem|1880d684-3070-4acd-b0ce-cdc7817c43ad",
-        "Timberborn.Common|88d60edf-d568-470b-af44-77abc48c8bd0");
+    private static bool Reviewed()=>LoadCompatibility.Reviewed(LoadBodies.TerrainSurface);
     internal static void Install()
     {
         if(Installed||Environment.GetCommandLineArgs().Contains("-t3mpTestServiceTerrainBaseline"))return;

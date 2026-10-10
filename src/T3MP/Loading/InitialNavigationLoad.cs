@@ -45,10 +45,7 @@ internal static class InitialNavigationLoad
                 x ^= x >> 27; x *= 0x94d049bb133111ebUL; return (int)(x ^ (x >> 31)); }
         }
     }
-    private static bool Reviewed() => LoadCompatibility.Reviewed(
-        "Timberborn.Navigation|b848ebf8-28b6-4c17-ab4f-f91582085afa",
-        "Timberborn.Common|88d60edf-d568-470b-af44-77abc48c8bd0",
-        "UnityEngine.CoreModule|61dee272-fd45-47db-9c13-40fe43fbdc1a");
+    private static bool Reviewed() => LoadCompatibility.Reviewed(LoadBodies.InitialNavigation);
     private static bool CheckCompatibility() => Reviewed() && LoadCompatibility.Unmodified(Protected, Owner,
         (method, owner) => owner == "local.gpupathinginvestigation.benchmarkprobe" && method.DeclaringType == typeof(RoadNavMeshGraph) &&
             (method.Name == "ConnectNodes" || method.Name == "DisconnectNodes" || method.Name == "Load"));

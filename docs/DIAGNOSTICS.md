@@ -50,7 +50,7 @@ fallbackを強制して計測値自体が製品を歪める（TickProfilerがPat
   `run_fixed_tick_ab.ps1`の期待表に名前を足す。
 - 不採用なら`experiments/<name>/`へ移して製品から消す。製品ファイルにフックを残さない
   （2026-09-16にtick-port / tick-dispatch / harvest-tree / harvest-indexのフック28箇所を撤去。復元はgit履歴）。
-- 製品が定義してよいシンボルは`MOVEMENT_SUBSTEPS`だけ（`tests/WalkerSpeedDelegates`がフィクスチャで委譲経路だけをコンパイルするため）。
+- 製品が定義してよいシンボルは`MOVEMENT_SUBSTEPS`だけ。
 
 ## ゲート
 

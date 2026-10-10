@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.2.5 — game-speed patches always apply (2026-10-10)
+
+- Game 1.1.2.7 silently disabled every game-speed patch, including the x1/x3/x7 speed policy: the raw-IL fingerprints changed with every game rebuild (metadata tokens), although the method bodies were unchanged. All runtime build checks, shape checks, foreign-patch checks, world-load revalidation and native fallbacks are removed. Runtime patches are always applied; a patch that cannot be applied throws out of StartMod, and the game shows its crash screen with a `T3MP:` message.
+- Allowed-good rows follow 1.1.2.7's new `Inventory._specIgnorableCapacity` early return (older builds without the field are unaffected).
+- Water upload de-duplication is no longer limited to Direct3D11.
+- Mono inline limit: a runtime whose limit reader cannot be located now throws instead of being skipped (other platforms and a user-set `MONO_INLINELIMIT` are still left alone).
+- Save-loading optimizations check the content of the game methods they rely on instead of exact assembly IDs, so a game rebuild with unchanged code keeps them on (all on 1.1.2.7; on 1.0.13.1 all but good stacks and entity visuals). A mismatch still falls back silently.
+- The bottom-right meter can be hidden: hovering it shows a small × button (hide) or + button (show); the choice is remembered.
+
 ## v1.2.4 — runtime inline limit (2026-09-18)
 
 - Raises the Mono JIT inline size limit from 20 to 300 IL bytes in memory after the mod's own patches are installed. The variable is located through the runtime's own MONO_INLINELIMIT reader and written only when the complete instruction template of the supported runtimes matches. Off switch `-t3mpTestNoInlineLimit`; a user-set `MONO_INLINELIMIT` wins.
