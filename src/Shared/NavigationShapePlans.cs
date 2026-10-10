@@ -59,14 +59,7 @@ internal static class NavigationShapePlans
         }
     }
     private static int Groups(object owner) => ((NavMeshGroupService)_groups.GetValue(owner)!)._groupIds.Count;
-    private static bool Reviewed() => LoadCompatibility.Reviewed(
-        "Timberborn.BlockSystemNavigation|096d1a2b-1134-4849-b128-c75707ff8520",
-        "Timberborn.BlockSystem|08ba0380-b21b-4e84-999e-011c1cc0b67d",
-        "Timberborn.Navigation|b848ebf8-28b6-4c17-ab4f-f91582085afa",
-        "Timberborn.Common|88d60edf-d568-470b-af44-77abc48c8bd0",
-        "Timberborn.Coordinates|9efec216-4ae7-43da-9563-c8fc7537bcf1",
-        "Timberborn.BaseComponentSystem|c0f7b920-5694-4612-bdd5-b736144e1f02",
-        "UnityEngine.CoreModule|61dee272-fd45-47db-9c13-40fe43fbdc1a");
+    private static bool Reviewed() => LoadCompatibility.Reviewed(LoadBodies.NavigationShapes);
     private static void Begin()
     {
         if (_depth++ != 0) return;

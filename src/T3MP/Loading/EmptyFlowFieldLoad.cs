@@ -20,10 +20,7 @@ internal static class EmptyFlowFieldLoad
     private static readonly MethodBase[] Protected = new[] { typeof(AccessFlowField), typeof(PathFlowField) }
         .SelectMany(t=>new[]{t.GetMethod("OnNodesChanged",All)!,t.GetMethod("HasNode",All)!})
         .Concat(new[]{typeof(ReadOnlyList<int>).GetProperty("Count")!.GetMethod!,typeof(ReadOnlyList<int>).GetProperty("Item")!.GetMethod!}).ToArray();
-    private static bool Reviewed() => LoadCompatibility.Reviewed(
-        "Timberborn.Navigation|b848ebf8-28b6-4c17-ab4f-f91582085afa",
-        "Timberborn.Common|88d60edf-d568-470b-af44-77abc48c8bd0",
-        "mscorlib|816f70bc-2a9c-4332-b0bd-119906a8d40e");
+    private static bool Reviewed() => LoadCompatibility.Reviewed(LoadBodies.EmptyFlowField);
     private static bool Compatible() => Reviewed() && LoadCompatibility.Unmodified(Protected,Owner);
     internal static void Install()
     {

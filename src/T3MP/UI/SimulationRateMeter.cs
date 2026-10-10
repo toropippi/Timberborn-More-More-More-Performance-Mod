@@ -69,8 +69,10 @@ public sealed class SimulationRateMeter : ITickableSingleton, IPostLoadableSingl
 public sealed class SimulationRateMeterView : MonoBehaviour
 {
     private readonly SimulationRateWindow _window = new SimulationRateWindow();
+    private const string VisiblePref = "T3MP.MeterVisible";
     private SimulationRateMeter _meter = null!;
-    private GUIStyle? _style;
+    private GUIStyle? _style, _button;
+    private bool _visible = true;
     private double _nextSample;
     private bool _paused;
     private string _text = "rSPD/iSPD -- / --\nUPS -- ticks/s";
@@ -78,6 +80,7 @@ public sealed class SimulationRateMeterView : MonoBehaviour
     internal void Initialize(SimulationRateMeter meter)
     {
         _meter = meter;
+        _visible = PlayerPrefs.GetInt(VisiblePref, 1) != 0;
         Reset(Time.realtimeSinceStartupAsDouble);
     }
 
@@ -107,22 +110,35 @@ public sealed class SimulationRateMeterView : MonoBehaviour
                 : string.Format(CultureInfo.InvariantCulture, "rSPD/iSPD -- / x{0:F1}\nUPS -- ticks/s", _meter.RequestedSpeed);
     }
 
+    // Hovering the meter corner shows a small button: x hides the meter, + shows
+    // it again. Symbols only, so it reads the same in every language.
     private void OnGUI()
     {
-        if (Event.current.type != EventType.Repaint || SceneManager.GetActiveScene().buildIndex != 2) return;
+        if (SceneManager.GetActiveScene().buildIndex != 2) return;
         _style ??= new GUIStyle { alignment = TextAnchor.MiddleRight, fontStyle = FontStyle.Bold };
         var scale = Mathf.Clamp(Screen.height / 1080f, 1f, 2f);
         _style.fontSize = Mathf.RoundToInt(15 * scale);
         var width = Mathf.Min(280 * scale, Screen.width - 18 * scale);
         var rect = new Rect(Screen.width - width - 9 * scale, Screen.height - 70 * scale, width, 40 * scale);
-        _style.normal.textColor = new Color(0, 0, 0, 0.75f);
-        GUI.Label(new Rect(rect.x + scale, rect.y + scale, rect.width, rect.height), _text, _style);
-        _style.normal.textColor = new Color(0.6f, 1, 0.7f, 0.95f);
-        GUI.Label(rect, _text, _style);
-        if (_meter.SmoothEnabled)
+        var smooth = _visible && _meter.SmoothEnabled;
+        var size = 20 * scale;
+        var top = rect.y - (smooth ? 22 * scale : 0);
+        var toggle = new Rect(Screen.width - 9 * scale - size, top - size - 2 * scale, size, size);
+        if (Event.current.type == EventType.Repaint && _visible)
         {
-            var modeRect = new Rect(rect.x, rect.y - 22 * scale, rect.width, 22 * scale);
-            GUI.Label(modeRect, "Smooth 30fps [Shift+O]", _style);
+            _style.normal.textColor = new Color(0, 0, 0, 0.75f);
+            GUI.Label(new Rect(rect.x + scale, rect.y + scale, rect.width, rect.height), _text, _style);
+            _style.normal.textColor = new Color(0.6f, 1, 0.7f, 0.95f);
+            GUI.Label(rect, _text, _style);
+            if (smooth) GUI.Label(new Rect(rect.x, rect.y - 22 * scale, rect.width, 22 * scale), "Smooth 30fps [Shift+O]", _style);
         }
+        var hover = new Rect(rect.x, toggle.y, rect.width, rect.yMax - toggle.y);
+        if (!hover.Contains(Event.current.mousePosition)) return;
+        _button ??= new GUIStyle(GUI.skin.button) { alignment = TextAnchor.MiddleCenter, fontStyle = FontStyle.Bold, padding = new RectOffset(0, 0, 0, 0) };
+        _button.fontSize = Mathf.RoundToInt(14 * scale);
+        if (!GUI.Button(toggle, _visible ? "\u00D7" : "+", _button)) return;
+        _visible = !_visible;
+        PlayerPrefs.SetInt(VisiblePref, _visible ? 1 : 0);
+        PlayerPrefs.Save();
     }
 }

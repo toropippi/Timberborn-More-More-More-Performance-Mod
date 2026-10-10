@@ -1,6 +1,6 @@
 # More More More Performance! (T3MP)
 
-Version 1.2.4.
+Version 1.2.5.
 
 T3MP reduces repeated work during save loading and simulation. Its runtime
 optimizations preserve simulation decisions and their order. Performance depends
@@ -22,7 +22,9 @@ on the colony, game version and other enabled mods.
   the current target speed, and `UPS` is simulation ticks per real second.
   The meter refreshes four times per second over about two seconds. Pause
   shows zero. These values describe the running game; they do not measure
-  speedup against a separate unmodded run.
+  speedup against a separate unmodded run. Point at the meter and press the
+  small × button to hide it; point at the same corner and press + to show it
+  again. The choice is remembered.
 - **Save loading.** Entity construction, initialization, event delivery and
   navigation setup use fewer repeated lookups on supported game builds. A thin
   progress bar at the bottom of the window shows the load phases of a world load.
@@ -50,10 +52,11 @@ on the colony, game version and other enabled mods.
 
 ## Compatibility
 
-Requires Harmony. The compatibility targets are Timberborn 1.1.2.4 and
-1.0.13.1 on Windows. Water upload optimization requires Direct3D11. Game
-method checks and checks for conflicting patches retain native execution
-when an optimization cannot safely apply.
+Requires Harmony. Tested on Timberborn 1.1.2.7, 1.1.2.0 and 1.0.13.1 on
+Windows. The game-speed patches are always applied: if one cannot be applied
+to your game version, the game stops with an error that names T3MP. Disable
+the mod or wait for an update. Save-loading optimizations that do not match the
+game version are skipped and the native loading code runs.
 
 The older frame-based simulation caches, animation snapping and render suppression
 have been removed. Tube lighting repair does not change movement animation.
@@ -62,7 +65,7 @@ have been removed. Tube lighting repair does not change movement animation.
 
 # 日本語
 
-バージョン1.2.4。
+バージョン1.2.5。
 
 T3MPはセーブのロードとシミュレーション中の重複処理を減らします。
 ランタイムの最適化はシミュレーションの判断と順序を維持します。
@@ -81,6 +84,7 @@ T3MPはセーブのロードとシミュレーション中の重複処理を減�
 - **右下の速度メーター。** `rSPD`は実測の進行速度、`iSPD`は現在の設定速度、
   `UPS`は実時間1秒あたりのシミュレーションtick数です。約2秒の実測を毎秒4回更新し、
   一時停止では0を表示します。現在のゲームの速度を示すもので、MODなしとの比較倍率ではありません。
+  メーターにマウスを乗せると出る小さな×ボタンで非表示、同じ場所に乗せて+ボタンで再表示します（設定は保存されます）。
 - **セーブのロード。** 対応するゲーム版で、エンティティ生成・初期化・イベント配信・
   経路網構築の重複した検索を減らします。ワールドのロード中は画面下部に細いプログレスバーを表示します。
 - **本編ループの軽量化。** 型付きdelegateによるイベント配信、tick部品がすべて無効な
@@ -99,9 +103,10 @@ T3MPはセーブのロードとシミュレーション中の重複処理を減�
 
 ## 互換性
 
-Harmonyが必要です。対応対象はWindowsのTimberborn 1.1.2.4と1.0.13.1です。
-水テクスチャの最適化にはDirect3D11が必要です。ゲームの対象メソッドと他MODのパッチを確認し、
-安全に適用できない最適化は元の処理を使います。
+Harmonyが必要です。WindowsのTimberborn 1.1.2.7、1.1.2.0、1.0.13.1で確認しています。
+ゲーム高速化のパッチは常に適用します。お使いのゲーム版に適用できない場合は、T3MPの名前が入った
+エラーでゲームが停止します。MODを無効にするか更新をお待ちください。ゲーム版に合わない
+セーブロード最適化は適用せず、元のロード処理を使います。
 
 旧版のフレーム基準のシミュレーションキャッシュ、モデルのスナップ、描画抑制は削除しました。
 配管照明修正は移動アニメーションを変更しません。

@@ -5,7 +5,6 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 using Timberborn.BaseComponentSystem;
 using Timberborn.EntitySystem;
 using Timberborn.SingletonSystem;
@@ -95,16 +94,9 @@ internal static class LoadEventRouter
         object? harmony = null;
         try
         {
-            // Fail closed on game updates. These are the two reviewed game
-            // modules; the IL guard also protects a modified assembly.
-            var module = TubeHandler.Module.ModuleVersionId.ToString();
-            using var sha = SHA256.Create();
-            var hash = BitConverter.ToString(sha.ComputeHash(TubeHandler.GetMethodBody()!.GetILAsByteArray()!)).Replace("-", "");
-            if ((!Loading.LoadCompatibility.ReviewedModule("Timberborn.TubeSystem", "066c00a6-7b4a-4820-81dc-2c3745cb838a", module) &&
-                 !Loading.LoadCompatibility.ReviewedModule("Timberborn.TubeSystem", "51b4e043-c4f9-47d9-92da-7a9e70baa2d1", module)) ||
-                hash != "B036194EE7C2432A2B51CB0FF5C10D43451DCB4388D1C8DD776E4CF00CBFCE9E")
+            if (!Loading.LoadCompatibility.Reviewed(Loading.LoadBodies.EventRouting))
             {
-                Debug.Log("[T3MP] Load event routing: unrecognized TubeTracker; using original delivery.");
+                Debug.Log("[T3MP] Load event routing: unrecognized event or tube bodies; using original delivery.");
                 return;
             }
             harmony = Activator.CreateInstance(harmonyType, Owner)!;

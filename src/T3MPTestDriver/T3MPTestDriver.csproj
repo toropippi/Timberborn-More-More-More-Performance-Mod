@@ -168,6 +168,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../Shared/LoadCompatibility.cs" Link="Loading/LoadCompatibility.cs" />
+    <Compile Include="../Shared/MethodFingerprint.cs" Link="Loading/MethodFingerprint.cs" />
+    <Compile Include="../Shared/LoadBodies.cs" Link="Loading/LoadBodies.cs" />
     <Compile Include="../Shared/TransputLoadRouting.cs" Link="Loading/TransputLoadRouting.cs" />
   </ItemGroup>
   <ItemGroup><Compile Include="../Shared/DeferredGoodStackModels.cs" Link="Loading/DeferredGoodStackModels.cs" /></ItemGroup>

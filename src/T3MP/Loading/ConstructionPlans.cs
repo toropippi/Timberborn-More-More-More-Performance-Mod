@@ -20,11 +20,7 @@ internal static partial class ConstructionPlans
         .Where(t => t == typeof(InstanceCreator) || t == typeof(ConstructorRetriever) || t == typeof(MethodInjector) ||
             t == typeof(MethodRetriever) || t == typeof(InstanceProviderFuncFactory) || t == typeof(ParameterProvider))
         .SelectMany(t => t.GetMethods(All | BindingFlags.DeclaredOnly)).Cast<MethodBase>().ToArray();
-    internal static bool Reviewed() => LoadCompatibility.Reviewed(
-        "Bindito.Core|0190a2c8-03c6-4915-8b1d-53d8292182ff",
-        "Timberborn.SingletonSystem|962512a9-30fb-4e42-b29f-b0115c9e9015",
-        "Timberborn.BlueprintSystem|41363a54-def1-40c7-9ff3-f884cf81cf81",
-        "Timberborn.BaseComponentSystem|c0f7b920-5694-4612-bdd5-b736144e1f02");
+    internal static bool Reviewed() => LoadCompatibility.Reviewed(LoadBodies.Construction);
     private static bool CheckCompatibility() => Reviewed() && LoadCompatibility.Unmodified(ProtectedMethods, PatchId);
     private const BindingFlags All = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
     [ThreadStatic] private static int _depth;

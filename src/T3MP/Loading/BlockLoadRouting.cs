@@ -51,13 +51,7 @@ internal static class BlockLoadRouting
     private static int Epoch => Volatile.Read(ref _epoch);
 
     internal static bool Installed { get; private set; }
-    private static bool Reviewed() => LoadCompatibility.Reviewed(
-        "Timberborn.BlockObstacles|825233ec-0cd7-4d95-b79d-3ab47b8c4333",
-        "Timberborn.BlockSystem|08ba0380-b21b-4e84-999e-011c1cc0b67d",
-        "Timberborn.WaterBuildings|8efae8cc-faad-45bf-8be5-2f90d9e40435",
-        "Timberborn.SingletonSystem|962512a9-30fb-4e42-b29f-b0115c9e9015",
-        "Timberborn.Common|88d60edf-d568-470b-af44-77abc48c8bd0",
-        "mscorlib|816f70bc-2a9c-4332-b0bd-119906a8d40e");
+    private static bool Reviewed() => LoadCompatibility.Reviewed(LoadBodies.BlockRouting);
 
     internal static void Install()
     {

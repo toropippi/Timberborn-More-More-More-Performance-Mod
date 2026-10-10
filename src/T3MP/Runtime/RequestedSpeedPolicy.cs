@@ -11,23 +11,16 @@ namespace T3MP.Runtime;
 internal static class RequestedSpeedPolicy
 {
     private const string Owner = "t3mp.speed.requested";
-    // Identical ChangeSpeedScale(float) IL on 1.0.13.1 and 1.1.2.4.
-    private const string ReviewedBody = "B139BD751F2DCE8355ED0C23B9A4475CCB0311E093F24B12BC474D1C850077EB";
     internal static bool Installed { get; private set; }
 
     internal static void Install(Type harmonyType, Type harmonyMethodType, MethodInfo patch)
     {
         if (Installed) return;
-        Installed = RuntimePatches.TryInstall(Owner, harmonyType, harmonyMethodType, patch, apply =>
-        {
-            var target = typeof(SpeedManager).GetMethod(nameof(SpeedManager.ChangeSpeedScale),
-                RuntimePatches.All, null, new[] { typeof(float) }, null)
-                ?? throw new MissingMethodException("SpeedManager.ChangeSpeedScale(float)");
-            if (!RuntimePatches.ReviewedBody(target, ReviewedBody))
-                throw new InvalidOperationException("SpeedManager.ChangeSpeedScale is not a reviewed build");
-            apply(target, nameof(KeepRequestedSpeed), null, null, null);
-        }, typeof(RequestedSpeedPolicy));
-        if (Installed) Debug.Log("[T3MP] Requested speed policy installed (population scaling disabled; speed buttons x1/x3/x7).");
+        RuntimePatches.Apply(Owner, harmonyType, harmonyMethodType, patch, apply =>
+            apply(RuntimePatches.Find(typeof(SpeedManager), nameof(SpeedManager.ChangeSpeedScale), new[] { typeof(float) }),
+                nameof(KeepRequestedSpeed), null, null, null), typeof(RequestedSpeedPolicy));
+        Installed = true;
+        Debug.Log("[T3MP] Requested speed policy installed (population scaling disabled; speed buttons x1/x3/x7).");
     }
 
     private static void KeepRequestedSpeed(ref float __0)

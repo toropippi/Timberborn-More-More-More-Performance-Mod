@@ -79,10 +79,7 @@ internal static class TransputLoadRouting
         return list;
     }
 
-    private static bool Reviewed() => LoadCompatibility.Reviewed(
-        "Timberborn.MechanicalSystem|22e640db-81af-4a3a-94fd-72cb8a063d7f",
-        "Timberborn.MechanicalConnectorSystem|d5f0a196-1a1f-4540-83ba-4cc0f1cad0a5",
-        "Timberborn.WorldPersistence|322e064a-da3b-4021-9703-113b13123a6f");
+    private static bool Reviewed() => LoadCompatibility.Reviewed(LoadBodies.Transput);
     private static void Begin()
     {
         if (_depth++ != 0) return;

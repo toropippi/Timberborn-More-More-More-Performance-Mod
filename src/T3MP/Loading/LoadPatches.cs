@@ -13,27 +13,6 @@ internal static class LoadPatches
 {
     private static bool _installed;
 
-    // Runtime guards are re-checked at the start of every world load, after
-    // every other mod has had the chance to install its hooks.
-    private static void InstallRevalidation(Type harmonyType, Type harmonyMethodType, System.Reflection.MethodInfo patch)
-    {
-        var target = LoadPatchBridge.Find("Timberborn.SingletonSystem.SingletonLifecycleService").GetMethod("LoadAll", LoadPatchBridge.All);
-        var prefix = Activator.CreateInstance(harmonyMethodType, typeof(LoadPatches).GetMethod(nameof(BeforeLoadAll), LoadPatchBridge.All));
-        var harmony = Activator.CreateInstance(harmonyType, "t3mp.runtime.guard")!;
-        patch.Invoke(harmony, new object?[] { target, prefix, null, null, null });
-    }
-
-    private static void BeforeLoadAll()
-    {
-        Runtime.WaterTextureUpload.Revalidate();
-        Runtime.TickFrontier.Revalidate();
-        Runtime.WalkerSpeedDelegates.Revalidate();
-        Runtime.TerrainNeighborVisits.Revalidate();
-        Runtime.TubeVisitFix.Revalidate();
-        Runtime.AllowedGoodRows.Revalidate();
-        Runtime.YielderReachabilitySkip.Revalidate();
-    }
-
     internal static void Install()
     {
         if (_installed) return;
@@ -44,7 +23,6 @@ internal static class LoadPatches
             var harmonyMethodType = LoadPatchBridge.Find("HarmonyLib.HarmonyMethod");
             var patch = harmonyType.GetMethods().Single(m => m.Name == "Patch" && m.GetParameters().Length == 5);
             LoadEventRouter.Install(harmonyType, harmonyMethodType, patch);
-            InstallRevalidation(harmonyType, harmonyMethodType, patch);
         }
         catch (Exception exception)
         {
